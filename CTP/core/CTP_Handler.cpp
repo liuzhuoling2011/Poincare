@@ -136,7 +136,6 @@ void CTP_Handler::OnRtnDepthMarketData(
     CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	char* symbol = pDepthMarketData->InstrumentID;
-	PRINT_INFO("Recieve Quote: %s", symbol);
 	if (!Quotes.exist(symbol)) return;
 	    
     CThostFtdcDepthMarketDataField& l_quote = Quotes[symbol]->next();
@@ -145,7 +144,7 @@ void CTP_Handler::OnRtnDepthMarketData(
     std::cout << "OnRtnDepthMarketData:|| " << l_quote.InstrumentID << ", " << l_quote.UpdateTime << ", " << l_quote.UpdateMillisec << ", " <<
     l_quote.LastPrice <<  std::endl;
     //print(pDepthMarketData);
-    std::cout << std::endl << "Quote size: " << Quotes[symbol]->size() << std::endl;
+    PRINT_INFO("%s quote size: %d\n", symbol, Quotes[symbol]->size());
 }
 
 void CTP_Handler::start_trading()
