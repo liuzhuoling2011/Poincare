@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstring>
 
-#include "core/CTP_Handler.h"
+#include "core/Quote_Handler.h"
 #include "core/ThostFtdcUserApiStruct.h"
 #include "utils/MyArray.h"
 #include "utils/utils.h"
@@ -16,16 +16,17 @@ typedef MyArray<CThostFtdcDepthMarketDataField> QuoteArray;
 static MyHash<QuoteArray*> Quotes;
 
 
-CTP_Handler::CTP_Handler(CThostFtdcMdApi * api_, TraderConfig *trader_config)
+Quote_Handler::Quote_Handler(CThostFtdcMdApi * api_, TraderConfig *trader_config)
 {
 	api = api_;
 	m_trader_config = trader_config;
 	api->RegisterSpi(this);
-	api->RegisterFront(m_trader_config->MD_FRONT);
+	api->RegisterFront(m_trader_config->QUOTE_FRONT);
 }
 
-CTP_Handler::~CTP_Handler()
+Quote_Handler::~Quote_Handler()
 {
+	api->Release();
 	QuoteArray* qarray;
 	Quotes.init_iterator();
 	while (Quotes.next_used_node(&qarray)) {
@@ -33,42 +34,39 @@ CTP_Handler::~CTP_Handler()
 	}
 }
 
-void CTP_Handler::OnFrontConnected()
+void Quote_Handler::OnFrontConnected()
 {
 	CThostFtdcReqUserLoginField req = { 0 };
-	strcpy(req.BrokerID, m_trader_config->BROKER_ID);
-	strcpy(req.UserID, m_trader_config->USER_ID);
-	strcpy(req.Password, m_trader_config->PASSWORD);
-	int ret = api->ReqUserLogin(&req, ++requestId);
-	if (ret == 0)
-		PRINT_SUCCESS("User Login Successful!");
+	strcpy(req.BrokerID, m_trader_config->QBROKER_ID);
+	strcpy(req.UserID, m_trader_config->QUSER_ID);
+	strcpy(req.Password, m_trader_config->QPASSWORD);
+	api->ReqUserLogin(&req, ++requestId);
 }
 
-void CTP_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo,
+void Quote_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo,
                        int nRequestID, bool bIsLast)
 {
-	bool bResult = ((pRspInfo) && (pRspInfo->ErrorID != 0));
-	if (bResult)
-		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+	IsErrorRspInfo(pRspInfo, bIsLast);
 }
 
-void CTP_Handler::OnHeartBeatWarning(int nTimeLapse)
+void Quote_Handler::OnHeartBeatWarning(int nTimeLapse)
 {
     PRINT_WARN("OnHeartBeatWarning: nTimerLapse = %d", nTimeLapse);
 }
 
-void CTP_Handler::OnRspUserLogin(
+void Quote_Handler::OnRspUserLogin(
     CThostFtdcRspUserLoginField *pRspUserLogin,
     CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-    std::cout << "OnRspUserLogin>>>|" << std::endl;
-    std::cout << "ErrorID>>>|: " << pRspInfo->ErrorID << std::endl;
-    std::cout << "TradingDay>>>|: " << pRspUserLogin->TradingDay << std::endl;
-    std::cout << "SessionID>>>|: " << pRspUserLogin->SessionID << std::endl;
-    std::cout << "FrontID>>>|: " << pRspUserLogin->FrontID << std::endl;
-    std::cout << "MaxOrderRef>>>|: " << pRspUserLogin->MaxOrderRef << std::endl;
+    if (!IsErrorRspInfo(pRspInfo, bIsLast)) {
+		PRINT_SUCCESS("Login quote front successful!");
+		std::cout << "OnRspUserLogin>>>|" << std::endl;
+		std::cout << "ErrorID>>>|: " << pRspInfo->ErrorID << std::endl;
+		std::cout << "TradingDay>>>|: " << pRspUserLogin->TradingDay << std::endl;
+		std::cout << "SessionID>>>|: " << pRspUserLogin->SessionID << std::endl;
+		std::cout << "FrontID>>>|: " << pRspUserLogin->FrontID << std::endl;
+		std::cout << "MaxOrderRef>>>|: " << pRspUserLogin->MaxOrderRef << std::endl;
 
-    if (pRspInfo->ErrorID == 0 && bIsLast) {
 		int ret = api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
 		if (ret == 0) {
 			for(int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
@@ -83,13 +81,13 @@ void CTP_Handler::OnRspUserLogin(
     }
 }
 
-void CTP_Handler::OnRspSubMarketData(
+void Quote_Handler::OnRspSubMarketData(
     CThostFtdcSpecificInstrumentField *pSpecificInstrument,
     CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 }
 
-void CTP_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
+void Quote_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
      std::cout << pDepthMarketData->TradingDay<<", ";
      std::cout << pDepthMarketData->InstrumentID<<", ";
      std::cout << pDepthMarketData->ExchangeID<<", ";
@@ -132,7 +130,7 @@ void CTP_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
      //std::cout << pDepthMarketData->AskPrice5<<", ";
      //std::cout << pDepthMarketData->AskVolume5<<", ";
 }
-void CTP_Handler::OnRtnDepthMarketData(
+void Quote_Handler::OnRtnDepthMarketData(
     CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	char* symbol = pDepthMarketData->InstrumentID;
@@ -147,13 +145,7 @@ void CTP_Handler::OnRtnDepthMarketData(
     PRINT_INFO("%s quote size: %d\n", symbol, Quotes[symbol]->size());
 }
 
-void CTP_Handler::start_trading()
-{
-	api->Init();
-	api->Join();
-}
-
-void CTP_Handler::OnFrontDisconnected(int nReason)
+void Quote_Handler::OnFrontDisconnected(int nReason)
 {
     std::cout << "OnFrontDisconnected: " << nReason << std::endl;
 }

@@ -1,21 +1,13 @@
 #pragma once
 #include "core/ThostFtdcMdApi.h"
+#include "core/Trader_Handler.h"
+#include "core/CTP_define.h"
 
-struct TraderConfig
-{
-	char  MD_FRONT[64];
-	char  BROKER_ID[8];
-	char  USER_ID[64];
-	char  PASSWORD[64];
-	char *INSTRUMENTS[64];
-	int   INSTRUMENT_COUNT;
-};
-
-class CTP_Handler : public CThostFtdcMdSpi
+class Quote_Handler : public CThostFtdcMdSpi
 {
   public:
-	CTP_Handler(CThostFtdcMdApi *api_, TraderConfig *trader_config);
-	~CTP_Handler();
+	Quote_Handler(CThostFtdcMdApi *api_, TraderConfig *trader_config);
+	~Quote_Handler();
 
 	///当客户端与交易后台建立起通信连接时（还未登录前），该方法被调用。
 	virtual void OnFrontConnected();
@@ -77,8 +69,6 @@ class CTP_Handler : public CThostFtdcMdSpi
 
 	///询价通知
 	virtual void OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp){};
-
-	void start_trading();
 
   private:
     CThostFtdcMdApi *api;

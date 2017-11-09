@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include "utils.h"
 #include "log.h"
+#include "core/ThostFtdcTraderApi.h"
 
 #define CHAR_EQUAL_ZERO(a, b, c) do{\
 	if (a != b) goto end;\
@@ -256,6 +257,19 @@ static uint64_t order_count = 0;
 
 void reset_order_count_for_test() {
 	order_count = 0;
+}
+
+bool IsErrorRspInfo(CThostFtdcRspInfoField * pRspInfo, bool bIsLast)
+{
+	if (pRspInfo == NULL) return true;
+
+	// 如果ErrorID != 0, 说明收到了错误的响应
+	if (bIsLast == false || pRspInfo->ErrorID != 0) {
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+		return true;
+	}
+	else
+		return false;
 }
 
 int process_debug_info(int type, int length, void *data) {

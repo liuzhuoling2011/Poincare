@@ -1,7 +1,7 @@
 #include <fstream>
 #include <sstream>
 #include "utils/log.h"		 
-#include "core/CTP_Handler.h"
+#include "core/Quote_Handler.h"
 #include "utils/json11.hpp"
 #include "utils/utils.h"
 
@@ -28,10 +28,14 @@ bool read_json_config(TraderConfig& trader_config) {
 		return false;
 	}
 
-	strlcpy(trader_config.MD_FRONT, l_json["MD_FRONT"].string_value().c_str(), 64);
-	strlcpy(trader_config.BROKER_ID, l_json["BROKER_ID"].string_value().c_str(), 8);
-	strlcpy(trader_config.USER_ID, l_json["USER_ID"].string_value().c_str(), 64);
-	strlcpy(trader_config.PASSWORD, l_json["PASSWORD"].string_value().c_str(), 64);
+	strlcpy(trader_config.QUOTE_FRONT, l_json["MD_FRONT"].string_value().c_str(), 64);
+	strlcpy(trader_config.QBROKER_ID, l_json["QBROKER_ID"].string_value().c_str(), 8);
+	strlcpy(trader_config.QUSER_ID, l_json["QUSER_ID"].string_value().c_str(), 64);
+	strlcpy(trader_config.QPASSWORD, l_json["QPASSWORD"].string_value().c_str(), 64);
+	strlcpy(trader_config.TRADER_FRONT, l_json["TRADER_FRONT"].string_value().c_str(), 64);
+	strlcpy(trader_config.TBROKER_ID, l_json["TBROKER_ID"].string_value().c_str(), 8);
+	strlcpy(trader_config.TUSER_ID, l_json["TUSER_ID"].string_value().c_str(), 64);
+	strlcpy(trader_config.TPASSWORD, l_json["TPASSWORD"].string_value().c_str(), 64);
 	int instr_count = 0;
 	for (auto &l_instr : l_json["INSTRUMENTS"].array_items()) {
 		trader_config.INSTRUMENTS[instr_count] = (char *)malloc(64 * sizeof(char));
@@ -50,12 +54,25 @@ void free_config(TraderConfig& trader_config) {
 int main(int argc, char **argv)
 {
 	PRINT_INFO("Welcome to CTP demo!");
-	CThostFtdcMdApi *api = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
 	TraderConfig trader_config = { 0 };
-	//trader_config.INSTRUMENTS = (char*)malloc(64 * sizeof(64));
 	read_json_config(trader_config);
-	CTP_Handler ctp_handler(api, &trader_config);
-	ctp_handler.start_trading();
+
+	/*CThostFtdcMdApi *MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
+	Quote_Handler quote_handler(MdUserApi, &trader_config);
+	MdUserApi->Init();*/
+
+	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/md");
+	Trader_Handler* trader_handler = new Trader_Handler(TraderApi, &trader_config);
+	TraderApi->Init();
+	// 必须在Init函数之后调用
+	TraderApi->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
+	TraderApi->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
+
+	/*MdUserApi->Join();
+	MdUserApi->Release();*/
+	TraderApi->Join();
+	TraderApi->Release();
+
 	free_config(trader_config);
 	return 0;
 }

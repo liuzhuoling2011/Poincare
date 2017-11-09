@@ -39,11 +39,14 @@
     <ClCompile Include="utils\utils.cpp">
       <Filter>资源文件\utils</Filter>
     </ClCompile>
-    <ClCompile Include="core\CTP_Handler.cpp">
-      <Filter>资源文件\core</Filter>
-    </ClCompile>
     <ClCompile Include="utils\json11.cpp">
       <Filter>资源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="core\Trader_Handler.cpp">
+      <Filter>资源文件\core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\Quote_Handler.cpp">
+      <Filter>资源文件\core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -80,11 +83,17 @@
     <ClInclude Include="core\base_define.h">
       <Filter>头文件\core</Filter>
     </ClInclude>
-    <ClInclude Include="core\CTP_Handler.h">
-      <Filter>头文件\core</Filter>
-    </ClInclude>
     <ClInclude Include="utils\json11.hpp">
       <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="core\Trader_Handler.h">
+      <Filter>头文件\core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\CTP_define.h">
+      <Filter>头文件\core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\Quote_Handler.h">
+      <Filter>头文件\core</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

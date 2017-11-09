@@ -90,4 +90,7 @@ int add_time(int int_time, int seconds);
 
 void reset_order_count_for_test();
 
+struct CThostFtdcRspInfoField;
+bool IsErrorRspInfo(CThostFtdcRspInfoField *pRspInfo, bool bIsLast);
+
 #endif
