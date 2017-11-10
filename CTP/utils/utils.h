@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include "core/base_define.h"
+#include "core/Trader_Handler.h"
 
 #define MAX(a,b)  ((a)>(b)?(a):(b))
 #define MIN(a,b)  ((a)>(b)?(b):(a))
@@ -94,5 +95,9 @@ struct CThostFtdcRspInfoField;
 bool IsErrorRspInfo(CThostFtdcRspInfoField *pRspInfo, bool bIsLast);
 
 int code_convert(char *inbuf, size_t inlen, char *outbuf, size_t outlen);
+
+bool read_json_config(TraderConfig& trader_config);
+
+void free_config(TraderConfig& trader_config);
 
 #endif
