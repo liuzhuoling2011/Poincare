@@ -1,3 +1,4 @@
+ï»¿#include <iconv.h>
 #include <stdio.h>
 #include <ctype.h>
 #include "utils.h"
@@ -259,13 +260,16 @@ void reset_order_count_for_test() {
 	order_count = 0;
 }
 
+static char ERROR_MSG[1024];
+
 bool IsErrorRspInfo(CThostFtdcRspInfoField * pRspInfo, bool bIsLast)
 {
 	if (pRspInfo == NULL) return true;
 
-	// Èç¹ûErrorID != 0, ËµÃ÷ÊÕµ½ÁË´íÎóµÄÏìÓ¦
+	// å¦‚æžœErrorID != 0, è¯´æ˜Žæ”¶åˆ°äº†é”™è¯¯çš„å“åº”
 	if (bIsLast == false || pRspInfo->ErrorID != 0) {
-		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 1024);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 		return true;
 	}
 	else
@@ -345,4 +349,23 @@ int add_time(int int_time, int seconds)
 	int time1_min = (sum_sec % 3600) / 60;
 	int time1_sec = ((sum_sec % 3600) % 60);
 	return (time1_hour * 10000 + time1_min * 100 + time1_sec) * 1000;
+}
+
+int code_convert(char *inbuf, size_t inlen, char *outbuf, size_t outlen)
+{
+	iconv_t cd;
+	char **pin = &inbuf;
+	char **pout = &outbuf;
+
+	cd = iconv_open("utf-8", "gb2312");
+	if (cd == 0) return -1;
+	memset(outbuf, 0, outlen);
+	if (iconv(cd, pin, &inlen, pout, &outlen) == -1) 
+		return -1;
+	iconv_close(cd);
+	return 0;
+}
+
+bool read_json_config(TraderConfig& trader_config) {
+	
 }

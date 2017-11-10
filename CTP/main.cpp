@@ -28,7 +28,7 @@ bool read_json_config(TraderConfig& trader_config) {
 		return false;
 	}
 
-	strlcpy(trader_config.QUOTE_FRONT, l_json["MD_FRONT"].string_value().c_str(), 64);
+	strlcpy(trader_config.QUOTE_FRONT, l_json["QUOTE_FRONT"].string_value().c_str(), 64);
 	strlcpy(trader_config.QBROKER_ID, l_json["QBROKER_ID"].string_value().c_str(), 8);
 	strlcpy(trader_config.QUSER_ID, l_json["QUSER_ID"].string_value().c_str(), 64);
 	strlcpy(trader_config.QPASSWORD, l_json["QPASSWORD"].string_value().c_str(), 64);
@@ -57,21 +57,21 @@ int main(int argc, char **argv)
 	TraderConfig trader_config = { 0 };
 	read_json_config(trader_config);
 
-	/*CThostFtdcMdApi *MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
+	CThostFtdcMdApi *MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
 	Quote_Handler quote_handler(MdUserApi, &trader_config);
-	MdUserApi->Init();*/
+	MdUserApi->Init();
 
-	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/md");
-	Trader_Handler* trader_handler = new Trader_Handler(TraderApi, &trader_config);
-	TraderApi->Init();
-	// 必须在Init函数之后调用
-	TraderApi->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
-	TraderApi->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
+	//CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/tr");
+	//Trader_Handler* trader_handler = new Trader_Handler(TraderApi, &trader_config);
+	//TraderApi->Init();
+	//// 必须在Init函数之后调用
+	//TraderApi->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
+	//TraderApi->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
 
-	/*MdUserApi->Join();
-	MdUserApi->Release();*/
-	TraderApi->Join();
-	TraderApi->Release();
+	MdUserApi->Join();
+	MdUserApi->Release();
+	/*TraderApi->Join();
+	TraderApi->Release();*/
 
 	free_config(trader_config);
 	return 0;

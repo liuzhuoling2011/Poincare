@@ -85,6 +85,7 @@ void Quote_Handler::OnRspSubMarketData(
     CThostFtdcSpecificInstrumentField *pSpecificInstrument,
     CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
+	PRINT_SUCCESS("lalala");
 }
 
 void Quote_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
