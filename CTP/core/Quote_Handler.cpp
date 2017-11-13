@@ -16,17 +16,19 @@ typedef MyArray<CThostFtdcDepthMarketDataField> QuoteArray;
 static MyHash<QuoteArray*> Quotes;
 
 
-Quote_Handler::Quote_Handler(CThostFtdcMdApi * api_, TraderConfig *trader_config)
+Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_api_, TraderConfig *trader_config)
 {
-	api = api_;
 	m_trader_config = trader_config;
-	api->RegisterSpi(this);
-	api->RegisterFront(m_trader_config->QUOTE_FRONT);
+	m_trader_handler = trader_api_;
+
+	m_md_api = md_api_;
+	m_md_api->RegisterSpi(this);
+	m_md_api->RegisterFront(m_trader_config->QUOTE_FRONT);
 }
 
 Quote_Handler::~Quote_Handler()
 {
-	api->Release();
+	m_md_api->Release();
 	QuoteArray* qarray;
 	Quotes.init_iterator();
 	while (Quotes.next_used_node(&qarray)) {
@@ -40,7 +42,7 @@ void Quote_Handler::OnFrontConnected()
 	strcpy(req.BrokerID, m_trader_config->QBROKER_ID);
 	strcpy(req.UserID, m_trader_config->QUSER_ID);
 	strcpy(req.Password, m_trader_config->QPASSWORD);
-	api->ReqUserLogin(&req, ++requestId);
+	m_md_api->ReqUserLogin(&req, ++requestId);
 }
 
 void Quote_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo,
@@ -60,14 +62,9 @@ void Quote_Handler::OnRspUserLogin(
 {
     if (!IsErrorRspInfo(pRspInfo, bIsLast)) {
 		PRINT_SUCCESS("Login quote front successful!");
-		std::cout << "OnRspUserLogin>>>|" << std::endl;
-		std::cout << "ErrorID>>>|: " << pRspInfo->ErrorID << std::endl;
-		std::cout << "TradingDay>>>|: " << pRspUserLogin->TradingDay << std::endl;
-		std::cout << "SessionID>>>|: " << pRspUserLogin->SessionID << std::endl;
-		std::cout << "FrontID>>>|: " << pRspUserLogin->FrontID << std::endl;
-		std::cout << "MaxOrderRef>>>|: " << pRspUserLogin->MaxOrderRef << std::endl;
-
-		int ret = api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
+		PRINT_SUCCESS("TradingDay: %s", pRspUserLogin->TradingDay);
+	
+		int ret = m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
 		if (ret == 0) {
 			for(int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 				char* symbol = m_trader_config->INSTRUMENTS[i];
@@ -85,7 +82,7 @@ void Quote_Handler::OnRspSubMarketData(
     CThostFtdcSpecificInstrumentField *pSpecificInstrument,
     CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	PRINT_SUCCESS("lalala");
+	//PRINT_SUCCESS("lalala");
 }
 
 void Quote_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
@@ -131,6 +128,11 @@ void Quote_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
      //std::cout << pDepthMarketData->AskPrice5<<", ";
      //std::cout << pDepthMarketData->AskVolume5<<", ";
 }
+
+order_t default_order = { 0 };
+
+static int i = 0;
+
 void Quote_Handler::OnRtnDepthMarketData(
     CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
@@ -144,6 +146,15 @@ void Quote_Handler::OnRtnDepthMarketData(
     l_quote.LastPrice <<  std::endl;
     //print(pDepthMarketData);
     PRINT_INFO("%s quote size: %d\n", symbol, Quotes[symbol]->size());
+
+	strlcpy(default_order.symbol, symbol, SYMBOL_LEN);
+	default_order.direction = ORDER_BUY;
+	default_order.open_close = ORDER_OPEN;
+	default_order.price = l_quote.AskPrice1;
+	default_order.volume = 1;
+	
+	if(++i % 20 == 0)
+		m_trader_handler->send_single_order(&default_order);
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)

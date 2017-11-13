@@ -1,12 +1,12 @@
 #pragma once
 #include "core/ThostFtdcMdApi.h"
-#include "core/Trader_Handler.h"
 #include "core/CTP_define.h"
+#include "core/Trader_Handler.h"
 
 class Quote_Handler : public CThostFtdcMdSpi
 {
   public:
-	Quote_Handler(CThostFtdcMdApi *api_, TraderConfig *trader_config);
+	Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_api_, TraderConfig *trader_config);
 	~Quote_Handler();
 
 	//当客户端与交易后台建立起通信连接时（还未登录前），该方法被调用。
@@ -71,8 +71,9 @@ class Quote_Handler : public CThostFtdcMdSpi
 	virtual void OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp){};
 
   private:
-    CThostFtdcMdApi *api;
-    int requestId = 0;
+	int requestId = 0;
+	CThostFtdcMdApi *m_md_api;
+	Trader_Handler *m_trader_handler;
 	TraderConfig *m_trader_config;
     void print(CThostFtdcDepthMarketDataField *pDepthMarketData);
 };

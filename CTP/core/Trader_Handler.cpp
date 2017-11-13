@@ -12,6 +12,7 @@ using namespace std;
 #define sleep Sleep
 #endif
 
+static CThostFtdcInputOrderField g_order_t = { 0 };
 
 // 流控判断
 bool IsFlowControl(int iResult)
@@ -59,19 +60,16 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 		ReqSettlementInfo();
 		
 		//请求查询资金账户
-		//ReqTradingAccount();
+		ReqTradingAccount();
 
 		//请求查询合约
 		/*for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 			ReqInstrument(m_trader_config->INSTRUMENTS[i]);
 		}*/
 
-		//请求查询投资者持仓
-		//ReqInvestorPosition();
-
 		//请求下单
-		ReqOrderInsert();
-		ReqOrderAction(&m_cancel);
+		//ReqOrderInsert();
+		//ReqOrderAction(&m_cancel);
 	} else {
 		PRINT_ERROR("Login Failed!");
 		exit(-1);
@@ -92,10 +90,13 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	PRINT_DEBUG("%s %f %f %f %f %f %f %f", pTradingAccount->AccountID, pTradingAccount->Interest, pTradingAccount->Deposit, pTradingAccount->Withdraw, pTradingAccount->CurrMargin, pTradingAccount->CloseProfit, pTradingAccount->PositionProfit, pTradingAccount->Available);
+	//请求查询投资者持仓
+	ReqInvestorPosition();
 }
 
 void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
+	//PRINT_INFO("is_last: %d", bIsLast); //todo 过滤重复的
 	if (pInvestorPosition) {
 		printf("\nInstrumentID: %s, "
 			"PosiDirection: %c, "
@@ -223,61 +224,76 @@ void Trader_Handler::ReqInvestorPosition()
 	}
 }
 
-void Trader_Handler::ReqOrderInsert()
+void Trader_Handler::send_single_order(order_t *order)
 {
-	PRINT_SUCCESS("lalal");
-	CThostFtdcInputOrderField req = { 0 };
 	///经纪公司代码
-	strcpy(req.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(g_order_t.BrokerID, m_trader_config->TBROKER_ID);
 	///投资者代码
-	strcpy(req.InvestorID, m_trader_config->TUSER_ID);
-	///合约代码
-	strcpy(req.InstrumentID, m_trader_config->INSTRUMENTS[0]);
+	strcpy(g_order_t.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
-	strcpy(req.OrderRef, m_trader_info.MaxOrderRef);
+	strcpy(g_order_t.OrderRef, m_trader_info.MaxOrderRef);
 	///用户代码
-	strcpy(req.UserID, m_trader_config->TUSER_ID);
+	strcpy(g_order_t.UserID, m_trader_config->TUSER_ID);
+
+	///合约代码
+	strcpy(g_order_t.InstrumentID, order->symbol);
 	///报单价格条件: 限价
-	req.OrderPriceType = THOST_FTDC_OPT_LimitPrice;
-	//req.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //shijia
+	if(order->order_type == ORDER_TYPE_LIMIT)
+		g_order_t.OrderPriceType = THOST_FTDC_OPT_LimitPrice;
+	else
+		g_order_t.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //市价单
 	///买卖方向: 
-	req.Direction = THOST_FTDC_D_Buy;
+	g_order_t.Direction = order->direction == ORDER_BUY ? '0':'1';
 	///组合开平标志: 开仓
-	// req.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
-	req.CombOffsetFlag[0] = THOST_FTDC_OF_Open;//  THOST_FTDC_OF_Close
-													 ///组合投机套保标志
-	req.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
+	if(order->open_close == ORDER_OPEN)
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
+	else if(order->open_close == ORDER_CLOSE)
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
+	else if (order->open_close == ORDER_CLOSE_YES)
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_CloseYesterday;
+
+	///组合投机套保标志
+	if(order->investor_type == ORDER_SPECULATOR)
+		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
+	else if (order->investor_type == ORDER_HEDGER)
+		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Hedge;
+	else if (order->investor_type == ORDER_ARBITRAGEURS)
+		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Arbitrage;
 	///价格
-	req.LimitPrice = 3800;
-	//req.LimitPrice = 0; // shijia
+	g_order_t.LimitPrice = order->price;
 	///数量: 1
-	req.VolumeTotalOriginal = 1;
+	g_order_t.VolumeTotalOriginal = order->volume;
 	///有效期类型: 当日有效
-	req.TimeCondition = THOST_FTDC_TC_GFD;
+	if(order->time_in_force == ORDER_TIF_DAY || order->time_in_force == ORDER_TIF_GTD)
+		g_order_t.TimeCondition = THOST_FTDC_TC_GFD;
+	else if (order->time_in_force == ORDER_TIF_IOC || order->time_in_force == ORDER_TIF_FOK
+		|| order->time_in_force == ORDER_TIF_FAK)
+		g_order_t.TimeCondition = THOST_FTDC_TC_IOC;
+	else if (order->time_in_force == ORDER_TIF_GTC)
+		g_order_t.TimeCondition = THOST_FTDC_TC_GTC;
 	///GTD日期
 	//	TThostFtdcDateType	GTDDate;
 	///成交量类型: 任何数量
-	req.VolumeCondition = THOST_FTDC_VC_AV;
+	g_order_t.VolumeCondition = THOST_FTDC_VC_AV;
 	///最小成交量: 1
-	req.MinVolume = 1;
+	g_order_t.MinVolume = 1;
 	///触发条件: 立即
-	req.ContingentCondition = THOST_FTDC_CC_Immediately;
+	g_order_t.ContingentCondition = THOST_FTDC_CC_Immediately;
 	///止损价
 	//	TThostFtdcPriceType	StopPrice;
 	///强平原因: 非强平
-	req.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
+	g_order_t.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
 	///自动挂起标志: 否
-	req.IsAutoSuspend = 0;
+	g_order_t.IsAutoSuspend = 0;
 	///业务单元
 	//	TThostFtdcBusinessUnitType	BusinessUnit;
 	///请求编号
 	//	TThostFtdcRequestIDType	RequestID;
 	///用户强评标志: 否
-	req.UserForceClose = 0;
+	g_order_t.UserForceClose = 0;
 
-	m_cancel = req;
-	int iResult = m_trader_api->ReqOrderInsert(&req, ++m_request_id);
-	cerr << "--->>> Send order: " << iResult << ((iResult == 0) ? ", success" : ", fail") << endl;
+	int ret = m_trader_api->ReqOrderInsert(&g_order_t, ++m_request_id);
+	PRINT_DEBUG("Send order: %s", ret == 0 ? ", success" : ", fail");
 }
 
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)

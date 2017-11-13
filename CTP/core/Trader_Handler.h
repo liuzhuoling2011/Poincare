@@ -1,6 +1,7 @@
 #pragma once
 #include "core/ThostFtdcTraderApi.h"
 #include "core/CTP_define.h"
+#include "core/base_define.h"
 
 class Trader_Handler : public CThostFtdcTraderSpi
 {
@@ -46,6 +47,12 @@ public:
 	//成交通知
 	virtual void OnRtnTrade(CThostFtdcTradeField *pTrade);
 
+	//报单录入请求
+	void send_single_order(order_t *order);
+
+	//报单撤销请求
+	void cancel_single_order(order_t *order);
+
 private:
 	//投资者结算结果确认
 	void ReqSettlementInfo();
@@ -55,8 +62,7 @@ private:
 	void ReqInstrument(char* symbol);
 	//请求查询投资者持仓
 	void ReqInvestorPosition();
-	//报单录入请求
-	void ReqOrderInsert();
+	
 	//报单操作请求
 	void ReqOrderAction(CThostFtdcInputOrderField *pOrder);
 
