@@ -268,12 +268,12 @@ void reset_order_count_for_test() {
 
 static char ERROR_MSG[1024];
 
-bool IsErrorRspInfo(CThostFtdcRspInfoField * pRspInfo, bool bIsLast)
+bool IsErrorRspInfo(CThostFtdcRspInfoField * pRspInfo)
 {
 	if (pRspInfo == NULL) return true;
 
 	// 如果ErrorID != 0, 说明收到了错误的响应
-	if (bIsLast == false || pRspInfo->ErrorID != 0) {
+	if (pRspInfo->ErrorID != 0) {
 		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 1024);
 		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 		return true;

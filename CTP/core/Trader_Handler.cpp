@@ -2,6 +2,7 @@
 #include <string.h>
 #include "utils/utils.h"
 #include "utils/log.h"
+#include "strategy.h"
 using namespace std;
 
 #include "Trader_Handler.h"
@@ -13,6 +14,7 @@ using namespace std;
 #endif
 
 static CThostFtdcInputOrderField g_order_t = { 0 };
+static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
 
 // 流控判断
 bool IsFlowControl(int iResult)
@@ -26,6 +28,12 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_trader_api = TraderApi;
 	m_trader_api->RegisterSpi(this);			// 注册事件类
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
+	m_orders = new MyArray<CThostFtdcInputOrderField>(2000);
+}
+
+Trader_Handler::~Trader_Handler()
+{
+	delete m_orders;
 }
 
 void Trader_Handler::OnFrontConnected()
@@ -42,8 +50,8 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	info.FrontID = pRspUserLogin->FrontID;
 	info.SessionID = pRspUserLogin->SessionID;
 	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
-	iNextOrderRef++;
-	sprintf(info.MaxOrderRef, "%d", iNextOrderRef);
+	info.MaxOrderRef = iNextOrderRef++;
+	//sprintf(info.MaxOrderRef, "%d", iNextOrderRef);
 	strlcpy(info.TradingDay, pRspUserLogin->TradingDay, TRADING_DAY_LEN);
 	strlcpy(info.LoginTime, pRspUserLogin->LoginTime, TRADING_DAY_LEN);
 }
@@ -91,12 +99,12 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 {
 	PRINT_DEBUG("%s %f %f %f %f %f %f %f", pTradingAccount->AccountID, pTradingAccount->Interest, pTradingAccount->Deposit, pTradingAccount->Withdraw, pTradingAccount->CurrMargin, pTradingAccount->CloseProfit, pTradingAccount->PositionProfit, pTradingAccount->Available);
 	//请求查询投资者持仓
-	ReqInvestorPosition();
+	//ReqQryInvestorPositionDetail();
 }
 
 void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	//PRINT_INFO("is_last: %d", bIsLast); //todo 过滤重复的
+	PRINT_INFO("is_last: %d", bIsLast); //todo 过滤重复的
 	if (pInvestorPosition) {
 		printf("\nInstrumentID: %s, "
 			"PosiDirection: %c, "
@@ -167,6 +175,55 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 	//}
 }
 
+void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (pInvestorPositionDetail) {
+		//对于所有合约，不保存已平仓的，只保存未平仓的
+		if (pInvestorPositionDetail->Volume > 0) {
+			if (pInvestorPositionDetail->Direction == '0')
+				m_contracts_long.push_back(pInvestorPositionDetail);
+			else if (pInvestorPositionDetail->Direction == '1')
+				m_contracts_short.push_back(pInvestorPositionDetail);
+
+			bool find_instId = false;
+			for(int i = 0; i< m_trader_config->INSTRUMENT_COUNT; i++) {
+				if (strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//合约已存在，已订阅过行情
+					find_instId = true;
+					break;
+				}
+			}
+			if (find_instId == false) {
+				strlcpy(m_trader_config->INSTRUMENTS[m_trader_config->INSTRUMENT_COUNT], pInvestorPositionDetail->InstrumentID, SYMBOL_LEN);
+				m_trader_config->INSTRUMENT_COUNT++;
+			}
+		}
+
+		if (bIsLast) {
+			ReqQryInvestorPosition();
+			cout << "long remained contract:" << m_contracts_long.size() << " short remained contract:" << m_contracts_short.size() << endl;
+			for (int i = 0; i < m_contracts_long.size(); i++) {
+				cout << "InvestorID: " << m_contracts_long[i].InvestorID << endl
+					<< " InstrumentID: " << m_contracts_long[i].InstrumentID << endl
+					<< " ExchangeID: " << m_contracts_long[i].ExchangeID << endl
+					<< " Direction: " << m_contracts_long[i].Direction << endl
+					<< " OpenPrice: " << m_contracts_long[i].OpenPrice << endl
+					<< " Volume: " << m_contracts_long[i].Volume << endl
+					<< " TradingDay: " << m_contracts_long[i].TradingDay << endl;
+			}
+
+			for (int i = 0; i < m_contracts_short.size(); i++) {
+				cout << "InvestorID: " << m_contracts_short[i].InvestorID << endl
+					<< " InstrumentID: " << m_contracts_short[i].InstrumentID << endl
+					<< " ExchangeID: " << m_contracts_short[i].ExchangeID << endl
+					<< " Direction: " << m_contracts_short[i].Direction << endl
+					<< " OpenPrice: " << m_contracts_short[i].OpenPrice << endl
+					<< " Volume: " << m_contracts_short[i].Volume << endl
+					<< " TradingDay: " << m_contracts_short[i].TradingDay << endl;
+			}
+		}
+	}
+}
+
 void Trader_Handler::ReqSettlementInfo()
 {
 	CThostFtdcSettlementInfoConfirmField req = { 0 };
@@ -207,7 +264,24 @@ void Trader_Handler::ReqInstrument(char* symbol) {
 	}
 }
 
-void Trader_Handler::ReqInvestorPosition()
+void Trader_Handler::ReqQryInvestorPositionDetail()
+{
+	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
+	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
+			break;
+		} else {
+			sleep(1);
+		}
+	}
+}
+
+void Trader_Handler::ReqQryInvestorPosition()
 {
 	CThostFtdcQryInvestorPositionField req_pos = { 0 };
 	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
@@ -218,7 +292,8 @@ void Trader_Handler::ReqInvestorPosition()
 		if (!IsFlowControl(iResult)) {
 			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
 			break;
-		} else {
+		}
+		else {
 			sleep(1);
 		}
 	}
@@ -231,7 +306,8 @@ void Trader_Handler::send_single_order(order_t *order)
 	///投资者代码
 	strcpy(g_order_t.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
-	strcpy(g_order_t.OrderRef, m_trader_info.MaxOrderRef);
+	sprintf(g_order_t.OrderRef, "%d", m_trader_info.MaxOrderRef);
+	//strcpy(g_order_t.OrderRef, m_trader_info.MaxOrderRef);
 	///用户代码
 	strcpy(g_order_t.UserID, m_trader_config->TUSER_ID);
 
@@ -292,43 +368,37 @@ void Trader_Handler::send_single_order(order_t *order)
 	///用户强评标志: 否
 	g_order_t.UserForceClose = 0;
 
+	CThostFtdcInputOrderField& order_record = (*m_orders)[m_trader_info.MaxOrderRef];
+	order_record = g_order_t;
+	order->order_id = m_trader_info.MaxOrderRef;
+	m_trader_info.MaxOrderRef++;
 	int ret = m_trader_api->ReqOrderInsert(&g_order_t, ++m_request_id);
-	PRINT_DEBUG("Send order: %s", ret == 0 ? ", success" : ", fail");
+	PRINT_DEBUG("Send order %s", ret == 0 ? ", success" : ", fail");
 }
 
-void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void Trader_Handler::cancel_single_order(order_t * order)
 {
-	cerr << "--->>> " << "OnRspOrderInsert" << endl;
-	IsErrorRspInfo(pRspInfo, bIsLast);
-}
-
-void Trader_Handler::ReqOrderAction(CThostFtdcInputOrderField *pOrder)
-{
-	static bool ORDER_ACTION_SENT = false;		//是否发送了报单
-	if (ORDER_ACTION_SENT)
-		return;
-
-	CThostFtdcInputOrderActionField req = { 0 };
+	CThostFtdcInputOrderField& order_record = (*m_orders)[order->order_id];
 	///经纪公司代码
-	strcpy(req.BrokerID, pOrder->BrokerID);
+	strcpy(g_order_action_t.BrokerID, order_record.BrokerID);
 	///投资者代码
-	strcpy(req.InvestorID, pOrder->InvestorID);
+	strcpy(g_order_action_t.InvestorID, order_record.InvestorID);
 	///报单操作引用
 	//	TThostFtdcOrderActionRefType	OrderActionRef;
 	///报单引用
-	strcpy(req.OrderRef, pOrder->OrderRef);
+	strcpy(g_order_action_t.OrderRef, order_record.OrderRef);
 	///请求编号
-	req.RequestID = m_request_id;
+	g_order_action_t.RequestID = m_request_id;
 	///前置编号
-	req.FrontID = m_trader_info.FrontID;
+	g_order_action_t.FrontID = m_trader_info.FrontID;
 	///会话编号
-	req.SessionID = m_trader_info.SessionID;
+	g_order_action_t.SessionID = m_trader_info.SessionID;
 	///交易所代码
 	//	TThostFtdcExchangeIDType	ExchangeID;
 	///报单编号
 	//	TThostFtdcOrderSysIDType	OrderSysID;
 	///操作标志
-	req.ActionFlag = THOST_FTDC_AF_Delete;
+	g_order_action_t.ActionFlag = THOST_FTDC_AF_Delete;
 	///价格
 	//	TThostFtdcPriceType	LimitPrice;
 	///数量变化
@@ -336,23 +406,28 @@ void Trader_Handler::ReqOrderAction(CThostFtdcInputOrderField *pOrder)
 	///用户代码
 	//	TThostFtdcUserIDType	UserID;
 	///合约代码
-	strcpy(req.InstrumentID, pOrder->InstrumentID);
+	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
 
-	int iResult = m_trader_api->ReqOrderAction(&req, ++m_request_id);
-	cerr << "--->>> Order action: " << iResult << ((iResult == 0) ? ", success" : ", fail") << endl;
-	ORDER_ACTION_SENT = true;
+	int ret = m_trader_api->ReqOrderAction(&g_order_action_t, ++m_request_id);
+	PRINT_DEBUG("Cancel order %s", ret == 0 ? ", success" : ", fail");
+}
+
+void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	cout << "--->>> " << "OnRspOrderInsert" << endl;
+	IsErrorRspInfo(pRspInfo);
 }
 
 void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	cerr << "--->>> " << "OnRspOrderAction" << endl;
-	IsErrorRspInfo(pRspInfo, bIsLast);
+	cout << "--->>> " << "OnRspOrderAction" << endl;
+	IsErrorRspInfo(pRspInfo);
 }
 
 ///报单通知
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
-	cerr << "--->>> " << "OnRtnOrder" << endl;
+	cout << "--->>> " << "OnRtnOrder" << endl;
 	if (IsMyOrder(pOrder))
 	{
 		if (pOrder) {
@@ -383,6 +458,7 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
+		on_response(pTrade);
 		printf("[OnRtnTrade] Inv_ID:%s ,Ref: %d, symbol:%s ,exhg_ID:%s,LocalID: %d,O_Sys_ID:%d,Dir:%c,open_close:%c, price:%f,deal_vol:%d, TradeTime:%s, TradeID:%s,Broker_Seq:%d \n",
 			pTrade->InvestorID,
 			atoi(pTrade->OrderRef),
@@ -402,26 +478,26 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
 {
-	cerr << "--->>> " << "OnFrontDisconnected" << endl;
-	cerr << "--->>> Reason = " << nReason << endl;
+	cout << "--->>> " << "OnFrontDisconnected" << endl;
+	cout << "--->>> Reason = " << nReason << endl;
 }
 
 void Trader_Handler::OnHeartBeatWarning(int nTimeLapse)
 {
-	cerr << "--->>> " << "OnHeartBeatWarning" << endl;
-	cerr << "--->>> nTimerLapse = " << nTimeLapse << endl;
+	cout << "--->>> " << "OnHeartBeatWarning" << endl;
+	cout << "--->>> nTimerLapse = " << nTimeLapse << endl;
 }
 
 void Trader_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	IsErrorRspInfo(pRspInfo, bIsLast);
+	IsErrorRspInfo(pRspInfo);
 }
 
 bool Trader_Handler::IsMyOrder(CThostFtdcOrderField *pOrder)
 {
 	return ((pOrder->FrontID == m_trader_info.FrontID) &&
 		(pOrder->SessionID == m_trader_info.SessionID) &&
-		(strcmp(pOrder->OrderRef, m_trader_info.MaxOrderRef) == 0));
+		atoi(pOrder->OrderRef) == m_trader_info.MaxOrderRef);
 }
 
 bool Trader_Handler::IsTradingOrder(CThostFtdcOrderField *pOrder)

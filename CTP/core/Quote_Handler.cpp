@@ -9,6 +9,7 @@
 #include "utils/utils.h"
 #include "utils/log.h"
 #include "utils/MyHash.h"
+#include "strategy.h"
 
 #define MAX_QUOTE_SIZE 100000
 
@@ -48,7 +49,7 @@ void Quote_Handler::OnFrontConnected()
 void Quote_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo,
                        int nRequestID, bool bIsLast)
 {
-	IsErrorRspInfo(pRspInfo, bIsLast);
+	IsErrorRspInfo(pRspInfo);
 }
 
 void Quote_Handler::OnHeartBeatWarning(int nTimeLapse)
@@ -60,7 +61,7 @@ void Quote_Handler::OnRspUserLogin(
     CThostFtdcRspUserLoginField *pRspUserLogin,
     CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-    if (!IsErrorRspInfo(pRspInfo, bIsLast)) {
+    if (!IsErrorRspInfo(pRspInfo)) {
 		PRINT_SUCCESS("Login quote front successful!");
 		PRINT_SUCCESS("TradingDay: %s", pRspUserLogin->TradingDay);
 	
@@ -129,9 +130,7 @@ void Quote_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
      //std::cout << pDepthMarketData->AskVolume5<<", ";
 }
 
-order_t default_order = { 0 };
 
-static int i = 0;
 
 void Quote_Handler::OnRtnDepthMarketData(
     CThostFtdcDepthMarketDataField *pDepthMarketData)
@@ -147,14 +146,7 @@ void Quote_Handler::OnRtnDepthMarketData(
     //print(pDepthMarketData);
     PRINT_INFO("%s quote size: %d\n", symbol, Quotes[symbol]->size());
 
-	strlcpy(default_order.symbol, symbol, SYMBOL_LEN);
-	default_order.direction = ORDER_BUY;
-	default_order.open_close = ORDER_OPEN;
-	default_order.price = l_quote.AskPrice1;
-	default_order.volume = 1;
-	
-	if(++i % 20 == 0)
-		m_trader_handler->send_single_order(&default_order);
+	on_book(&l_quote);
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)

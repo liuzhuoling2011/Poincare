@@ -3,6 +3,7 @@
 #include "core/Trader_Handler.h"
 #include "utils/utils.h"
 
+extern Trader_Handler *s_trader_handler;
 
 int main(int argc, char **argv)
 {
@@ -16,6 +17,8 @@ int main(int argc, char **argv)
 	// 必须在Init函数之后调用
 	TraderApi->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
 	TraderApi->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
+
+	s_trader_handler = trader_handler;
 
 	CThostFtdcMdApi *MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
 	Quote_Handler quote_handler(MdUserApi, trader_handler, &trader_config);

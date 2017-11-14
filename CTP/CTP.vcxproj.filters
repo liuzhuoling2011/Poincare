@@ -48,6 +48,9 @@
     <ClCompile Include="core\Quote_Handler.cpp">
       <Filter>资源文件\core</Filter>
     </ClCompile>
+    <ClCompile Include="strategy.cpp">
+      <Filter>资源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\ThostFtdcMdApi.h">
@@ -94,6 +97,9 @@
     </ClInclude>
     <ClInclude Include="core\Quote_Handler.h">
       <Filter>头文件\core</Filter>
+    </ClInclude>
+    <ClInclude Include="strategy.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

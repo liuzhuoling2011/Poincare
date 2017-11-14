@@ -2,11 +2,13 @@
 #include "core/ThostFtdcTraderApi.h"
 #include "core/CTP_define.h"
 #include "core/base_define.h"
+#include "utils/MyArray.h"
 
 class Trader_Handler : public CThostFtdcTraderSpi
 {
 public:
 	Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config);
+	~Trader_Handler();
 
 	//当客户端与交易后台建立起通信连接时（还未登录前），该方法被调用。
 	virtual void OnFrontConnected();
@@ -25,6 +27,7 @@ public:
 
 	//请求查询投资者持仓响应
 	virtual void OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	virtual void OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 	//报单录入请求响应
 	virtual void OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
@@ -61,11 +64,9 @@ private:
 	//请求查询合约
 	void ReqInstrument(char* symbol);
 	//请求查询投资者持仓
-	void ReqInvestorPosition();
+	void ReqQryInvestorPositionDetail();
+	void ReqQryInvestorPosition();
 	
-	//报单操作请求
-	void ReqOrderAction(CThostFtdcInputOrderField *pOrder);
-
 	// 是否我的报单回报
 	bool IsMyOrder(CThostFtdcOrderField *pOrder);
 	// 是否正在交易的报单
@@ -78,6 +79,10 @@ private:
 
 	int m_request_id = 0;
 	bool m_is_ready = false;
+
+	MyArray<CThostFtdcInvestorPositionDetailField> m_contracts_long;
+	MyArray<CThostFtdcInvestorPositionDetailField> m_contracts_short;
+	MyArray<CThostFtdcInputOrderField> *m_orders;
 
 	CThostFtdcInputOrderField m_cancel;
 	CThostFtdcQryInstrumentField m_req_contract;
