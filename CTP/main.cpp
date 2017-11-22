@@ -20,14 +20,14 @@ int main(int argc, char **argv)
 
 	s_trader_handler = trader_handler;
 
-	CThostFtdcMdApi *MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
+	/*CThostFtdcMdApi *MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
 	Quote_Handler quote_handler(MdUserApi, trader_handler, &trader_config);
-	MdUserApi->Init();
+	MdUserApi->Init();*/
 
 	TraderApi->Join();
 	TraderApi->Release();
-	MdUserApi->Join();
-	MdUserApi->Release();
+	/*MdUserApi->Join();
+	MdUserApi->Release();*/
 
 	free_config(trader_config);
 	return 0;

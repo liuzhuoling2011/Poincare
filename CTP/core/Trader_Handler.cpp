@@ -2,6 +2,7 @@
 #include <string.h>
 #include "utils/utils.h"
 #include "utils/log.h"
+#include "strategy_interface.h"
 #include "strategy.h"
 using namespace std;
 
@@ -15,6 +16,23 @@ using namespace std;
 
 static CThostFtdcInputOrderField g_order_t = { 0 };
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
+static st_config_t g_config_t = { 0 };
+
+int process_strategy_order(int type, int length, void *data){
+	PRINT_INFO("lalal");
+	return 0;
+}
+
+int process_strategy_info(int type, int length, void *data) {
+	PRINT_INFO("lalal");
+	return 0;
+}
+
+int process_strategy_resp(int type, int length, void *data) {
+	PRINT_INFO("lalal");
+	return 0;
+}
+
 
 // 流控判断
 bool IsFlowControl(int iResult)
@@ -29,6 +47,10 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_trader_api->RegisterSpi(this);			// 注册事件类
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
 	m_orders = new MyArray<CThostFtdcInputOrderField>(2000);
+
+	g_config_t.proc_order_hdl = process_strategy_order;
+	g_config_t.send_info_hdl = process_strategy_info;
+	g_config_t.pass_rsp_hdl = process_strategy_resp;
 }
 
 Trader_Handler::~Trader_Handler()
@@ -54,6 +76,19 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	//sprintf(info.MaxOrderRef, "%d", iNextOrderRef);
 	strlcpy(info.TradingDay, pRspUserLogin->TradingDay, TRADING_DAY_LEN);
 	strlcpy(info.LoginTime, pRspUserLogin->LoginTime, TRADING_DAY_LEN);
+
+	g_config_t.trading_date = atoi(info.TradingDay);
+	int hour = 0;
+	for(int i = 0; i < 6; i++) {
+		if(info.LoginTime[i] != ':') {
+			hour = 10 * hour + info.LoginTime[i];
+		}
+		break;
+	}
+	if (hour > 8 && hour < 19)
+		g_config_t.day_night = DAY;
+	else
+		g_config_t.day_night = NIGHT;
 }
 
 void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
@@ -62,18 +97,12 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	if (pRspInfo != NULL && pRspInfo->ErrorID == 0) {
 		m_is_ready = true;
 		update_trader_info(m_trader_info, pRspUserLogin);
-		PRINT_SUCCESS("TradingDay: %s LoginTime: %s", m_trader_info.TradingDay, m_trader_info.LoginTime);
+		PRINT_SUCCESS("TradingDay: %d DayNight: %d", g_config_t.trading_date, g_config_t.day_night);
 
 		//投资者结算结果确认
 		ReqSettlementInfo();
-		
-		//请求查询资金账户
-		ReqTradingAccount();
 
-		//请求查询合约
-		/*for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
-			ReqInstrument(m_trader_config->INSTRUMENTS[i]);
-		}*/
+		
 
 		//请求下单
 		//ReqOrderInsert();
@@ -87,19 +116,65 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 void Trader_Handler::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	PRINT_SUCCESS("Comform settlement!");
+	//请求查询资金账户
+	ReqTradingAccount();
+}
+
+void Trader_Handler::OnRspQryInstrumentMarginRate(CThostFtdcInstrumentMarginRateField * pInstrumentMarginRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (pInstrumentMarginRate == NULL) return;
+	//todo 填写合约保证金率相关信息
+	PRINT_INFO("%s", pInstrumentMarginRate->InstrumentID);
+
+	
+}
+
+void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField * pInstrumentCommissionRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (pInstrumentCommissionRate == NULL) return;
+	//todo 填写手续费率相关信息
+	PRINT_INFO("%s", pInstrumentCommissionRate->InstrumentID);
+	//请求查询合约保证金率
+	//ReqQryInstrumentMarginRate(pInstrumentCommissionRate->InstrumentID);
+	//查询最大报单数量请求
+	ReqQueryMaxOrderVolume(pInstrumentCommissionRate->InstrumentID);
+}
+
+void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField * pQueryMaxOrderVolume, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (pQueryMaxOrderVolume == NULL) return;
+	//todo 填写最大开仓量
+	PRINT_INFO("%s", pQueryMaxOrderVolume->InstrumentID);
+
+	//请求查询投资者持仓
+	ReqQryInvestorPositionDetail();
 }
 
 void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
+	if (pInstrument == NULL) return;
 	PRINT_DEBUG("%s %s %s %s %s %f", pInstrument->InstrumentID, pInstrument->ExchangeID, pInstrument->ProductID, pInstrument->CreateDate, pInstrument->ExpireDate, pInstrument->PriceTick);
+	//todo 补全合约信息，先考虑一个合约
+	strlcpy(g_config_t.contracts[0].symbol, pInstrument->InstrumentID, SYMBOL_LEN);
+
+	if(bIsLast == true) {
+		//请求查询合约手续费率
+		ReqQryInstrumentCommissionRate(pInstrument->InstrumentID);
+	}
 }
 
 
 void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
+	if (pTradingAccount == NULL) return;
 	PRINT_DEBUG("%s %f %f %f %f %f %f %f", pTradingAccount->AccountID, pTradingAccount->Interest, pTradingAccount->Deposit, pTradingAccount->Withdraw, pTradingAccount->CurrMargin, pTradingAccount->CloseProfit, pTradingAccount->PositionProfit, pTradingAccount->Available);
-	//请求查询投资者持仓
-	//ReqQryInvestorPositionDetail();
+	//todo 补全账户信息
+	strlcpy(g_config_t.accounts[0].account, pTradingAccount->AccountID, ACCOUNT_LEN);
+
+	//请求查询合约
+	for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+		ReqInstrument(m_trader_config->INSTRUMENTS[i]);
+	}
 }
 
 void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -199,7 +274,39 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 		}
 
 		if (bIsLast) {
-			ReqQryInvestorPosition();
+			//ReqQryInvestorPosition();
+			//todo 根据日期合并填入contract的yes_pos, today_pos
+			/*
+			 * long remained contract:3 short remained contract:1
+				InvestorID: 106409
+				 InstrumentID: rb1805
+				 ExchangeID: SHFE
+				 Direction: 0
+				 OpenPrice: 3711
+				 Volume: 1
+				 TradingDay: 20171123
+				InvestorID: 106409
+				 InstrumentID: rb1805
+				 ExchangeID: SHFE
+				 Direction: 0
+				 OpenPrice: 3692
+				 Volume: 1
+				 TradingDay: 20171123
+				InvestorID: 106409
+				 InstrumentID: rb1805
+				 ExchangeID: SHFE
+				 Direction: 0
+				 OpenPrice: 3711
+				 Volume: 1
+				 TradingDay: 20171123
+				InvestorID: 106409
+				 InstrumentID: rb1805
+				 ExchangeID: SHFE
+				 Direction: 1
+				 OpenPrice: 3793
+				 Volume: 1
+				 TradingDay: 20171123
+			 */
 			cout << "long remained contract:" << m_contracts_long.size() << " short remained contract:" << m_contracts_short.size() << endl;
 			for (int i = 0; i < m_contracts_long.size(); i++) {
 				cout << "InvestorID: " << m_contracts_long[i].InvestorID << endl
@@ -220,6 +327,8 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					<< " Volume: " << m_contracts_short[i].Volume << endl
 					<< " TradingDay: " << m_contracts_short[i].TradingDay << endl;
 			}
+
+			//todo 在这里我们结束了config的配置，开始初始化策略
 		}
 	}
 }
@@ -264,6 +373,44 @@ void Trader_Handler::ReqInstrument(char* symbol) {
 	}
 }
 
+void Trader_Handler::ReqQryInstrumentMarginRate(char * symbol)
+{
+	CThostFtdcQryInstrumentMarginRateField ReqMarginRate = { 0 };
+	strcpy(ReqMarginRate.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(ReqMarginRate.InvestorID, m_trader_config->TUSER_ID);
+	strcpy(ReqMarginRate.InstrumentID, symbol);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInstrumentMarginRate(&ReqMarginRate, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query margin rate %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	}
+}
+
+void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
+{
+	CThostFtdcQryInstrumentCommissionRateField ReqCommissionRate = { 0 };
+	strcpy(ReqCommissionRate.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(ReqCommissionRate.InvestorID, m_trader_config->TUSER_ID);
+	strcpy(ReqCommissionRate.InstrumentID, symbol);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query commission rate %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	}
+}
+
 void Trader_Handler::ReqQryInvestorPositionDetail()
 {
 	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
@@ -276,6 +423,25 @@ void Trader_Handler::ReqQryInvestorPositionDetail()
 			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
 			break;
 		} else {
+			sleep(1);
+		}
+	}
+}
+
+void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
+{
+	CThostFtdcQueryMaxOrderVolumeField ReqMaxOrdSize = { 0 };
+	strcpy(ReqMaxOrdSize.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(ReqMaxOrdSize.InvestorID, m_trader_config->TUSER_ID);
+	strcpy(ReqMaxOrdSize.InstrumentID, symbol);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query max order size %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
 			sleep(1);
 		}
 	}

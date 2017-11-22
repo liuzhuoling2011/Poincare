@@ -131,7 +131,9 @@
     <ClInclude Include="core\ThostFtdcUserApiDataType.h" />
     <ClInclude Include="core\ThostFtdcUserApiStruct.h" />
     <ClInclude Include="core\Trader_Handler.h" />
+    <ClInclude Include="quote_format_define.h" />
     <ClInclude Include="strategy.h" />
+    <ClInclude Include="strategy_interface.h" />
     <ClInclude Include="utils\json11.hpp" />
     <ClInclude Include="utils\list.h" />
     <ClInclude Include="utils\log.h" />

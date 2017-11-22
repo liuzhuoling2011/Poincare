@@ -19,6 +19,21 @@ public:
 	//投资者结算结果确认响应
 	virtual void OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
+	//请求查询合约保证金率响应
+	virtual void OnRspQryInstrumentMarginRate(
+		CThostFtdcInstrumentMarginRateField *pInstrumentMarginRate,
+		CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+
+	//请求查询合约手续费率响应
+	virtual void OnRspQryInstrumentCommissionRate(
+		CThostFtdcInstrumentCommissionRateField *pInstrumentCommissionRate,
+		CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+
+	//查询最大报单数量响应
+	virtual void OnRspQueryMaxOrderVolume(
+		CThostFtdcQueryMaxOrderVolumeField *pQueryMaxOrderVolume,
+		CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+
 	//请求查询合约响应
 	virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
@@ -56,6 +71,8 @@ public:
 	//报单撤销请求
 	void cancel_single_order(order_t *order);
 
+	
+
 private:
 	//投资者结算结果确认
 	void ReqSettlementInfo();
@@ -63,9 +80,15 @@ private:
 	void ReqTradingAccount();
 	//请求查询合约
 	void ReqInstrument(char* symbol);
+	//请求查询合约保证金率
+	void ReqQryInstrumentMarginRate(char* symbol);
+	//请求查询合约手续费率
+	void ReqQryInstrumentCommissionRate(char* symbol);
 	//请求查询投资者持仓
 	void ReqQryInvestorPositionDetail();
 	void ReqQryInvestorPosition();
+	//查询最大报单数量请求
+	void ReqQueryMaxOrderVolume(char* symbol);
 	
 	// 是否我的报单回报
 	bool IsMyOrder(CThostFtdcOrderField *pOrder);

@@ -101,5 +101,11 @@
     <ClInclude Include="strategy.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="quote_format_define.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="strategy_interface.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
