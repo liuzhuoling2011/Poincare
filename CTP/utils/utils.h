@@ -4,6 +4,7 @@
 #include <string.h>
 #include "core/base_define.h"
 #include "core/Trader_Handler.h"
+#include "quote_format_define.h"
 
 #define MAX(a,b)  ((a)>(b)?(a):(b))
 #define MIN(a,b)  ((a)>(b)?(b):(a))
@@ -99,5 +100,8 @@ int code_convert(char *inbuf, size_t inlen, char *outbuf, size_t outlen);
 bool read_json_config(TraderConfig& trader_config);
 
 void free_config(TraderConfig& trader_config);
+
+void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_Book * internal_book);
+
 
 #endif
