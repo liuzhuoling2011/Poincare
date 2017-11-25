@@ -4,6 +4,10 @@
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "strategy.h"
+#include "Trader_Handler.h"
+#include "../strategy_interface.h"
+#include "ThostFtdcUserApiStruct.h"
+
 using namespace std;
 
 #ifndef _WIN32
@@ -332,6 +336,18 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 				 Volume: 1
 				 TradingDay: 20171123
 			 */
+			int long_size = 0;
+			double long_price=0;
+
+			int yes_long_size = 0;
+			double yes_long_price = 0;
+
+			double short_price= 0;
+			int short_size=0;
+
+			int yes_short_size=0;
+			double yes_short_price = 0;
+
 			cout << "long remained contract:" << m_contracts_long.size() << " short remained contract:" << m_contracts_short.size() << endl;
 			for (int i = 0; i < m_contracts_long.size(); i++) {
 				cout << "InvestorID: " << m_contracts_long[i].InvestorID << endl
@@ -341,7 +357,25 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					<< " OpenPrice: " << m_contracts_long[i].OpenPrice << endl
 					<< " Volume: " << m_contracts_long[i].Volume << endl
 					<< " TradingDay: " << m_contracts_long[i].TradingDay << endl;
+                    if (m_contracts_long[i].TradingDay == g_config_t.trading_date){
+						long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
+                    	long_size += m_contracts_long[i].Volume;
+                	}
+					else{
+						yes_long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
+						yes_long_size += m_contracts_long[i].Volume;
+					}
+
+
+
 			}
+
+			g_config_t.contracts[0].today_pos.long_price = long_price/long_size;
+			g_config_t.contracts[0].today_pos.long_volume = long_size;
+
+			g_config_t.contracts[0].yesterday_pos.long_price = yes_long_price/yes_long_size;
+			g_config_t.contracts[0].yesterday_pos.long_volume = yes_long_size;
+
 
 			for (int i = 0; i < m_contracts_short.size(); i++) {
 				cout << "InvestorID: " << m_contracts_short[i].InvestorID << endl
@@ -351,7 +385,22 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					<< " OpenPrice: " << m_contracts_short[i].OpenPrice << endl
 					<< " Volume: " << m_contracts_short[i].Volume << endl
 					<< " TradingDay: " << m_contracts_short[i].TradingDay << endl;
+
+
+				if (m_contracts_short[i].TradingDay == g_config_t.trading_date){
+					short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
+					short_size += m_contracts_short[i].Volume;
+				}
+				else{
+					yes_short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
+					yes_short_size += m_contracts_short[i].Volume;
+				}
 			}
+
+			g_config_t.contracts[0].today_pos.short_price = short_price/short_size;
+			g_config_t.contracts[0].today_pos.short_volume = short_size;
+			g_config_t.contracts[0].yesterday_pos.short_price = yes_short_price/yes_short_size;
+			g_config_t.contracts[0].yesterday_pos.short_volume = yes_short_size;
 
 			//todo 在这里我们结束了config的配置，开始初始化策略
 		}
