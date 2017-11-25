@@ -6,7 +6,6 @@
 #include "strategy.h"
 using namespace std;
 
-#include "Trader_Handler.h"
 #ifndef _WIN32
 #include <unistd.h>
 #else
@@ -34,7 +33,7 @@ int process_strategy_resp(int type, int length, void *data) {
 }
 
 
-// Á÷¿ØÅĞ¶Ï
+// æµæ§åˆ¤æ–­
 bool IsFlowControl(int iResult)
 {
 	return ((iResult == -2) || (iResult == -3));
@@ -44,7 +43,7 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 {
 	m_trader_config = trader_config;
 	m_trader_api = TraderApi;
-	m_trader_api->RegisterSpi(this);			// ×¢²áÊÂ¼şÀà
+	m_trader_api->RegisterSpi(this);			// æ³¨å†Œäº‹ä»¶ç±»
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
 	m_orders = new MyArray<CThostFtdcInputOrderField>(2000);
 
@@ -68,7 +67,7 @@ void Trader_Handler::OnFrontConnected()
 }
 
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
-	// ±£´æ»á»°²ÎÊı
+	// ä¿å­˜ä¼šè¯å‚æ•°
 	info.FrontID = pRspUserLogin->FrontID;
 	info.SessionID = pRspUserLogin->SessionID;
 	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
@@ -99,12 +98,12 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 		update_trader_info(m_trader_info, pRspUserLogin);
 		PRINT_SUCCESS("TradingDay: %d DayNight: %d", g_config_t.trading_date, g_config_t.day_night);
 
-		//Í¶×ÊÕß½áËã½á¹ûÈ·ÈÏ
+		//æŠ•èµ„è€…ç»“ç®—ç»“æœç¡®è®¤
 		ReqSettlementInfo();
 
 		
 
-		//ÇëÇóÏÂµ¥
+		//è¯·æ±‚ä¸‹å•
 		//ReqOrderInsert();
 		//ReqOrderAction(&m_cancel);
 	} else {
@@ -116,15 +115,17 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 void Trader_Handler::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	PRINT_SUCCESS("Comform settlement!");
-	//ÇëÇó²éÑ¯×Ê½ğÕË»§
+	//è¯·æ±‚æŸ¥è¯¢èµ„é‡‘è´¦æˆ·
 	ReqTradingAccount();
 }
 
 void Trader_Handler::OnRspQryInstrumentMarginRate(CThostFtdcInstrumentMarginRateField * pInstrumentMarginRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInstrumentMarginRate == NULL) return;
-	//todo ÌîĞ´ºÏÔ¼±£Ö¤½ğÂÊÏà¹ØĞÅÏ¢
+	//todo å¡«å†™åˆçº¦ä¿è¯é‡‘ç‡ç›¸å…³ä¿¡æ¯
 	PRINT_INFO("%s", pInstrumentMarginRate->InstrumentID);
+    //g_config_t.contracts[0]
+	//g_config_t.contracts[0].fee.broker_fee = ;
 
 	
 }
@@ -132,21 +133,29 @@ void Trader_Handler::OnRspQryInstrumentMarginRate(CThostFtdcInstrumentMarginRate
 void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField * pInstrumentCommissionRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInstrumentCommissionRate == NULL) return;
-	//todo ÌîĞ´ÊÖĞø·ÑÂÊÏà¹ØĞÅÏ¢
+	//todo å¡«å†™æ‰‹ç»­è´¹ç‡ç›¸å…³ä¿¡æ¯
+	g_config_t.contracts[0].fee.broker_fee = 1;
+	g_config_t.contracts[0].fee.exchange_fee = pInstrumentCommissionRate->OpenRatioByMoney;
+//	g_config_t.contracts[0].fee.acc_transfer_fee= ;
+//	g_config_t.contracts[0].fee.fee_by_lot= ;
+//	g_config_t.contracts[0].fee.yes_exchange_fee=;
+//	g_config_t.contracts[0].fee.stamp_tax = ;
+
 	PRINT_INFO("%s", pInstrumentCommissionRate->InstrumentID);
-	//ÇëÇó²éÑ¯ºÏÔ¼±£Ö¤½ğÂÊ
+	//è¯·æ±‚æŸ¥è¯¢åˆçº¦ä¿è¯é‡‘ç‡
 	//ReqQryInstrumentMarginRate(pInstrumentCommissionRate->InstrumentID);
-	//²éÑ¯×î´ó±¨µ¥ÊıÁ¿ÇëÇó
+	//æŸ¥è¯¢æœ€å¤§æŠ¥å•æ•°é‡è¯·æ±‚
 	ReqQueryMaxOrderVolume(pInstrumentCommissionRate->InstrumentID);
 }
 
 void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField * pQueryMaxOrderVolume, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pQueryMaxOrderVolume == NULL) return;
-	//todo ÌîĞ´×î´ó¿ª²ÖÁ¿
+	//todo å¡«å†™æœ€å¤§å¼€ä»“é‡
 	PRINT_INFO("%s", pQueryMaxOrderVolume->InstrumentID);
+	g_config_t.contracts[0].max_accum_open_vol = pQueryMaxOrderVolume->MaxVolume;
 
-	//ÇëÇó²éÑ¯Í¶×ÊÕß³Ö²Ö
+	//è¯·æ±‚æŸ¥è¯¢æŠ•èµ„è€…æŒä»“
 	ReqQryInvestorPositionDetail();
 }
 
@@ -154,11 +163,23 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 {
 	if (pInstrument == NULL) return;
 	PRINT_DEBUG("%s %s %s %s %s %f", pInstrument->InstrumentID, pInstrument->ExchangeID, pInstrument->ProductID, pInstrument->CreateDate, pInstrument->ExpireDate, pInstrument->PriceTick);
-	//todo ²¹È«ºÏÔ¼ĞÅÏ¢£¬ÏÈ¿¼ÂÇÒ»¸öºÏÔ¼
+	//todo è¡¥å…¨åˆçº¦ä¿¡æ¯ï¼Œå…ˆè€ƒè™‘ä¸€ä¸ªåˆçº¦
+
 	strlcpy(g_config_t.contracts[0].symbol, pInstrument->InstrumentID, SYMBOL_LEN);
+	//correct
+	g_config_t.contracts[0].exch=pInstrument->ExchangeID[0];
+	//correct
+	g_config_t.contracts[0].expiration_date=(int)pInstrument->EndDelivDate;
+	g_config_t.contracts[0].tick_size=pInstrument->PriceTick;
+//  g_config_t.contracts[0].multiple
+//	g_config_t.contracts[0].account
+//	g_config_t.contracts[0].max_cancel_limit
+//	g_config_t.contracts[0].reserved_data
+//	g_config_t.contracts[0].today_pos
+//	g_config_t.contracts[0].yesterday_pos
 
 	if(bIsLast == true) {
-		//ÇëÇó²éÑ¯ºÏÔ¼ÊÖĞø·ÑÂÊ
+		//è¯·æ±‚æŸ¥è¯¢åˆçº¦æ‰‹ç»­è´¹ç‡
 		ReqQryInstrumentCommissionRate(pInstrument->InstrumentID);
 	}
 }
@@ -168,15 +189,22 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 {
 	if (pTradingAccount == NULL) return;
 	PRINT_DEBUG("%s %f %f %f %f %f %f %f", pTradingAccount->AccountID, pTradingAccount->Interest, pTradingAccount->Deposit, pTradingAccount->Withdraw, pTradingAccount->CurrMargin, pTradingAccount->CloseProfit, pTradingAccount->PositionProfit, pTradingAccount->Available);
+	//todo è¡¥å…¨è´¦æˆ·ä¿¡æ¯
+	strlcpy(g_config_t.accounts[0].account, pTradingAccount->AccountID, ACCOUNT_LEN);
+	g_config_t.accounts[0].cash_asset = pTradingAccount->CashIn;
+	g_config_t.accounts[0].cash_available = pTradingAccount->Available;
+	//g_config_t.accounts[0].currency = pTradingAccount->CurrencyID;
+	g_config_t.accounts[0].exch_rate = pTradingAccount->PreBalance;
 
-	//ÇëÇó²éÑ¯Í¶×ÊÕß³Ö²Ö
-	ReqInstrument("rb1805");
-	//ReqQryInvestorPositionDetail();
+	//è¯·æ±‚æŸ¥è¯¢åˆçº¦
+	for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+		ReqInstrument(m_trader_config->INSTRUMENTS[i]);
+	}
 }
 
 void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	PRINT_INFO("is_last: %d", bIsLast); //todo ¹ıÂËÖØ¸´µÄ
+	PRINT_INFO("is_last: %d", bIsLast); //todo è¿‡æ»¤é‡å¤çš„
 	if (pInvestorPosition) {
 		printf("\nInstrumentID: %s, "
 			"PosiDirection: %c, "
@@ -242,7 +270,7 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 			pInvestorPosition->StrikeFrozenAmount);
 	}
 	//	PRINT_DEBUG("%s %d %d %d %f", pInvestorPosition->InstrumentID, pInvestorPosition->Position, pInvestorPosition->TodayPosition, pInvestorPosition->YdPosition, pInvestorPosition->UseMargin);
-		///±¨µ¥Â¼ÈëÇëÇó
+		///æŠ¥å•å½•å…¥è¯·æ±‚
 		//ReqOrderInsert();
 	//}
 }
@@ -250,7 +278,7 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInvestorPositionDetail) {
-		//¶ÔÓÚËùÓĞºÏÔ¼£¬²»±£´æÒÑÆ½²ÖµÄ£¬Ö»±£´æÎ´Æ½²ÖµÄ
+		//å¯¹äºæ‰€æœ‰åˆçº¦ï¼Œä¸ä¿å­˜å·²å¹³ä»“çš„ï¼Œåªä¿å­˜æœªå¹³ä»“çš„
 		if (pInvestorPositionDetail->Volume > 0) {
 			if (pInvestorPositionDetail->Direction == '0')
 				m_contracts_long.push_back(pInvestorPositionDetail);
@@ -259,7 +287,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 
 			bool find_instId = false;
 			for(int i = 0; i< m_trader_config->INSTRUMENT_COUNT; i++) {
-				if (strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//ºÏÔ¼ÒÑ´æÔÚ£¬ÒÑ¶©ÔÄ¹ıĞĞÇé
+				if (strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//åˆçº¦å·²å­˜åœ¨ï¼Œå·²è®¢é˜…è¿‡è¡Œæƒ…
 					find_instId = true;
 					break;
 				}
@@ -272,7 +300,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 
 		if (bIsLast) {
 			//ReqQryInvestorPosition();
-			//todo ¸ù¾İÈÕÆÚºÏ²¢ÌîÈëcontractµÄyes_pos, today_pos
+			//todo æ ¹æ®æ—¥æœŸåˆå¹¶å¡«å…¥contractçš„yes_pos, today_pos
 			/*
 			 * long remained contract:3 short remained contract:1
 				InvestorID: 106409
@@ -325,7 +353,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					<< " TradingDay: " << m_contracts_short[i].TradingDay << endl;
 			}
 
-			//todo ÔÚÕâÀïÎÒÃÇ½áÊøÁËconfigµÄÅäÖÃ£¬¿ªÊ¼³õÊ¼»¯²ßÂÔ
+			//todo åœ¨è¿™é‡Œæˆ‘ä»¬ç»“æŸäº†configçš„é…ç½®ï¼Œå¼€å§‹åˆå§‹åŒ–ç­–ç•¥
 		}
 	}
 }
@@ -464,45 +492,45 @@ void Trader_Handler::ReqQryInvestorPosition()
 
 void Trader_Handler::send_single_order(order_t *order)
 {
-	///¾­¼Í¹«Ë¾´úÂë
+	///ç»çºªå…¬å¸ä»£ç 
 	strcpy(g_order_t.BrokerID, m_trader_config->TBROKER_ID);
-	///Í¶×ÊÕß´úÂë
+	///æŠ•èµ„è€…ä»£ç 
 	strcpy(g_order_t.InvestorID, m_trader_config->TUSER_ID);
-	///±¨µ¥ÒıÓÃ
+	///æŠ¥å•å¼•ç”¨
 	sprintf(g_order_t.OrderRef, "%d", m_trader_info.MaxOrderRef);
 	//strcpy(g_order_t.OrderRef, m_trader_info.MaxOrderRef);
-	///ÓÃ»§´úÂë
+	///ç”¨æˆ·ä»£ç 
 	strcpy(g_order_t.UserID, m_trader_config->TUSER_ID);
 
-	///ºÏÔ¼´úÂë
+	///åˆçº¦ä»£ç 
 	strcpy(g_order_t.InstrumentID, order->symbol);
-	///±¨µ¥¼Û¸ñÌõ¼ş: ÏŞ¼Û
+	///æŠ¥å•ä»·æ ¼æ¡ä»¶: é™ä»·
 	if(order->order_type == ORDER_TYPE_LIMIT)
 		g_order_t.OrderPriceType = THOST_FTDC_OPT_LimitPrice;
 	else
-		g_order_t.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //ÊĞ¼Ûµ¥
-	///ÂòÂô·½Ïò: 
+		g_order_t.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //å¸‚ä»·å•
+	///ä¹°å–æ–¹å‘: 
 	g_order_t.Direction = order->direction == ORDER_BUY ? '0':'1';
-	///×éºÏ¿ªÆ½±êÖ¾: ¿ª²Ö
+	///ç»„åˆå¼€å¹³æ ‡å¿—: å¼€ä»“
 	if(order->open_close == ORDER_OPEN)
 		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
 	else if(order->open_close == ORDER_CLOSE)
-		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_CloseToday;
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
 	else if (order->open_close == ORDER_CLOSE_YES)
 		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_CloseYesterday;
 
-	///×éºÏÍ¶»úÌ×±£±êÖ¾
+	///ç»„åˆæŠ•æœºå¥—ä¿æ ‡å¿—
 	if(order->investor_type == ORDER_SPECULATOR)
 		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
 	else if (order->investor_type == ORDER_HEDGER)
 		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Hedge;
 	else if (order->investor_type == ORDER_ARBITRAGEURS)
 		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Arbitrage;
-	///¼Û¸ñ
+	///ä»·æ ¼
 	g_order_t.LimitPrice = order->price;
-	///ÊıÁ¿: 1
+	///æ•°é‡: 1
 	g_order_t.VolumeTotalOriginal = order->volume;
-	///ÓĞĞ§ÆÚÀàĞÍ: µ±ÈÕÓĞĞ§
+	///æœ‰æ•ˆæœŸç±»å‹: å½“æ—¥æœ‰æ•ˆ
 	if(order->time_in_force == ORDER_TIF_DAY || order->time_in_force == ORDER_TIF_GTD)
 		g_order_t.TimeCondition = THOST_FTDC_TC_GFD;
 	else if (order->time_in_force == ORDER_TIF_IOC || order->time_in_force == ORDER_TIF_FOK
@@ -510,25 +538,25 @@ void Trader_Handler::send_single_order(order_t *order)
 		g_order_t.TimeCondition = THOST_FTDC_TC_IOC;
 	else if (order->time_in_force == ORDER_TIF_GTC)
 		g_order_t.TimeCondition = THOST_FTDC_TC_GTC;
-	///GTDÈÕÆÚ
+	///GTDæ—¥æœŸ
 	//	TThostFtdcDateType	GTDDate;
-	///³É½»Á¿ÀàĞÍ: ÈÎºÎÊıÁ¿
+	///æˆäº¤é‡ç±»å‹: ä»»ä½•æ•°é‡
 	g_order_t.VolumeCondition = THOST_FTDC_VC_AV;
-	///×îĞ¡³É½»Á¿: 1
+	///æœ€å°æˆäº¤é‡: 1
 	g_order_t.MinVolume = 1;
-	///´¥·¢Ìõ¼ş: Á¢¼´
+	///è§¦å‘æ¡ä»¶: ç«‹å³
 	g_order_t.ContingentCondition = THOST_FTDC_CC_Immediately;
-	///Ö¹Ëğ¼Û
+	///æ­¢æŸä»·
 	//	TThostFtdcPriceType	StopPrice;
-	///Ç¿Æ½Ô­Òò: ·ÇÇ¿Æ½
+	///å¼ºå¹³åŸå› : éå¼ºå¹³
 	g_order_t.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
-	///×Ô¶¯¹ÒÆğ±êÖ¾: ·ñ
+	///è‡ªåŠ¨æŒ‚èµ·æ ‡å¿—: å¦
 	g_order_t.IsAutoSuspend = 0;
-	///ÒµÎñµ¥Ôª
+	///ä¸šåŠ¡å•å…ƒ
 	//	TThostFtdcBusinessUnitType	BusinessUnit;
-	///ÇëÇó±àºÅ
+	///è¯·æ±‚ç¼–å·
 	//	TThostFtdcRequestIDType	RequestID;
-	///ÓÃ»§Ç¿ÆÀ±êÖ¾: ·ñ
+	///ç”¨æˆ·å¼ºè¯„æ ‡å¿—: å¦
 	g_order_t.UserForceClose = 0;
 
 	CThostFtdcInputOrderField& order_record = (*m_orders)[m_trader_info.MaxOrderRef];
@@ -542,33 +570,33 @@ void Trader_Handler::send_single_order(order_t *order)
 void Trader_Handler::cancel_single_order(order_t * order)
 {
 	CThostFtdcInputOrderField& order_record = (*m_orders)[order->order_id];
-	///¾­¼Í¹«Ë¾´úÂë
+	///ç»çºªå…¬å¸ä»£ç 
 	strcpy(g_order_action_t.BrokerID, order_record.BrokerID);
-	///Í¶×ÊÕß´úÂë
+	///æŠ•èµ„è€…ä»£ç 
 	strcpy(g_order_action_t.InvestorID, order_record.InvestorID);
-	///±¨µ¥²Ù×÷ÒıÓÃ
+	///æŠ¥å•æ“ä½œå¼•ç”¨
 	//	TThostFtdcOrderActionRefType	OrderActionRef;
-	///±¨µ¥ÒıÓÃ
+	///æŠ¥å•å¼•ç”¨
 	strcpy(g_order_action_t.OrderRef, order_record.OrderRef);
-	///ÇëÇó±àºÅ
+	///è¯·æ±‚ç¼–å·
 	g_order_action_t.RequestID = m_request_id;
-	///Ç°ÖÃ±àºÅ
+	///å‰ç½®ç¼–å·
 	g_order_action_t.FrontID = m_trader_info.FrontID;
-	///»á»°±àºÅ
+	///ä¼šè¯ç¼–å·
 	g_order_action_t.SessionID = m_trader_info.SessionID;
-	///½»Ò×Ëù´úÂë
+	///äº¤æ˜“æ‰€ä»£ç 
 	//	TThostFtdcExchangeIDType	ExchangeID;
-	///±¨µ¥±àºÅ
+	///æŠ¥å•ç¼–å·
 	//	TThostFtdcOrderSysIDType	OrderSysID;
-	///²Ù×÷±êÖ¾
+	///æ“ä½œæ ‡å¿—
 	g_order_action_t.ActionFlag = THOST_FTDC_AF_Delete;
-	///¼Û¸ñ
+	///ä»·æ ¼
 	//	TThostFtdcPriceType	LimitPrice;
-	///ÊıÁ¿±ä»¯
+	///æ•°é‡å˜åŒ–
 	//	TThostFtdcVolumeType	VolumeChange;
-	///ÓÃ»§´úÂë
+	///ç”¨æˆ·ä»£ç 
 	//	TThostFtdcUserIDType	UserID;
-	///ºÏÔ¼´úÂë
+	///åˆçº¦ä»£ç 
 	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
 
 	int ret = m_trader_api->ReqOrderAction(&g_order_action_t, ++m_request_id);
@@ -587,7 +615,7 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 	IsErrorRspInfo(pRspInfo);
 }
 
-///±¨µ¥Í¨Öª
+///æŠ¥å•é€šçŸ¥
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	cout << "--->>> " << "OnRtnOrder" << endl;
@@ -617,7 +645,7 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	*/}
 }
 
-///³É½»Í¨Öª
+///æˆäº¤é€šçŸ¥
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
