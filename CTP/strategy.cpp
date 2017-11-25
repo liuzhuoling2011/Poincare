@@ -14,6 +14,7 @@ void on_book(CThostFtdcDepthMarketDataField * pDepthMarketData)
 	default_order.open_close = ORDER_OPEN;
 	default_order.price = pDepthMarketData->AskPrice1;
 	default_order.volume = 1;
+	default_order.time_in_force = ORDER_TIF_IOC;
 
 	if(++i % 50 == 0 && strcmp(default_order.symbol,"rb1805") == 0)
 		s_trader_handler->send_single_order(&default_order);
@@ -21,5 +22,5 @@ void on_book(CThostFtdcDepthMarketDataField * pDepthMarketData)
 
 void on_response(CThostFtdcTradeField * pTrade)
 {
-	printf("we are here!\n");
+	PRINT_SUCCESS("we are here!");
 }

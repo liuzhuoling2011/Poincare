@@ -168,13 +168,10 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 {
 	if (pTradingAccount == NULL) return;
 	PRINT_DEBUG("%s %f %f %f %f %f %f %f", pTradingAccount->AccountID, pTradingAccount->Interest, pTradingAccount->Deposit, pTradingAccount->Withdraw, pTradingAccount->CurrMargin, pTradingAccount->CloseProfit, pTradingAccount->PositionProfit, pTradingAccount->Available);
-	//todo 补全账户信息
-	strlcpy(g_config_t.accounts[0].account, pTradingAccount->AccountID, ACCOUNT_LEN);
 
-	//请求查询合约
-	for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
-		ReqInstrument(m_trader_config->INSTRUMENTS[i]);
-	}
+	//请求查询投资者持仓
+	ReqInstrument("rb1805");
+	//ReqQryInvestorPositionDetail();
 }
 
 void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -490,7 +487,7 @@ void Trader_Handler::send_single_order(order_t *order)
 	if(order->open_close == ORDER_OPEN)
 		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
 	else if(order->open_close == ORDER_CLOSE)
-		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_CloseToday;
 	else if (order->open_close == ORDER_CLOSE_YES)
 		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_CloseYesterday;
 

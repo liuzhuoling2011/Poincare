@@ -12,7 +12,7 @@
 *          We believe MyArray provides an unparalleled combination of performance and memory usage.
 *
 * @notice  1. Tell MyArray max size you need in constructor to avoid memory reallocated
-*          2. Recommand to use next() to get full performace
+*          2. Recommand to use get_next_free_node() to get full performace
 *          3. We should use insert && erase as little as possible, it will spent much time to move memory.
 *          4. Don't point to item in MyArray, every reallocate may make pointers invalid.
 *
@@ -36,9 +36,9 @@ public:
 	*
 	* @param[in]  count  initial capacity
 	*/
-	MyArray(size_t count = 4) {
+	MyArray(size_t count = 64) {
 		m_elem_size = sizeof(T);
-		m_data = (T*)malloc(count * m_elem_size);
+		m_data = (T*)calloc(count, m_elem_size);
 		m_use_count = 0;
 		m_total_count = count;
 		m_last_pos = m_data;
@@ -48,17 +48,14 @@ public:
 		m_elem_size = other.m_elem_size;
 		m_use_count = other.m_use_count;
 		m_total_count = other.m_total_count;
-		size_t data_len = m_use_count * m_elem_size;
 
 		if (m_data != NULL) {
-			T* new_data = (T*)realloc(m_data, data_len);
-			if (new_data != m_data) {
-				m_data = new_data;
-			}
+			free(m_data);
+			m_data = (T*)calloc(m_total_count, m_elem_size);
+			memcpy(m_data, other.m_data, m_use_count * m_elem_size);
 		}
 
 		m_last_pos = m_data + m_use_count;
-		memcpy(m_data, other.m_data, data_len);
 	}
 
 	T& operator[] (size_t pos) {
@@ -79,14 +76,14 @@ public:
 	* @param[in]  count   new capacity to expan
 	*/
 	void resize(size_t count) {
-		T* new_data = (T*)realloc(m_data, count * m_elem_size);
-
-		if (new_data != m_data) {
-			m_data = new_data;
-		}
+		T* new_data = (T*)calloc(count, m_elem_size);
 		if (m_use_count > count) {
 			m_use_count = count;
 		}
+		memcpy(new_data, m_data, m_use_count * m_elem_size);
+		free(m_data);
+		m_data = new_data;
+
 		m_total_count = count;
 		m_last_pos = m_data + m_use_count;
 	}
@@ -137,7 +134,7 @@ public:
 	/**
 	* @return  point to the next free item, recommand to use!
 	*/
-	T& next() {
+	T& get_next_free_node() {
 		if (m_use_count >= m_total_count) {
 			resize(m_total_count << 1);
 		}
@@ -154,7 +151,7 @@ public:
 	*
 	* @param[in]  item   item to be inserted to the end of this array
 	*/
-	void push_back(const T item) {
+	void push_back(const T& item) {
 		if (m_use_count == m_total_count) {
 			resize(m_total_count << 1);
 		}
