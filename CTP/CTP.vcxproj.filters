@@ -51,20 +51,11 @@
     <ClCompile Include="strategy.cpp">
       <Filter>资源文件</Filter>
     </ClCompile>
+    <ClCompile Include="strategy_interface.cpp">
+      <Filter>资源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="core\ThostFtdcMdApi.h">
-      <Filter>头文件\core</Filter>
-    </ClInclude>
-    <ClInclude Include="core\ThostFtdcTraderApi.h">
-      <Filter>头文件\core</Filter>
-    </ClInclude>
-    <ClInclude Include="core\ThostFtdcUserApiDataType.h">
-      <Filter>头文件\core</Filter>
-    </ClInclude>
-    <ClInclude Include="core\ThostFtdcUserApiStruct.h">
-      <Filter>头文件\core</Filter>
-    </ClInclude>
     <ClInclude Include="utils\list.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
@@ -106,6 +97,18 @@
     </ClInclude>
     <ClInclude Include="strategy_interface.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="core\ThostFtdcMdApi.h">
+      <Filter>头文件\core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\ThostFtdcTraderApi.h">
+      <Filter>头文件\core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\ThostFtdcUserApiDataType.h">
+      <Filter>头文件\core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\ThostFtdcUserApiStruct.h">
+      <Filter>头文件\core</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

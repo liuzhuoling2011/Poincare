@@ -30,10 +30,8 @@ Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_ap
 Quote_Handler::~Quote_Handler()
 {
 	m_md_api->Release();
-	QuoteArray* qarray;
-	Quotes.init_iterator();
-	while (Quotes.next_used_node(&qarray)) {
-		delete qarray;
+	for(auto iter = Quotes.begin(); iter != Quotes.end(); iter++) {
+		delete iter->second;
 	}
 }
 
@@ -138,7 +136,7 @@ void Quote_Handler::OnRtnDepthMarketData(
 	char* symbol = pDepthMarketData->InstrumentID;
 	if (!Quotes.exist(symbol)) return;
 	    
-    CThostFtdcDepthMarketDataField& l_quote = Quotes[symbol]->next();
+    CThostFtdcDepthMarketDataField& l_quote = Quotes[symbol]->get_next_free_node();
     l_quote = *pDepthMarketData;
 
     std::cout << "OnRtnDepthMarketData:|| " << l_quote.InstrumentID << ", " << l_quote.UpdateTime << ", " << l_quote.UpdateMillisec << ", " <<

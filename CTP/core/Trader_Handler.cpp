@@ -17,6 +17,10 @@ using namespace std;
 #define sleep Sleep
 #endif
 
+#define BROKER_FEE 0.0002
+#define STAMP_TAX 0.001
+#define ACC_TRANSFER_FEE 0.00002
+
 static CThostFtdcInputOrderField g_order_t = { 0 };
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
 static st_config_t g_config_t = { 0 };
@@ -138,12 +142,12 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 {
 	if (pInstrumentCommissionRate == NULL) return;
 	//todo 填写手续费率相关信息
-	g_config_t.contracts[0].fee.broker_fee = 1;
 	g_config_t.contracts[0].fee.exchange_fee = pInstrumentCommissionRate->OpenRatioByMoney;
-//	g_config_t.contracts[0].fee.acc_transfer_fee= ;
 //	g_config_t.contracts[0].fee.fee_by_lot= ;
 //	g_config_t.contracts[0].fee.yes_exchange_fee=;
-//	g_config_t.contracts[0].fee.stamp_tax = ;
+	g_config_t.contracts[0].fee.acc_transfer_fee = ACC_TRANSFER_FEE;
+	g_config_t.contracts[0].fee.stamp_tax = STAMP_TAX;
+	g_config_t.contracts[0].fee.broker_fee = BROKER_FEE;
 
 	PRINT_INFO("%s", pInstrumentCommissionRate->InstrumentID);
 	//请求查询合约保证金率
@@ -175,12 +179,12 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	//correct
 	g_config_t.contracts[0].expiration_date=(int)pInstrument->EndDelivDate;
 	g_config_t.contracts[0].tick_size=pInstrument->PriceTick;
-//  g_config_t.contracts[0].multiple
+	g_config_t.contracts[0].multiple = pInstrument->UnderlyingMultiple;
 //	g_config_t.contracts[0].account
 //	g_config_t.contracts[0].max_cancel_limit
-//	g_config_t.contracts[0].reserved_data
 //	g_config_t.contracts[0].today_pos
 //	g_config_t.contracts[0].yesterday_pos
+//	g_config_t.contracts[0].reserved_data
 
 	if(bIsLast == true) {
 		//请求查询合约手续费率
