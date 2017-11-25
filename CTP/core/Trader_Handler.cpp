@@ -177,7 +177,7 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	//correct
 	g_config_t.contracts[0].exch=pInstrument->ExchangeID[0];
 	//correct
-	g_config_t.contracts[0].expiration_date=(int)pInstrument->EndDelivDate;
+	g_config_t.contracts[0].expiration_date=atoi(pInstrument->EndDelivDate);
 	g_config_t.contracts[0].tick_size=pInstrument->PriceTick;
 	g_config_t.contracts[0].multiple = pInstrument->UnderlyingMultiple;
 //	g_config_t.contracts[0].account
@@ -361,7 +361,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					<< " OpenPrice: " << m_contracts_long[i].OpenPrice << endl
 					<< " Volume: " << m_contracts_long[i].Volume << endl
 					<< " TradingDay: " << m_contracts_long[i].TradingDay << endl;
-                    if (m_contracts_long[i].TradingDay == g_config_t.trading_date){
+                    if (atoi(m_contracts_long[i].TradingDay) == g_config_t.trading_date){
 						long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
                     	long_size += m_contracts_long[i].Volume;
                 	}
@@ -391,7 +391,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					<< " TradingDay: " << m_contracts_short[i].TradingDay << endl;
 
 
-				if (m_contracts_short[i].TradingDay == g_config_t.trading_date){
+				if (atoi(m_contracts_short[i].TradingDay) == g_config_t.trading_date){
 					short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
 					short_size += m_contracts_short[i].Volume;
 				}

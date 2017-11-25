@@ -1,8 +1,9 @@
 ﻿#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include "unistd.h"
-#include "dlfcn.h"
+#include <unistd.h>
+#include <dlfcn.h>
 #include "strategy_interface.h"
 
 #define MAX_LOG_BUFF_SIZE     8 * 1024 * 1024
