@@ -47,6 +47,31 @@ bool IsFlowControl(int iResult)
 	return ((iResult == -2) || (iResult == -3));
 }
 
+void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
+	// 保存会话参数
+	info.FrontID = pRspUserLogin->FrontID;
+	info.SessionID = pRspUserLogin->SessionID;
+	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
+	info.MaxOrderRef = iNextOrderRef++;
+	//sprintf(info.MaxOrderRef, "%d", iNextOrderRef);
+	strlcpy(info.TradingDay, pRspUserLogin->TradingDay, TRADING_DAY_LEN);
+	strlcpy(info.LoginTime, pRspUserLogin->LoginTime, TRADING_DAY_LEN);
+
+	g_config_t.trading_date = atoi(info.TradingDay);
+	int hour = 0;
+	for (int i = 0; i < 6; i++) {
+		if (info.LoginTime[i] != ':') {
+			hour = 10 * hour + info.LoginTime[i];
+		}
+		break;
+	}
+	if (hour > 8 && hour < 19)
+		g_config_t.day_night = DAY;
+	else
+		g_config_t.day_night = NIGHT;
+}
+
+
 Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config)
 {
 	m_trader_config = trader_config;
@@ -75,30 +100,6 @@ void Trader_Handler::OnFrontConnected()
 	LOG_LN("OnFrontConnected");
 }
 
-void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
-	// 保存会话参数
-	info.FrontID = pRspUserLogin->FrontID;
-	info.SessionID = pRspUserLogin->SessionID;
-	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
-	info.MaxOrderRef = iNextOrderRef++;
-	//sprintf(info.MaxOrderRef, "%d", iNextOrderRef);
-	strlcpy(info.TradingDay, pRspUserLogin->TradingDay, TRADING_DAY_LEN);
-	strlcpy(info.LoginTime, pRspUserLogin->LoginTime, TRADING_DAY_LEN);
-
-	g_config_t.trading_date = atoi(info.TradingDay);
-	int hour = 0;
-	for(int i = 0; i < 6; i++) {
-		if(info.LoginTime[i] != ':') {
-			hour = 10 * hour + info.LoginTime[i];
-		}
-		break;
-	}
-	if (hour > 8 && hour < 19)
-		g_config_t.day_night = DAY;
-	else
-		g_config_t.day_night = NIGHT;
-}
-
 void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -121,11 +122,40 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	}
 }
 
+void Trader_Handler::ReqSettlementInfo()
+{
+	CThostFtdcSettlementInfoConfirmField req = { 0 };
+	strcpy(req.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(req.InvestorID, m_trader_config->TUSER_ID);
+	int ret = m_trader_api->ReqSettlementInfoConfirm(&req, ++m_request_id);
+	if (ret)
+		PRINT_ERROR("Send settlement request fail!");
+}
+
 void Trader_Handler::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	PRINT_SUCCESS("Comform settlement!");
 	//请求查询资金账户
 	ReqTradingAccount();
+}
+
+void Trader_Handler::ReqQryInstrumentMarginRate(char * symbol)
+{
+	CThostFtdcQryInstrumentMarginRateField ReqMarginRate = { 0 };
+	strcpy(ReqMarginRate.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(ReqMarginRate.InvestorID, m_trader_config->TUSER_ID);
+	strcpy(ReqMarginRate.InstrumentID, symbol);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInstrumentMarginRate(&ReqMarginRate, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query margin rate %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	}
 }
 
 void Trader_Handler::OnRspQryInstrumentMarginRate(CThostFtdcInstrumentMarginRateField * pInstrumentMarginRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -137,6 +167,25 @@ void Trader_Handler::OnRspQryInstrumentMarginRate(CThostFtdcInstrumentMarginRate
 	//g_config_t.contracts[0].fee.broker_fee = ;
 
 	
+}
+
+void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
+{
+	CThostFtdcQryInstrumentCommissionRateField ReqCommissionRate = { 0 };
+	strcpy(ReqCommissionRate.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(ReqCommissionRate.InvestorID, m_trader_config->TUSER_ID);
+	strcpy(ReqCommissionRate.InstrumentID, symbol);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query commission rate %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	}
 }
 
 void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField * pInstrumentCommissionRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -157,6 +206,25 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 	ReqQueryMaxOrderVolume(pInstrumentCommissionRate->InstrumentID);
 }
 
+void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
+{
+	CThostFtdcQueryMaxOrderVolumeField ReqMaxOrdSize = { 0 };
+	strcpy(ReqMaxOrdSize.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(ReqMaxOrdSize.InvestorID, m_trader_config->TUSER_ID);
+	strcpy(ReqMaxOrdSize.InstrumentID, symbol);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query max order size %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	}
+}
+
 void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField * pQueryMaxOrderVolume, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pQueryMaxOrderVolume == NULL) return;
@@ -166,6 +234,20 @@ void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField
 
 	//请求查询投资者持仓
 	ReqQryInvestorPositionDetail();
+}
+
+void Trader_Handler::ReqInstrument(char* symbol) {
+	while (true) {
+		strcpy(m_req_contract.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInstrument(&m_req_contract, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query contract: %s %s", m_req_contract.InstrumentID, iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	}
 }
 
 void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -193,6 +275,23 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	}
 }
 
+void Trader_Handler::ReqTradingAccount()
+{
+	CThostFtdcQryTradingAccountField requ = { 0 };
+	strcpy(requ.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(requ.InvestorID, m_trader_config->TUSER_ID);
+	strcpy(requ.CurrencyID, "CNY");
+	while (true) {
+		int iResult = m_trader_api->ReqQryTradingAccount(&requ, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query account: %s %s", requ.InvestorID, iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	} // while
+}
 
 void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -208,6 +307,24 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 	//请求查询合约
 	for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 		ReqInstrument(m_trader_config->INSTRUMENTS[i]);
+	}
+}
+
+void Trader_Handler::ReqQryInvestorPosition()
+{
+	CThostFtdcQryInvestorPositionField req_pos = { 0 };
+	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInvestorPosition(&req_pos, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
 	}
 }
 
@@ -282,6 +399,24 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 		///报单录入请求
 		//ReqOrderInsert();
 	//}
+}
+
+void Trader_Handler::ReqQryInvestorPositionDetail()
+{
+	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
+	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
+	while (true) {
+		//strcpy(m_req_pos.InstrumentID, symbol);
+		int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
+		if (!IsFlowControl(iResult)) {
+			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
+			break;
+		}
+		else {
+			sleep(1);
+		}
+	}
 }
 
 void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -412,251 +547,6 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 	}
 }
 
-void Trader_Handler::ReqSettlementInfo()
-{
-	CThostFtdcSettlementInfoConfirmField req = { 0 };
-	strcpy(req.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(req.InvestorID, m_trader_config->TUSER_ID);
-	int ret = m_trader_api->ReqSettlementInfoConfirm(&req, ++m_request_id);
-	if (ret)
-		PRINT_ERROR("Send settlement request fail!");
-}
-
-void Trader_Handler::ReqTradingAccount()
-{
-	CThostFtdcQryTradingAccountField requ = { 0 };
-	strcpy(requ.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(requ.InvestorID, m_trader_config->TUSER_ID);
-	strcpy(requ.CurrencyID, "CNY");
-	while (true) {
-		int iResult = m_trader_api->ReqQryTradingAccount(&requ, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query account: %s %s", requ.InvestorID, iResult == 0 ? "success" : "fail");
-			break;
-		} else {
-			sleep(1);
-		}
-	} // while
-}
-
-void Trader_Handler::ReqInstrument(char* symbol) {
-	while (true) {
-		strcpy(m_req_contract.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInstrument(&m_req_contract, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query contract: %s %s", m_req_contract.InstrumentID, iResult == 0 ? "success" : "fail");
-			break;
-		} else {
-			sleep(1);
-		}
-	}
-}
-
-void Trader_Handler::ReqQryInstrumentMarginRate(char * symbol)
-{
-	CThostFtdcQryInstrumentMarginRateField ReqMarginRate = { 0 };
-	strcpy(ReqMarginRate.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(ReqMarginRate.InvestorID, m_trader_config->TUSER_ID);
-	strcpy(ReqMarginRate.InstrumentID, symbol);
-	while (true) {
-		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInstrumentMarginRate(&ReqMarginRate, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query margin rate %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
-}
-
-void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
-{
-	CThostFtdcQryInstrumentCommissionRateField ReqCommissionRate = { 0 };
-	strcpy(ReqCommissionRate.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(ReqCommissionRate.InvestorID, m_trader_config->TUSER_ID);
-	strcpy(ReqCommissionRate.InstrumentID, symbol);
-	while (true) {
-		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query commission rate %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
-}
-
-void Trader_Handler::ReqQryInvestorPositionDetail()
-{
-	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
-	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
-	while (true) {
-		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
-			break;
-		} else {
-			sleep(1);
-		}
-	}
-}
-
-void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
-{
-	CThostFtdcQueryMaxOrderVolumeField ReqMaxOrdSize = { 0 };
-	strcpy(ReqMaxOrdSize.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(ReqMaxOrdSize.InvestorID, m_trader_config->TUSER_ID);
-	strcpy(ReqMaxOrdSize.InstrumentID, symbol);
-	while (true) {
-		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query max order size %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
-}
-
-void Trader_Handler::ReqQryInvestorPosition()
-{
-	CThostFtdcQryInvestorPositionField req_pos = { 0 };
-	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
-	while (true) {
-		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInvestorPosition(&req_pos, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
-}
-
-void Trader_Handler::send_single_order(order_t *order)
-{
-	///经纪公司代码
-	strcpy(g_order_t.BrokerID, m_trader_config->TBROKER_ID);
-	///投资者代码
-	strcpy(g_order_t.InvestorID, m_trader_config->TUSER_ID);
-	///报单引用
-	sprintf(g_order_t.OrderRef, "%d", m_trader_info.MaxOrderRef);
-	//strcpy(g_order_t.OrderRef, m_trader_info.MaxOrderRef);
-	///用户代码
-	strcpy(g_order_t.UserID, m_trader_config->TUSER_ID);
-
-	///合约代码
-	strcpy(g_order_t.InstrumentID, order->symbol);
-	///报单价格条件: 限价
-	if(order->order_type == ORDER_TYPE_LIMIT)
-		g_order_t.OrderPriceType = THOST_FTDC_OPT_LimitPrice;
-	else
-		g_order_t.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //市价单
-	///买卖方向: 
-	g_order_t.Direction = order->direction == ORDER_BUY ? '0':'1';
-	///组合开平标志: 开仓
-	if(order->open_close == ORDER_OPEN)
-		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
-	else if(order->open_close == ORDER_CLOSE)
-		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
-	else if (order->open_close == ORDER_CLOSE_YES)
-		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_CloseYesterday;
-
-	///组合投机套保标志
-	if(order->investor_type == ORDER_SPECULATOR)
-		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
-	else if (order->investor_type == ORDER_HEDGER)
-		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Hedge;
-	else if (order->investor_type == ORDER_ARBITRAGEURS)
-		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Arbitrage;
-	///价格
-	g_order_t.LimitPrice = order->price;
-	///数量: 1
-	g_order_t.VolumeTotalOriginal = order->volume;
-	///有效期类型: 当日有效
-	if(order->time_in_force == ORDER_TIF_DAY || order->time_in_force == ORDER_TIF_GTD)
-		g_order_t.TimeCondition = THOST_FTDC_TC_GFD;
-	else if (order->time_in_force == ORDER_TIF_IOC || order->time_in_force == ORDER_TIF_FOK
-		|| order->time_in_force == ORDER_TIF_FAK)
-		g_order_t.TimeCondition = THOST_FTDC_TC_IOC;
-	else if (order->time_in_force == ORDER_TIF_GTC)
-		g_order_t.TimeCondition = THOST_FTDC_TC_GTC;
-	///GTD日期
-	//	TThostFtdcDateType	GTDDate;
-	///成交量类型: 任何数量
-	g_order_t.VolumeCondition = THOST_FTDC_VC_AV;
-	///最小成交量: 1
-	g_order_t.MinVolume = 1;
-	///触发条件: 立即
-	g_order_t.ContingentCondition = THOST_FTDC_CC_Immediately;
-	///止损价
-	//	TThostFtdcPriceType	StopPrice;
-	///强平原因: 非强平
-	g_order_t.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
-	///自动挂起标志: 否
-	g_order_t.IsAutoSuspend = 0;
-	///业务单元
-	//	TThostFtdcBusinessUnitType	BusinessUnit;
-	///请求编号
-	//	TThostFtdcRequestIDType	RequestID;
-	///用户强评标志: 否
-	g_order_t.UserForceClose = 0;
-
-	CThostFtdcInputOrderField& order_record = (*m_orders)[m_trader_info.MaxOrderRef];
-	order_record = g_order_t;
-	order->order_id = m_trader_info.MaxOrderRef;
-	m_trader_info.MaxOrderRef++;
-	int ret = m_trader_api->ReqOrderInsert(&g_order_t, ++m_request_id);
-	PRINT_DEBUG("Send order %s", ret == 0 ? ", success" : ", fail");
-}
-
-void Trader_Handler::cancel_single_order(order_t * order)
-{
-	CThostFtdcInputOrderField& order_record = (*m_orders)[order->order_id];
-	///经纪公司代码
-	strcpy(g_order_action_t.BrokerID, order_record.BrokerID);
-	///投资者代码
-	strcpy(g_order_action_t.InvestorID, order_record.InvestorID);
-	///报单操作引用
-	//	TThostFtdcOrderActionRefType	OrderActionRef;
-	///报单引用
-	strcpy(g_order_action_t.OrderRef, order_record.OrderRef);
-	///请求编号
-	g_order_action_t.RequestID = m_request_id;
-	///前置编号
-	g_order_action_t.FrontID = m_trader_info.FrontID;
-	///会话编号
-	g_order_action_t.SessionID = m_trader_info.SessionID;
-	///交易所代码
-	//	TThostFtdcExchangeIDType	ExchangeID;
-	///报单编号
-	//	TThostFtdcOrderSysIDType	OrderSysID;
-	///操作标志
-	g_order_action_t.ActionFlag = THOST_FTDC_AF_Delete;
-	///价格
-	//	TThostFtdcPriceType	LimitPrice;
-	///数量变化
-	//	TThostFtdcVolumeType	VolumeChange;
-	///用户代码
-	//	TThostFtdcUserIDType	UserID;
-	///合约代码
-	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
-
-	int ret = m_trader_api->ReqOrderAction(&g_order_action_t, ++m_request_id);
-	PRINT_DEBUG("Cancel order %s", ret == 0 ? ", success" : ", fail");
-}
-
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	cout << "--->>> " << "OnRspOrderInsert" << endl;
@@ -750,4 +640,126 @@ bool Trader_Handler::IsTradingOrder(CThostFtdcOrderField *pOrder)
 	return ((pOrder->OrderStatus != THOST_FTDC_OST_PartTradedNotQueueing) &&
 		(pOrder->OrderStatus != THOST_FTDC_OST_Canceled) &&
 		(pOrder->OrderStatus != THOST_FTDC_OST_AllTraded));
+}
+
+
+
+
+
+
+
+
+
+
+void Trader_Handler::send_single_order(order_t *order)
+{
+	///经纪公司代码
+	strcpy(g_order_t.BrokerID, m_trader_config->TBROKER_ID);
+	///投资者代码
+	strcpy(g_order_t.InvestorID, m_trader_config->TUSER_ID);
+	///报单引用
+	sprintf(g_order_t.OrderRef, "%d", m_trader_info.MaxOrderRef);
+	//strcpy(g_order_t.OrderRef, m_trader_info.MaxOrderRef);
+	///用户代码
+	strcpy(g_order_t.UserID, m_trader_config->TUSER_ID);
+
+	///合约代码
+	strcpy(g_order_t.InstrumentID, order->symbol);
+	///报单价格条件: 限价
+	if (order->order_type == ORDER_TYPE_LIMIT)
+		g_order_t.OrderPriceType = THOST_FTDC_OPT_LimitPrice;
+	else
+		g_order_t.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //市价单
+															///买卖方向: 
+	g_order_t.Direction = order->direction == ORDER_BUY ? '0' : '1';
+	///组合开平标志: 开仓
+	if (order->open_close == ORDER_OPEN)
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
+	else if (order->open_close == ORDER_CLOSE)
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
+	else if (order->open_close == ORDER_CLOSE_YES)
+		g_order_t.CombOffsetFlag[0] = THOST_FTDC_OF_CloseYesterday;
+
+	///组合投机套保标志
+	if (order->investor_type == ORDER_SPECULATOR)
+		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
+	else if (order->investor_type == ORDER_HEDGER)
+		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Hedge;
+	else if (order->investor_type == ORDER_ARBITRAGEURS)
+		g_order_t.CombHedgeFlag[0] = THOST_FTDC_HF_Arbitrage;
+	///价格
+	g_order_t.LimitPrice = order->price;
+	///数量: 1
+	g_order_t.VolumeTotalOriginal = order->volume;
+	///有效期类型: 当日有效
+	if (order->time_in_force == ORDER_TIF_DAY || order->time_in_force == ORDER_TIF_GTD)
+		g_order_t.TimeCondition = THOST_FTDC_TC_GFD;
+	else if (order->time_in_force == ORDER_TIF_IOC || order->time_in_force == ORDER_TIF_FOK
+		|| order->time_in_force == ORDER_TIF_FAK)
+		g_order_t.TimeCondition = THOST_FTDC_TC_IOC;
+	else if (order->time_in_force == ORDER_TIF_GTC)
+		g_order_t.TimeCondition = THOST_FTDC_TC_GTC;
+	///GTD日期
+	//	TThostFtdcDateType	GTDDate;
+	///成交量类型: 任何数量
+	g_order_t.VolumeCondition = THOST_FTDC_VC_AV;
+	///最小成交量: 1
+	g_order_t.MinVolume = 1;
+	///触发条件: 立即
+	g_order_t.ContingentCondition = THOST_FTDC_CC_Immediately;
+	///止损价
+	//	TThostFtdcPriceType	StopPrice;
+	///强平原因: 非强平
+	g_order_t.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
+	///自动挂起标志: 否
+	g_order_t.IsAutoSuspend = 0;
+	///业务单元
+	//	TThostFtdcBusinessUnitType	BusinessUnit;
+	///请求编号
+	//	TThostFtdcRequestIDType	RequestID;
+	///用户强评标志: 否
+	g_order_t.UserForceClose = 0;
+
+	CThostFtdcInputOrderField& order_record = (*m_orders)[m_trader_info.MaxOrderRef];
+	order_record = g_order_t;
+	order->order_id = m_trader_info.MaxOrderRef;
+	m_trader_info.MaxOrderRef++;
+	int ret = m_trader_api->ReqOrderInsert(&g_order_t, ++m_request_id);
+	PRINT_DEBUG("Send order %s", ret == 0 ? ", success" : ", fail");
+}
+
+void Trader_Handler::cancel_single_order(order_t * order)
+{
+	CThostFtdcInputOrderField& order_record = (*m_orders)[order->order_id];
+	///经纪公司代码
+	strcpy(g_order_action_t.BrokerID, order_record.BrokerID);
+	///投资者代码
+	strcpy(g_order_action_t.InvestorID, order_record.InvestorID);
+	///报单操作引用
+	//	TThostFtdcOrderActionRefType	OrderActionRef;
+	///报单引用
+	strcpy(g_order_action_t.OrderRef, order_record.OrderRef);
+	///请求编号
+	g_order_action_t.RequestID = m_request_id;
+	///前置编号
+	g_order_action_t.FrontID = m_trader_info.FrontID;
+	///会话编号
+	g_order_action_t.SessionID = m_trader_info.SessionID;
+	///交易所代码
+	//	TThostFtdcExchangeIDType	ExchangeID;
+	///报单编号
+	//	TThostFtdcOrderSysIDType	OrderSysID;
+	///操作标志
+	g_order_action_t.ActionFlag = THOST_FTDC_AF_Delete;
+	///价格
+	//	TThostFtdcPriceType	LimitPrice;
+	///数量变化
+	//	TThostFtdcVolumeType	VolumeChange;
+	///用户代码
+	//	TThostFtdcUserIDType	UserID;
+	///合约代码
+	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
+
+	int ret = m_trader_api->ReqOrderAction(&g_order_action_t, ++m_request_id);
+	PRINT_DEBUG("Cancel order %s", ret == 0 ? ", success" : ", fail");
 }
