@@ -103,5 +103,6 @@ void free_config(TraderConfig& trader_config);
 
 void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_Book * internal_book);
 
+void get_time_record(char *time_str);
 
 #endif

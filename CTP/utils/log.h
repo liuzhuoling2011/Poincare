@@ -4,15 +4,16 @@
 #include <stdio.h>
 
 #define LOG(format,...) do{\
-	check_log("[VWAP] " format, ##__VA_ARGS__);\
+	ctp_log("[CTP] " format, ##__VA_ARGS__);\
 }while (0)
 
 #define LOG_LN(format,...) do{\
-	check_log_ln("[VWAP] " format, ##__VA_ARGS__);\
+	ctp_log_ln("[CTP] " format, ##__VA_ARGS__);\
 }while (0)
 
-void check_log(const char *fmt, ...);
-void check_log_ln(const char *fmt, ...);
+void flush_log();
+void ctp_log(const char *fmt, ...);
+void ctp_log_ln(const char *fmt, ...);
 
 #ifndef _WIN32
 	#define CC_RED "\033[31m"

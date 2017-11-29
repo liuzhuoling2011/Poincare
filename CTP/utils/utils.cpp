@@ -1,6 +1,7 @@
 ﻿#include <iconv.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <ctime>
 #include <fstream>
 #include <sstream>
 #include "utils.h"
@@ -472,4 +473,21 @@ void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_
 	//internal_book->implied_ask_size[0]=
 	//internal_book->implied_bid_size[0]=
 
+}
+
+void get_time_record(char *time_str) {
+	time_t timep;
+	struct tm *p;
+	time(&timep);
+	p = localtime(&timep); //取得当地时间
+	sprintf(time_str, "%d%02d%02d %02d:%02d:%02d", (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+}
+
+int get_seconds_from_char_time(char * time_str)
+{
+	/*Convert int_time e.g 134523 to char time e.g "13:45:23"*/
+	int hour = (time_str[0] - '0') * 10 + (time_str[1] - '0');
+	int minute = (time_str[3] - '0') * 10 + (time_str[4] - '0');
+	int second = (time_str[6] - '0') * 10 + (time_str[7] - '0');
+	return hour * 3600 + minute * 60 + second;
 }

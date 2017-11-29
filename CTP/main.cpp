@@ -1,13 +1,55 @@
+#include <signal.h>
+#include <unistd.h>
+#include <errno.h>
+#include <execinfo.h>
+#include <sys/wait.h>
 #include "utils/log.h"		 
 #include "core/Quote_Handler.h"
 #include "core/Trader_Handler.h"
 #include "utils/utils.h"
 
 extern Trader_Handler *s_trader_handler;
+extern char log_name[1024];
+extern FILE* log_handle;
+
+void DumpBacktrace() {
+	pid_t dying_pid = getpid();
+	pid_t child_pid = fork();
+	if (child_pid < 0) {
+		perror("fork() while collecting backtrace:");
+	}
+	else if (child_pid == 0) {
+		char buf[1024];
+		sprintf(buf, "gdb -p %d -batch -ex bt 2>/dev/null | "
+			"sed '0,/<signal handler/d'", dying_pid);
+		const char* argv[] = { "sh", "-c", buf, NULL };
+		execve("/bin/sh", (char**)argv, NULL);
+	}
+	else {
+		waitpid(child_pid, NULL, 0);
+	}
+}
+
+void recv_signal(int sig)
+{
+	DumpBacktrace();
+	flush_log();
+	fclose(log_handle);
+	exit(0);
+}
 
 int main(int argc, char **argv)
 {
 	PRINT_INFO("Welcome to CTP demo!");
+	signal(SIGSEGV, recv_signal);
+	signal(SIGABRT, recv_signal);
+	signal(SIGINT, recv_signal);
+	if (log_handle == NULL) {
+		get_time_record(log_name);
+		strcat(log_name, ".log");
+		log_handle = fopen(log_name, "w");
+	}
+
 	TraderConfig trader_config = { 0 };
 	read_json_config(trader_config);
 
@@ -30,5 +72,7 @@ int main(int argc, char **argv)
 	MdUserApi->Release();*/
 
 	free_config(trader_config);
+	flush_log();
+	fclose(log_handle);
 	return 0;
 }

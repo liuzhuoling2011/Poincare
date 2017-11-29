@@ -72,6 +72,7 @@ void Trader_Handler::OnFrontConnected()
 	strcpy(req.UserID, m_trader_config->TUSER_ID);
 	strcpy(req.Password, m_trader_config->TPASSWORD);
 	m_trader_api->ReqUserLogin(&req, ++m_request_id);
+	LOG_LN("OnFrontConnected");
 }
 
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {

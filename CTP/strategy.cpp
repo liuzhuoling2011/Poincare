@@ -9,6 +9,8 @@ static int i = 0;
 void on_book(CThostFtdcDepthMarketDataField * pDepthMarketData)
 {
 	PRINT_SUCCESS("strategy on book");
+	LOG_LN("strategy on book");
+
 	strlcpy(default_order.symbol, pDepthMarketData->InstrumentID, SYMBOL_LEN);
 	default_order.direction = ORDER_BUY;
 	default_order.open_close = ORDER_OPEN;
