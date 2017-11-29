@@ -107,4 +107,5 @@ void get_time_record(char *time_str);
 
 int get_seconds_from_char_time(char *time_str);
 
+char get_exch_by_name(const char *name);
 #endif

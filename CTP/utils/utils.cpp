@@ -11,6 +11,19 @@
 
 using namespace json11;
 
+static const std::map<std::string, char> EXCH_CHAR =
+{ { "SZSE", '0' },{ "SSE", '1' },{ "HKEX", '2' },{ "SHFE", 'A' },{ "CFFEX", 'G' },{ "DCE", 'B' },
+{ "CZCE", 'C' },{ "FUT_EXCH", 'X' },{ "SGX", 'S' },{ "SGE", 'D' },{ "CBOT", 'F' },{ "CME", 'M' },
+{ "LME", 'L' },{ "COMEX", 'O' },{ "NYMEX", 'N' },{ "BLANK_EXCH", '\0' },{ "UNDEFINED_EXCH", 'u' } };
+
+char get_exch_by_name(const char *name)
+{
+	auto need = EXCH_CHAR.find(name);
+	if (need != EXCH_CHAR.end())
+		return need->second;
+	else
+		return '\0';
+}
 
 #define CHAR_EQUAL_ZERO(a, b, c) do{\
 	if (a != b) goto end;\
@@ -402,12 +415,15 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.TBROKER_ID, l_json["TBROKER_ID"].string_value().c_str(), 8);
 	strlcpy(trader_config.TUSER_ID, l_json["TUSER_ID"].string_value().c_str(), 64);
 	strlcpy(trader_config.TPASSWORD, l_json["TPASSWORD"].string_value().c_str(), 64);
+	for (int i = 0; i < 64; i++) {
+		trader_config.INSTRUMENTS[i] = (char *)malloc(64 * sizeof(char));
+	}
 	int instr_count = 0;
 	for (auto &l_instr : l_json["INSTRUMENTS"].array_items()) {
-		trader_config.INSTRUMENTS[instr_count] = (char *)malloc(64 * sizeof(char));
 		strlcpy(trader_config.INSTRUMENTS[instr_count], l_instr.string_value().c_str(), 64);
 		instr_count++;
 	}
+	
 	trader_config.INSTRUMENT_COUNT = instr_count;
 }
 

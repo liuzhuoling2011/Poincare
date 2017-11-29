@@ -1,6 +1,16 @@
 #pragma once
 
-#define SYMBOL_LEN 64#define TRADING_DAY_LEN 9#define BROKER_ID_LEN 8#define ORDER_REF_LEN 13
+#define SYMBOL_LEN 64#define TRADING_DAY_LEN 9#define BROKER_ID_LEN 8#define ORDER_REF_LEN 13
+
+const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_YES" };
+const static char BUY_SELL_STR[][8] = { "BUY", "SELL" };
+const static char DAY_NIGHT_STR[][8] = { "DAY", "NIGHT" };
+
+enum TraderDirection
+{
+	TRADER_BUY = '0',
+	TRADER_SELL = '1'
+};
 struct TraderConfig
 {
 	char  QUOTE_FRONT[SYMBOL_LEN]; // ––«È«∞÷√
