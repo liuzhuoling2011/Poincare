@@ -105,4 +105,6 @@ void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_
 
 void get_time_record(char *time_str);
 
+int get_seconds_from_char_time(char *time_str);
+
 #endif
