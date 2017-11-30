@@ -542,23 +542,41 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 ///报单通知
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
-	cout << "--->>> " << "OnRtnOrder" << endl;
 	if (pOrder) {
-		printf("[OnRtnOrder]  Inv_ID: %s,symbol:%s ,Ref: %d, LocalID: %d, O_Sys_ID: %d, OrderStatus: %c,InsertTime:%s,VolumeTraded:%d,VolumeTotal:%d, Dir:%c, open_close:%c,price:%f ,vol:%d,Broker_Seq:%d \n",
-			pOrder->InvestorID,
-			pOrder->InstrumentID,
-			atoi(pOrder->OrderRef),
-			atoi(pOrder->OrderLocalID),
-			atoi(pOrder->OrderSysID),
-			pOrder->OrderStatus,
-			pOrder->InsertTime,
-			pOrder->VolumeTraded,
-			pOrder->VolumeTotal,
-			pOrder->Direction,
-			pOrder->CombOffsetFlag[0],
-			pOrder->LimitPrice,
-			pOrder->VolumeTotalOriginal,
-			pOrder->BrokerOrderSeq);
+		PRINT_SUCCESS("--->>> OnRtnOrder %s", pOrder->InsertTime);
+		cout << "经纪公司代码 "	<< pOrder->BrokerID << endl;
+		cout << "投资者代码 "		<< pOrder->InvestorID << endl;
+		cout << "合约代码 "		<< pOrder->InstrumentID << endl;
+		cout << "报单引用 "		<< pOrder->OrderRef << endl;
+		cout << "用户代码 "		<< pOrder->UserID << endl;
+		cout << "报单价格条件 "	<< pOrder->OrderPriceType << endl;
+		cout << "买卖方向 "		<< pOrder->Direction << endl;
+		cout << "组合开平标志 "	<< pOrder->CombOffsetFlag << endl;
+		cout << "组合投机套保标志 " << pOrder->CombHedgeFlag << endl;
+		cout << "价格 "			<< pOrder->LimitPrice << endl;
+		cout << "数量 "			<< pOrder->VolumeTotalOriginal << endl;
+		cout << "有效期类型 "		<< pOrder->TimeCondition << endl;
+		cout << "成交量类型 "		<< pOrder->VolumeCondition << endl;
+		cout << "最小成交量 "		<< pOrder->MinVolume << endl;
+		cout << "触发条件 "		<< pOrder->ContingentCondition << endl;
+		cout << "请求编号 "		<< pOrder->RequestID << endl;
+		cout << "本地报单编号 "	<< pOrder->OrderLocalID << endl;
+		cout << "交易所代码 "		<< pOrder->ExchangeID << endl;
+		cout << "合约在交易所的代码 "	<< pOrder->ExchangeInstID << endl;
+		cout << "报单提交状态 "	<< pOrder->OrderSubmitStatus << endl;
+		cout << "报单提示序号 "	<< pOrder->NotifySequence << endl;
+		cout << "交易日 "		<< pOrder->TradingDay << endl;
+		cout << "报单编号 "		<< pOrder->OrderSysID << endl;
+		cout << "报单状态 "		<< pOrder->OrderStatus << endl;
+		cout << "今成交数量 "		<< pOrder->VolumeTraded << endl;
+		cout << "剩余数量 "		<< pOrder->VolumeTotal << endl;
+		cout << "报单日期 "		<< pOrder->InsertDate << endl;
+		cout << "报单时间 "		<< pOrder->InsertTime << endl;
+		cout << "最后修改时间 "	<< pOrder->UpdateTime << endl;
+		cout << "撤销时间 "		<< pOrder->CancelTime << endl;
+		cout << "序号 "			<< pOrder->SequenceNo << endl;
+		cout << "前置编号 "		<< pOrder->FrontID << endl;
+		cout << "会话编号 "		<< pOrder->SessionID << endl;
 	}
 }
 
@@ -567,20 +585,28 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
 		on_response(pTrade);
-		printf("[OnRtnTrade] Inv_ID:%s ,Ref: %d, symbol:%s ,exhg_ID:%s,LocalID: %d,O_Sys_ID:%d,Dir:%c,open_close:%c, price:%f,deal_vol:%d, TradeTime:%s, TradeID:%s,Broker_Seq:%d \n",
-			pTrade->InvestorID,
-			atoi(pTrade->OrderRef),
-			pTrade->InstrumentID,
-			pTrade->ExchangeID,
-			atoi(pTrade->OrderLocalID),
-			atoi(pTrade->OrderSysID),
-			pTrade->Direction,
-			pTrade->OffsetFlag,
-			pTrade->Price,
-			pTrade->Volume,
-			pTrade->TradeTime,
-			pTrade->TradeID,
-			pTrade->BrokerOrderSeq);
+		PRINT_SUCCESS("--->>> OnRtnTrade %s", pTrade->TradeTime);
+		cout << "经纪公司代码 "	<< pTrade->BrokerID << endl;
+		cout << "投资者代码 "		<< pTrade->InvestorID << endl;
+		cout << "合约代码 "		<< pTrade->InstrumentID << endl;
+		cout << "报单引用 "		<< pTrade->OrderRef << endl;
+		cout << "用户代码 "		<< pTrade->UserID << endl;
+		cout << "交易所代码 "		<< pTrade->ExchangeID << endl;
+		cout << "成交编号 "		<< pTrade->TradeID << endl;
+		cout << "买卖方向 "		<< pTrade->Direction << endl;
+		cout << "报单编号 "		<< pTrade->OrderSysID << endl;
+		cout << "会员代码 "		<< pTrade->ParticipantID << endl;
+		cout << "客户代码 "		<< pTrade->ClientID << endl;
+		cout << "合约在交易所的代码 " << pTrade->ExchangeInstID << endl;
+		cout << "开平标志 "		<< pTrade->OffsetFlag << endl;
+		cout << "投机套保标志 "	<< pTrade->HedgeFlag << endl;
+		cout << "价格 "			<< pTrade->Price << endl;
+		cout << "数量 "			<< pTrade->Volume << endl;
+		cout << "成交时期 "		<< pTrade->TradeDate << endl;
+		cout << "成交时间 "		<< pTrade->TradeTime << endl;
+		cout << "本地报单编号 "	<< pTrade->OrderLocalID << endl;
+		cout << "序号 "			<< pTrade->SequenceNo << endl;
+		cout << "交易日 "		<< pTrade->TradingDay << endl;
 	}
 }
 
