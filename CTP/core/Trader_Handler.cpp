@@ -311,14 +311,12 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			double yes_long_price = 0, yes_short_price = 0;
 
 			for (int i = 0; i < m_contracts_long.size(); i++) {
-				if (atoi(m_contracts_long[i].TradingDay) == g_config_t.trading_date) {
-					long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
-					long_size += m_contracts_long[i].Volume;
-				}
-				else {
+				if (atoi(m_contracts_long[i].OpenDate) != g_config_t.trading_date) {
 					yes_long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
 					yes_long_size += m_contracts_long[i].Volume;
 				}
+				long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
+				long_size += m_contracts_long[i].Volume;
 			}
 			if(long_size == 0) {
 				g_config_t.contracts[0].today_pos.long_price = 0;
@@ -337,14 +335,12 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			}
 
 			for (int i = 0; i < m_contracts_short.size(); i++) {
-				if (atoi(m_contracts_short[i].TradingDay) == g_config_t.trading_date) {
-					short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
-					short_size += m_contracts_short[i].Volume;
-				}
-				else {
+				if (atoi(m_contracts_short[i].OpenDate) != g_config_t.trading_date) {
 					yes_short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
 					yes_short_size += m_contracts_short[i].Volume;
 				}
+				short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
+				short_size += m_contracts_short[i].Volume;
 			}
 			
 			if (short_size == 0) {
@@ -493,7 +489,26 @@ void Trader_Handler::send_single_order(order_t *order)
 
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	cout << "--->>> " << "OnRspOrderInsert" << endl;
+	if(pInputOrder) {
+		PRINT_SUCCESS("--->>> OnRspOrderInsert");
+		cout << "经纪公司代码 " << pInputOrder->BrokerID << endl;
+		cout << "投资者代码 " << pInputOrder->InvestorID << endl;
+		cout << "合约代码 " << pInputOrder->InstrumentID << endl;
+		cout << "报单引用 " << pInputOrder->OrderRef << endl;
+		cout << "用户代码 " << pInputOrder->UserID << endl;
+		cout << "报单价格条件 " << pInputOrder->OrderPriceType << endl;
+		cout << "买卖方向 " << pInputOrder->Direction << endl;
+		cout << "组合开平标志 " << pInputOrder->CombOffsetFlag << endl;
+		cout << "组合投机套保标志 " << pInputOrder->CombHedgeFlag << endl;
+		cout << "价格 " << pInputOrder->LimitPrice << endl;
+		cout << "数量 " << pInputOrder->VolumeTotalOriginal << endl;
+		cout << "有效期类型 " << pInputOrder->TimeCondition << endl;
+		cout << "成交量类型 " << pInputOrder->VolumeCondition << endl;
+		cout << "最小成交量 " << pInputOrder->MinVolume << endl;
+		cout << "触发条件 " << pInputOrder->ContingentCondition << endl;
+		cout << "请求编号 " << pInputOrder->RequestID << endl;
+		cout << "交易所代码 " << pInputOrder->ExchangeID << endl;
+	}
 	IsErrorRspInfo(pRspInfo);
 }
 
@@ -535,11 +550,25 @@ void Trader_Handler::cancel_single_order(order_t * order)
 
 void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	cout << "--->>> " << "OnRspOrderAction" << endl;
+	if(pInputOrderAction) {
+		PRINT_SUCCESS("--->>> OnRspOrderAction");
+		cout << "经纪公司代码 " << pInputOrderAction->BrokerID << endl;
+		cout << "投资者代码 " << pInputOrderAction->InvestorID << endl;
+		cout << "合约代码 " << pInputOrderAction->InstrumentID << endl;
+		cout << "报单编号 " << pInputOrderAction->OrderSysID << endl;
+		cout << "报单引用 " << pInputOrderAction->OrderRef << endl;
+		cout << "用户代码 " << pInputOrderAction->UserID << endl;
+		cout << "价格 " << pInputOrderAction->LimitPrice << endl;
+		cout << "数量变化 " << pInputOrderAction->VolumeChange << endl;
+		cout << "操作标志 " << pInputOrderAction->ActionFlag << endl;
+		cout << "交易所代码 " << pInputOrderAction->ExchangeID << endl;
+		cout << "请求编号 " << pInputOrderAction->RequestID << endl;
+		cout << "前置编号 " << pInputOrderAction->FrontID << endl;
+		cout << "会话编号 " << pInputOrderAction->SessionID << endl;
+	}
 	IsErrorRspInfo(pRspInfo);
 }
 
-///报单通知
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if (pOrder) {
@@ -580,7 +609,6 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	}
 }
 
-///成交通知
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
