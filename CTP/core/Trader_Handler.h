@@ -3,6 +3,7 @@
 #include "core/CTP_define.h"
 #include "core/base_define.h"
 #include "utils/MyArray.h"
+#include "utils/MyHash.h"
 
 class Trader_Handler : public CThostFtdcTraderSpi
 {
@@ -86,6 +87,8 @@ private:
 	// 是否正在交易的报单
 	bool IsTradingOrder(CThostFtdcOrderField *pOrder);
 
+	CThostFtdcInputOrderField& get_order_info(uint64_t order_id);
+
 private:
 	CThostFtdcTraderApi* m_trader_api = NULL;
 	TraderConfig *m_trader_config;
@@ -96,7 +99,7 @@ private:
 
 	MyArray<CThostFtdcInvestorPositionDetailField> m_contracts_long;
 	MyArray<CThostFtdcInvestorPositionDetailField> m_contracts_short;
-	MyArray<CThostFtdcInputOrderField> *m_orders;
+	MyHash<CThostFtdcInputOrderField> *m_orders;
 
 	CThostFtdcInputOrderField m_cancel;
 	CThostFtdcQryInstrumentField m_req_contract;

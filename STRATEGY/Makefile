@@ -1,6 +1,6 @@
 #### PROJECT SETTINGS ####
 # The name of the executable to be created
-BIN_NAME := ctp_demo
+BIN_NAME := strategy.so
 # Compiler used
 CXX ?= g++
 # Extension of source files used in the project
@@ -10,13 +10,13 @@ SRC_PATH = .
 # General compiler flags
 COMPILE_FLAGS = -std=c++11 -w
 # Additional release-specific flags
-RCOMPILE_FLAGS = -O3 -pthread
+RCOMPILE_FLAGS = -O3 -fPIC
 # Additional debug-specific flags
-DCOMPILE_FLAGS = -g3 -pthread -D DEBUG
+DCOMPILE_FLAGS = -g3 -fPIC -D DEBUG
 # Add additional include paths
-INCLUDES = -I $(SRC_PATH)
+INCLUDES = -I $(SRC_PATH) -I ../CTP
 # General linker settings
-LINK_FLAGS = -fPIC -pthread -Wl,-rpath,./ -L. -lthostmduserapi -lthosttraderapi -ldl
+LINK_FLAGS = -fPIC -shared
 # Additional release-specific linker settings
 RLINK_FLAGS = 
 # Additional debug-specific linker settings
@@ -89,7 +89,7 @@ clean:
 all: $(BIN_PATH)/$(BIN_NAME)
 	@echo "Create bin file: $(BIN_NAME) -> $<"
 	@$(RM) $(BIN_NAME)
-	@cp $(BIN_PATH)/$(BIN_NAME) $(BIN_NAME)
+	@cp $(BIN_PATH)/$(BIN_NAME) ../CTP/$(BIN_NAME)
 
 # Link the executable
 $(BIN_PATH)/$(BIN_NAME): $(OBJECTS)

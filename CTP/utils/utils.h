@@ -108,4 +108,13 @@ void get_time_record(char *time_str);
 int get_seconds_from_char_time(char *time_str);
 
 char get_exch_by_name(const char *name);
+
+int convert_open_close_flag(char openclose);
+
+ORDER_STATUS convert_status(char status);
+
+ORDER_STATUS get_final_status(ORDER_STATUS pre, ORDER_STATUS cur);
+
+int reverse_index(uint64_t ord_id);
+
 #endif

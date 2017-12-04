@@ -19,5 +19,10 @@
     "TUSER_ID": "106409",
     "TPASSWORD": "123456",
     
-    "INSTRUMENTS": ["cu1712"]
+    "INSTRUMENTS": ["cu1712"],
+
+    "STRAT_ID": 564335,
+    "STRAT_PATH": "./strategy.so",
+    "STRAT_EV": "./ev.txt",
+    "STRAT_OUTPUT": "./output"
 }

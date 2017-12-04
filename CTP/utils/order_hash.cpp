@@ -288,10 +288,6 @@ OrderHash::query_order(int index, uint64_t ord_id)
 	return NULL;
 } 
 
-int reverse_index(uint64_t ord_id) {
-	return ord_id / 10000000000;
-}
-
 Order *
 OrderHash::query_order(uint64_t ord_id)
 {

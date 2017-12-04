@@ -1,5 +1,6 @@
 #pragma once
 
+#define PATH_LEN 256
 #define SYMBOL_LEN 64#define TRADING_DAY_LEN 9#define BROKER_ID_LEN 8#define ORDER_REF_LEN 13
 
 const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_YES" };
@@ -23,6 +24,10 @@ struct TraderConfig
 	char  TPASSWORD[SYMBOL_LEN];
 	char *INSTRUMENTS[SYMBOL_LEN];
 	int   INSTRUMENT_COUNT;
+
+	int   STRAT_ID;
+	char  STRAT_PATH[PATH_LEN];
+	char  STRAT_EV[PATH_LEN];
 };
 
 struct TraderInfo

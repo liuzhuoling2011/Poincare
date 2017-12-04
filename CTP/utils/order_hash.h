@@ -26,8 +26,6 @@ int leaves_qty(Order *ord);
 
 int get_list_size(list_t *a_list);
 
-int reverse_index(uint64_t ord_id);
-
 class OrderHash{
 public:
 	OrderHash();

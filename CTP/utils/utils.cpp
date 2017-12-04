@@ -25,6 +25,52 @@ char get_exch_by_name(const char *name)
 		return '\0';
 }
 
+int convert_open_close_flag(char openclose)
+{
+	if(openclose == '0' || openclose == '1') {
+		return openclose - '0';
+	}
+	else if (openclose == '3' || openclose == '4') {
+		return openclose - '1';
+	}
+	return UNDEFINED_OPEN_CLOSE;
+}
+
+ORDER_STATUS convert_status(char status)
+{
+	switch(status) {
+		case 'a': {
+			return UNDEFINED_STATUS;
+		}
+		case '0': {
+			return SIG_STATUS_SUCCEED;
+		}
+		case '1': {
+			return SIG_STATUS_PARTED;
+		}
+		case '3': {
+			return SIG_STATUS_ENTRUSTED;
+		}
+		case '4': {
+			return SIG_STATUS_REJECTED;
+		}
+		case '2':
+		case '5': {
+			return SIG_STATUS_CANCELED;
+		}
+	}
+	return UNDEFINED_STATUS;
+}
+
+ORDER_STATUS get_final_status(ORDER_STATUS pre, ORDER_STATUS cur)
+{
+	if (cur == SIG_STATUS_SUCCEED || cur == SIG_STATUS_PARTED || cur == SIG_STATUS_ENTRUSTED
+		|| cur == SIG_STATUS_PARTED)
+		return cur;
+	if (cur == SIG_STATUS_CANCELED && pre != SIG_STATUS_ENTRUSTED)
+		return SIG_STATUS_REJECTED;
+}
+
 #define CHAR_EQUAL_ZERO(a, b, c) do{\
 	if (a != b) goto end;\
 	if (a == 0) {c = 0; goto end;}\
@@ -425,6 +471,10 @@ bool read_json_config(TraderConfig& trader_config) {
 	}
 	
 	trader_config.INSTRUMENT_COUNT = instr_count;
+
+	trader_config.STRAT_ID = l_json["STRAT_ID"].int_value();
+	strlcpy(trader_config.STRAT_PATH, l_json["STRAT_PATH"].string_value().c_str(), 64);
+	strlcpy(trader_config.STRAT_EV, l_json["STRAT_EV"].string_value().c_str(), 64);
 }
 
 void free_config(TraderConfig& trader_config) {
@@ -506,4 +556,8 @@ int get_seconds_from_char_time(char * time_str)
 	int minute = (time_str[3] - '0') * 10 + (time_str[4] - '0');
 	int second = (time_str[6] - '0') * 10 + (time_str[7] - '0');
 	return hour * 3600 + minute * 60 + second;
+}
+
+int reverse_index(uint64_t ord_id) {
+	return ord_id / 10000000000;
 }
