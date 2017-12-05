@@ -14,6 +14,7 @@ static char*      start_point = log_buffer;
 static int        log_buffer_len = 0;
 
 send_data send_log = NULL;
+int int_time = 0;
 
 void flush_log()
 {
@@ -59,4 +60,9 @@ void ctp_log_ln(const char * fmt, ...)
 	va_start(args, fmt);
 	write_log(true, fmt, args);
 	va_end(args);
+}
+
+int get_curr_time()
+{
+	return int_time;
 }

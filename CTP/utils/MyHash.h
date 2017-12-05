@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "utils/list.h"
-#include "utils/utils.h"
+#include "list.h"
+#include "utils.h"
 
 /**
 * @class   MyHash

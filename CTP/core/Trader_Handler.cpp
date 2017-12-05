@@ -3,7 +3,6 @@
 #include "utils/utils.h"
 #include "utils/log.h"
 #include "strategy_interface.h"
-#include "strategy.h"
 #include "Trader_Handler.h"
 #include "strategy_interface.h"
 #include "ThostFtdcUserApiStruct.h"
@@ -22,6 +21,8 @@ using namespace std;
 #define ACC_TRANSFER_FEE 0.00002
 
 #define SERIAL_NO_MULTI 10000000000
+
+extern char g_strategy_path[256];
 
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
 static st_config_t g_config_t = { 0 };
@@ -84,6 +85,7 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
 
+	strlcpy(g_strategy_path, m_trader_config->STRAT_PATH, 256);
 	g_config_t.proc_order_hdl = process_strategy_order;
 	g_config_t.send_info_hdl = process_strategy_info;
 	g_config_t.pass_rsp_hdl = process_strategy_resp;
@@ -369,6 +371,9 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			g_data_t.info = (void*)&g_config_t;
 			my_st_init(DEFAULT_CONFIG, 0, &g_data_t);
 
+			PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
+				g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
+
 			for (int i = 0; i < ACCOUNT_MAX; i++) {
 				if (g_config_t.accounts[i].account[0] == '\0') break;
 				account_t& l_account = g_config_t.accounts[i];
@@ -632,9 +637,10 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		g_resp_t.status = get_final_status(pre_status, cur_status);
 		
 		g_data_t.info = (void*)&g_resp_t;
-		my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
+		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED)
+			my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 
-		if (g_resp_t.status == SIG_STATUS_SUCCEED || g_resp_t.status == SIG_STATUS_CANCELED || g_resp_t.status == SIG_STATUS_REJECTED)
+		if (g_resp_t.status == SIG_STATUS_CANCELED || g_resp_t.status == SIG_STATUS_REJECTED)
 			m_orders->erase(cur_order_field.OrderRef);
 
 		cout << "经纪公司代码 "	<< pOrder->BrokerID << endl;
@@ -677,6 +683,23 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
 		PRINT_SUCCESS("--->>> OnRtnTrade %s", pTrade->TradeTime);
+		CThostFtdcInputOrderField& cur_order_field = m_orders->at(pTrade->OrderRef);
+
+		int index = cur_order_field.RequestID;
+		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
+		strlcpy(g_resp_t.symbol, pTrade->InstrumentID, SYMBOL_LEN);
+		g_resp_t.direction = pTrade->Direction - '0';
+		g_resp_t.open_close = convert_open_close_flag(pTrade->Direction);
+		g_resp_t.exe_price = pTrade->Price;
+		g_resp_t.exe_volume = pTrade->Volume;
+		g_resp_t.status = SIG_STATUS_SUCCEED;
+
+		g_data_t.info = (void*)&g_resp_t;
+		my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
+
+		if (g_resp_t.status == SIG_STATUS_SUCCEED)
+			m_orders->erase(cur_order_field.OrderRef);
+
 		cout << "经纪公司代码 "	<< pTrade->BrokerID << endl;
 		cout << "投资者代码 "		<< pTrade->InvestorID << endl;
 		cout << "合约代码 "		<< pTrade->InstrumentID << endl;

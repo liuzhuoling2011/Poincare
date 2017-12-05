@@ -14,7 +14,7 @@ RCOMPILE_FLAGS = -O3 -pthread
 # Additional debug-specific flags
 DCOMPILE_FLAGS = -g3 -pthread -D DEBUG
 # Add additional include paths
-INCLUDES = -I $(SRC_PATH)
+INCLUDES = -I $(SRC_PATH) -I utils
 # General linker settings
 LINK_FLAGS = -fPIC -pthread -Wl,-rpath,./ -L. -lthostmduserapi -lthosttraderapi -ldl
 # Additional release-specific linker settings

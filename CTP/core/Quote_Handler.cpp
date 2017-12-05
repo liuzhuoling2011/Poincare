@@ -5,22 +5,25 @@
 
 #include "core/Quote_Handler.h"
 #include "core/ThostFtdcUserApiStruct.h"
-#include "utils/MyArray.h"
+//#include "utils/MyArray.h"
 #include "utils/utils.h"
 #include "utils/log.h"
-#include "utils/MyHash.h"
-#include "strategy.h"
+//#include "utils/MyHash.h"
+#include "strategy_interface.h"
 
 #define MAX_QUOTE_SIZE 100000
 
-typedef MyArray<CThostFtdcDepthMarketDataField> QuoteArray;
-static MyHash<QuoteArray*> Quotes;
+//typedef MyArray<CThostFtdcDepthMarketDataField> QuoteArray;
+//static MyHash<QuoteArray*> Quotes;
 
+static Futures_Internal_Book g_f_book;
+static st_data_t g_data_t;
 
 Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_api_, TraderConfig *trader_config)
 {
 	m_trader_config = trader_config;
 	m_trader_handler = trader_api_;
+	g_data_t.info = &g_f_book;
 
 	m_md_api = md_api_;
 	m_md_api->RegisterSpi(this);
@@ -30,9 +33,9 @@ Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_ap
 Quote_Handler::~Quote_Handler()
 {
 	m_md_api->Release();
-	for(auto iter = Quotes.begin(); iter != Quotes.end(); iter++) {
+	/*for(auto iter = Quotes.begin(); iter != Quotes.end(); iter++) {
 		delete iter->second;
-	}
+	}*/
 }
 
 void Quote_Handler::OnFrontConnected()
@@ -65,14 +68,14 @@ void Quote_Handler::OnRspUserLogin(
 	
 		int ret = m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
 		if (ret == 0) {
-			for(int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+			/*for(int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 				char* symbol = m_trader_config->INSTRUMENTS[i];
 				if (!Quotes.exist(symbol)) {
 					QuoteArray* qarray = new QuoteArray(MAX_QUOTE_SIZE);
 					Quotes.insert(symbol, qarray);
 					PRINT_SUCCESS("Subscribe %s", symbol);
 				}
-			}
+			}*/
 		}
     }
 }
@@ -133,18 +136,19 @@ void Quote_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
 void Quote_Handler::OnRtnDepthMarketData(
     CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	char* symbol = pDepthMarketData->InstrumentID;
-	if (!Quotes.exist(symbol)) return;
+	//char* symbol = pDepthMarketData->InstrumentID;
+	//if (!Quotes.exist(symbol)) return;
 	    
-    CThostFtdcDepthMarketDataField& l_quote = Quotes[symbol]->get_next_free_node();
-    l_quote = *pDepthMarketData;
-
-    std::cout << "OnRtnDepthMarketData:|| " << l_quote.InstrumentID << ", " << l_quote.UpdateTime << ", " << l_quote.UpdateMillisec << ", " <<
-    l_quote.LastPrice <<  std::endl;
+    /*CThostFtdcDepthMarketDataField& l_quote = Quotes[symbol]->get_next_free_node();
+    l_quote = *pDepthMarketData;*/
+	convert_quote(pDepthMarketData, &g_f_book);
+    
+	PRINT_INFO("time: %d symbol: %s ap1: %f av1: %d bp1: %f bv1:%d",
+		g_f_book.int_time, g_f_book.symbol, g_f_book.ap_array[0], g_f_book.av_array[0], g_f_book.bp_array[0], g_f_book.bv_array[0]);
     //print(pDepthMarketData);
-    PRINT_INFO("%s quote size: %d\n", symbol, Quotes[symbol]->size());
-
-	on_book(&l_quote);
+    //PRINT_INFO("%s quote size: %d\n", symbol, Quotes[symbol]->size());
+	
+	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_config_t), &g_data_t);
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)
