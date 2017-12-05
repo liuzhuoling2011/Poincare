@@ -25,5 +25,7 @@
     "STRAT_NAME": "test_strategy",
     "STRAT_PATH": "./strategy.so",
     "STRAT_EV": "./ev.txt",
-    "STRAT_OUTPUT": "./output"
+    "STRAT_OUTPUT": "./output",
+
+    "TIME_INTERVAL": 5
 }

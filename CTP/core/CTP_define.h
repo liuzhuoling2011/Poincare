@@ -30,6 +30,8 @@ struct TraderConfig
 	char  STRAT_PATH[PATH_LEN];
 	char  STRAT_EV[PATH_LEN];
 	char  STRAT_OUTPUT[PATH_LEN];
+
+	int   TIME_INTERVAL;
 };
 
 struct TraderInfo

@@ -62,10 +62,12 @@ public:
 	virtual void OnRtnTrade(CThostFtdcTradeField *pTrade);
 
 	//报单录入请求
-	void send_single_order(order_t *order);
+	int send_single_order(order_t *order);
 
 	//报单撤销请求
-	void cancel_single_order(order_t *order);
+	int cancel_single_order(order_t *order);
+
+	int st_idle();
 
 private:
 	//投资者结算结果确认

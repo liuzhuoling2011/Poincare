@@ -489,6 +489,8 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.STRAT_EV, l_json["STRAT_EV"].string_value().c_str(), 256);
 	strlcpy(trader_config.STRAT_OUTPUT, l_json["STRAT_OUTPUT"].string_value().c_str(), 256);
 	strlcpy(trader_config.STRAT_NAME, l_json["STRAT_NAME"].string_value().c_str(), 64);
+	
+	trader_config.TIME_INTERVAL = l_json["TIME_INTERVAL"].int_value();
 }
 
 void free_config(TraderConfig& trader_config) {

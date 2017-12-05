@@ -38,6 +38,11 @@ void recv_signal(int sig)
 }
 
 CThostFtdcMdApi *MdUserApi;	// after strategy init finished, call MdUserApi->Init();
+extern Trader_Handler *g_trader_handler;
+
+void call_idle(int sig) {
+	g_trader_handler->st_idle();
+}
 
 int main(int argc, char **argv)
 {
@@ -45,6 +50,8 @@ int main(int argc, char **argv)
 	signal(SIGSEGV, recv_signal);
 	signal(SIGABRT, recv_signal);
 	signal(SIGINT, recv_signal);
+	signal(SIGALRM, call_idle);
+
 	if (log_handle == NULL) {
 		get_time_record(log_name);
 		strcat(log_name, ".log");

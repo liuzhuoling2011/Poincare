@@ -31,18 +31,50 @@ static st_response_t g_resp_t = { 0 };
 static st_data_t g_data_t = { 0 };
 static int g_sig_count = 0;
 
+Trader_Handler *g_trader_handler;
+
 int process_strategy_order(int type, int length, void *data){
-	PRINT_INFO("lalal");
-	return 0;
+	int ret = 0;
+	switch (type) {
+		case S_PLACE_ORDER_DEFAULT: {
+			order_t *ord = (order_t*)((st_data_t*)data)->info;
+
+			PRINT_INFO("Send Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
+				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
+				ord->investor_type, ord->order_type, ord->time_in_force,
+				ord->st_id, ord->order_id, ord->org_ord_id);
+
+			ret = g_trader_handler->send_single_order(ord);
+			break;
+		}
+		case S_CANCEL_ORDER_DEFAULT: {
+			order_t *ord = (order_t*)((st_data_t*)data)->info;
+
+			PRINT_INFO("Cancel Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
+				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
+				ord->investor_type, ord->order_type, ord->time_in_force,
+				ord->st_id, ord->order_id, ord->org_ord_id);
+
+			ret = g_trader_handler->cancel_single_order(ord);
+			break;
+		}
+	}
+	return ret;
 }
 
 int process_strategy_info(int type, int length, void *data) {
-	PRINT_INFO("lalal");
+	switch (type) {
+		case S_STRATEGY_DEBUG_LOG: {
+			printf("[STRAT LOG] %s\n", (char*)data);
+			break;
+		}
+	}
 	return 0;
 }
 
+// top process resp level do nothing
 int process_strategy_resp(int type, int length, void *data) {
-	PRINT_INFO("lalal");
+	PRINT_INFO("lalala");
 	return 0;
 }
 
@@ -85,6 +117,8 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_trader_api->RegisterSpi(this);			// 注册事件类
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
+
+	g_trader_handler = this;
 
 	strlcpy(g_strategy_path, m_trader_config->STRAT_PATH, 256);
 	g_config_t.vst_id = m_trader_config->STRAT_ID;
@@ -202,7 +236,6 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	strlcpy(g_config_t.contracts[0].symbol, pInstrument->InstrumentID, SYMBOL_LEN);
 	g_config_t.contracts[0].exch = get_exch_by_name(pInstrument->ExchangeID);
 	g_config_t.contracts[0].max_accum_open_vol = 10000;
-	printf("********************\n");
 	g_config_t.contracts[0].max_cancel_limit = 1000;
 	g_config_t.contracts[0].expiration_date = atoi(pInstrument->EndDelivDate); // to correct
 	g_config_t.contracts[0].tick_size = pInstrument->PriceTick;
@@ -374,10 +407,11 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			}
 			
 			// 在这里我们结束了config的配置，开始初始化策略
-			PRINT_INFO("Strating load strategy!");
-			g_data_t.info = (void*)&g_config_t;
-			my_st_init(DEFAULT_CONFIG, 0, &g_data_t);
+			PRINT_INFO("Starting load strategy!");
+			my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
 			MdUserApi->Init();
+			alarm(m_trader_config->TIME_INTERVAL);
+
 
 			PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
 				g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
@@ -431,7 +465,7 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 	}
 }
 
-void Trader_Handler::send_single_order(order_t *order)
+int Trader_Handler::send_single_order(order_t *order)
 {
 	order->order_id = ++g_sig_count * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 	
@@ -527,6 +561,7 @@ void Trader_Handler::send_single_order(order_t *order)
 	m_trader_info.MaxOrderRef++;
 	int ret = m_trader_api->ReqOrderInsert(&order_field, ++m_request_id);
 	PRINT_DEBUG("Send order %s", ret == 0 ? ", success" : ", fail");
+	return ret;
 }
 
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -554,7 +589,7 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 	IsErrorRspInfo(pRspInfo);
 }
 
-void Trader_Handler::cancel_single_order(order_t * order)
+int Trader_Handler::cancel_single_order(order_t * order)
 {
 	CThostFtdcInputOrderField& order_record = get_order_info(order->org_ord_id);
 	///经纪公司代码
@@ -603,6 +638,12 @@ void Trader_Handler::cancel_single_order(order_t * order)
 
 	int ret = m_trader_api->ReqOrderAction(&g_order_action_t, ++m_request_id);
 	PRINT_DEBUG("Cancel order %s", ret == 0 ? ", success" : ", fail");
+	return ret;
+}
+
+int Trader_Handler::st_idle()
+{
+	my_on_timer(DEFAULT_TIMER, 0, NULL);
 }
 
 void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
