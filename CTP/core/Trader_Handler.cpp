@@ -1,11 +1,11 @@
 #include <iostream>
 #include <string.h>
-#include "utils/utils.h"
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
 #include "strategy_interface.h"
 #include "ThostFtdcUserApiStruct.h"
+#include "ThostFtdcMdApi.h"
 
 using namespace std;
 
@@ -23,6 +23,7 @@ using namespace std;
 #define SERIAL_NO_MULTI 10000000000
 
 extern char g_strategy_path[256];
+extern CThostFtdcMdApi *MdUserApi;
 
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
 static st_config_t g_config_t = { 0 };
@@ -86,6 +87,11 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
 
 	strlcpy(g_strategy_path, m_trader_config->STRAT_PATH, 256);
+	g_config_t.vst_id = m_trader_config->STRAT_ID;
+	strlcpy(g_config_t.st_name, m_trader_config->STRAT_NAME, 256);
+	strlcpy(g_config_t.param_file_path, m_trader_config->STRAT_EV, 256);
+	strlcpy(g_config_t.output_file_path, m_trader_config->STRAT_OUTPUT, 256);
+
 	g_config_t.proc_order_hdl = process_strategy_order;
 	g_config_t.send_info_hdl = process_strategy_info;
 	g_config_t.pass_rsp_hdl = process_strategy_resp;
@@ -196,6 +202,7 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	strlcpy(g_config_t.contracts[0].symbol, pInstrument->InstrumentID, SYMBOL_LEN);
 	g_config_t.contracts[0].exch = get_exch_by_name(pInstrument->ExchangeID);
 	g_config_t.contracts[0].max_accum_open_vol = 10000;
+	printf("********************\n");
 	g_config_t.contracts[0].max_cancel_limit = 1000;
 	g_config_t.contracts[0].expiration_date = atoi(pInstrument->EndDelivDate); // to correct
 	g_config_t.contracts[0].tick_size = pInstrument->PriceTick;
@@ -370,6 +377,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			PRINT_INFO("Strating load strategy!");
 			g_data_t.info = (void*)&g_config_t;
 			my_st_init(DEFAULT_CONFIG, 0, &g_data_t);
+			MdUserApi->Init();
 
 			PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
 				g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);

@@ -26,8 +26,10 @@ struct TraderConfig
 	int   INSTRUMENT_COUNT;
 
 	int   STRAT_ID;
+	char  STRAT_NAME[SYMBOL_LEN];
 	char  STRAT_PATH[PATH_LEN];
 	char  STRAT_EV[PATH_LEN];
+	char  STRAT_OUTPUT[PATH_LEN];
 };
 
 struct TraderInfo

@@ -22,6 +22,7 @@
     "INSTRUMENTS": ["cu1712"],
 
     "STRAT_ID": 564335,
+    "STRAT_NAME": "test_strategy",
     "STRAT_PATH": "./strategy.so",
     "STRAT_EV": "./ev.txt",
     "STRAT_OUTPUT": "./output"

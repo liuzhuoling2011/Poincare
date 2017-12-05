@@ -6,9 +6,8 @@
 #include "utils/log.h"		 
 #include "core/Quote_Handler.h"
 #include "core/Trader_Handler.h"
-#include "utils/utils.h"
+//#include "utils/utils.h"
 
-extern Trader_Handler *s_trader_handler;
 extern char log_name[1024];
 extern FILE* log_handle;
 
@@ -38,6 +37,8 @@ void recv_signal(int sig)
 	exit(0);
 }
 
+CThostFtdcMdApi *MdUserApi;	// after strategy init finished, call MdUserApi->Init();
+
 int main(int argc, char **argv)
 {
 	PRINT_INFO("Welcome to CTP demo!");
@@ -60,16 +61,13 @@ int main(int argc, char **argv)
 	TraderApi->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
 	TraderApi->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
 
-	s_trader_handler = trader_handler;
-
-	/*CThostFtdcMdApi *MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
+	MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
 	Quote_Handler quote_handler(MdUserApi, trader_handler, &trader_config);
-	MdUserApi->Init();*/
-
+	
 	TraderApi->Join();
 	TraderApi->Release();
-	/*MdUserApi->Join();
-	MdUserApi->Release();*/
+	MdUserApi->Join();
+	MdUserApi->Release();
 
 	free_config(trader_config);
 	flush_log();

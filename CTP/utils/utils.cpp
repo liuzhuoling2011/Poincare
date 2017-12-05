@@ -16,6 +16,9 @@ static const std::map<std::string, char> EXCH_CHAR =
 { "CZCE", 'C' },{ "FUT_EXCH", 'X' },{ "SGX", 'S' },{ "SGE", 'D' },{ "CBOT", 'F' },{ "CME", 'M' },
 { "LME", 'L' },{ "COMEX", 'O' },{ "NYMEX", 'N' },{ "BLANK_EXCH", '\0' },{ "UNDEFINED_EXCH", 'u' } };
 
+static const std::map<std::string, int> EXCH_FEEDTYPE =
+{ { "CFFEX", 0 },{ "DCE", 1 },{ "SHFE", 6 },{ "CZCE", 7 },{ "Stock", 9 } };
+
 char get_exch_by_name(const char *name)
 {
 	auto need = EXCH_CHAR.find(name);
@@ -23,6 +26,15 @@ char get_exch_by_name(const char *name)
 		return need->second;
 	else
 		return '\0';
+}
+
+char get_feedtype_by_exch(const char *name)
+{
+	auto need = EXCH_CHAR.find(name);
+	if (need != EXCH_CHAR.end())
+		return need->second;
+	else
+		return 0;
 }
 
 int convert_open_close_flag(char openclose)
@@ -473,8 +485,10 @@ bool read_json_config(TraderConfig& trader_config) {
 	trader_config.INSTRUMENT_COUNT = instr_count;
 
 	trader_config.STRAT_ID = l_json["STRAT_ID"].int_value();
-	strlcpy(trader_config.STRAT_PATH, l_json["STRAT_PATH"].string_value().c_str(), 64);
-	strlcpy(trader_config.STRAT_EV, l_json["STRAT_EV"].string_value().c_str(), 64);
+	strlcpy(trader_config.STRAT_PATH, l_json["STRAT_PATH"].string_value().c_str(), 256);
+	strlcpy(trader_config.STRAT_EV, l_json["STRAT_EV"].string_value().c_str(), 256);
+	strlcpy(trader_config.STRAT_OUTPUT, l_json["STRAT_OUTPUT"].string_value().c_str(), 256);
+	strlcpy(trader_config.STRAT_NAME, l_json["STRAT_NAME"].string_value().c_str(), 64);
 }
 
 void free_config(TraderConfig& trader_config) {
@@ -483,13 +497,18 @@ void free_config(TraderConfig& trader_config) {
 	}
 }
 
+int get_int_time_from_quote(char* UpdateTime, int UpdateMillisec) {
+	int hour = (UpdateTime[0] - '0') * 10 + (UpdateTime[1] - '0');
+	int minute = (UpdateTime[3] - '0') * 10 + (UpdateTime[4] - '0');
+	int second = (UpdateTime[6] - '0') * 10 + (UpdateTime[7] - '0');
+	return UpdateMillisec + second * 1000 + minute * 1000 * 100 + hour * 1000 * 100 * 100;
+}
+
 void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_Book * internal_book) {
-	//correct
-	internal_book->feed_type = 0;
+	internal_book->exchange = get_exch_by_name(ctp_quote->ExchangeID);
+	internal_book->feed_type = get_feedtype_by_exch(ctp_quote->ExchangeID);
 	strlcpy(internal_book->symbol, ctp_quote->InstrumentID, SYMBOL_LEN);
-	//correct
-	internal_book->exchange = ctp_quote->ExchangeID[0];
-	internal_book->int_time = atoi(ctp_quote->UpdateTime);
+	internal_book->int_time = get_int_time_from_quote(ctp_quote->UpdateTime, ctp_quote->UpdateMillisec);
 	internal_book->pre_close_px = ctp_quote->PreClosePrice;
 	internal_book->pre_settle_px = ctp_quote->PreSettlementPrice;
 	internal_book->pre_open_interest = ctp_quote->PreOpenInterest;

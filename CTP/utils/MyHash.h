@@ -28,6 +28,11 @@
 #define HASH_KEY_SIZE 64
 #define ROUND_UP(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 
+size_t strlcpy(char * dst, const char * src, size_t siz);
+int my_strcmp(const char *s1, const char *s2);
+uint64_t my_hash_value(const char *str_key);
+
+
 template <class V>
 class MyHash {
 public:
