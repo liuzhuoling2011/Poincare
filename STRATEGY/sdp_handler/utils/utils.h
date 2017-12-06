@@ -75,4 +75,6 @@ int add_time(int int_time, int seconds);
 
 void reset_order_count_for_test();
 
+int get_seconds_from_int_time(int int_time);
+
 #endif

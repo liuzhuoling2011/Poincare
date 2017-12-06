@@ -338,3 +338,13 @@ int add_time(int int_time, int seconds)
 	return (time1_hour * 10000 + time1_min * 100 + time1_sec) * 1000;
 }
 
+int get_seconds_from_int_time(int int_time)
+{
+	/*Convert int_time e.g 90000000 to seconds */
+	int second = (int_time / 1000) % 100;
+	int_time = (int_time / 1000) / 100;
+	int minute = int_time % 100;
+	int_time = int_time  / 100;
+	int hour = int_time % 100;
+	return hour * 60 * 60 + minute * 60 + second;
+}

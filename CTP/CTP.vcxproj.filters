@@ -86,12 +86,6 @@
     <ClInclude Include="core\Quote_Handler.h">
       <Filter>头文件\core</Filter>
     </ClInclude>
-    <ClInclude Include="quote_format_define.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="strategy_interface.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="core\ThostFtdcMdApi.h">
       <Filter>头文件\core</Filter>
     </ClInclude>

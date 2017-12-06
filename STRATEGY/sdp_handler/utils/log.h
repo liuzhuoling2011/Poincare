@@ -35,6 +35,10 @@ bool is_debug_mode();
 			if(is_debug_mode()) printf(CC_CYAN "[SDP %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
 
+	#define PRINT_SUCCESS(format,...) do{\
+			printf(CC_GREEN "[SUCCESS %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+		}while (0)
+
 	#define PRINT_WARN(format,...) do{\
 			printf(CC_YELLOW "[SDP %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
@@ -49,6 +53,10 @@ bool is_debug_mode();
 
 	#define PRINT_INFO(format,...) do{\
 			printf("[SDP %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+		}while (0)
+
+	#define PRINT_SUCCESS(format,...) do{\
+			printf("[INFO %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
 
 	#define PRINT_WARN(format,...) do{\
