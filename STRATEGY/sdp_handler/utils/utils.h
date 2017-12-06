@@ -77,4 +77,8 @@ void reset_order_count_for_test();
 
 int get_seconds_from_int_time(int int_time);
 
+int get_seconds_from_char_time(char* char_time);
+
+void get_time_record(char *time_str);
+
 #endif

@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include "utils.h"
 #include "log.h"
+#include <ctime>
 
 #define CHAR_EQUAL_ZERO(a, b, c) do{\
 	if (a != b) goto end;\
@@ -338,6 +339,14 @@ int add_time(int int_time, int seconds)
 	return (time1_hour * 10000 + time1_min * 100 + time1_sec) * 1000;
 }
 
+void get_time_record(char *time_str) {
+	time_t timep;
+	struct tm *p;
+	time(&timep);
+	p = localtime(&timep); //取得当地时间
+	sprintf(time_str, "%d%02d%02d %02d:%02d:%02d", (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+}
+
 int get_seconds_from_int_time(int int_time)
 {
 	/*Convert int_time e.g 90000000 to seconds */
@@ -347,4 +356,8 @@ int get_seconds_from_int_time(int int_time)
 	int_time = int_time  / 100;
 	int hour = int_time % 100;
 	return hour * 60 * 60 + minute * 60 + second;
+}
+
+int get_seconds_from_char_time(char* char_time) {
+	return 0;
 }

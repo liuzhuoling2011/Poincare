@@ -19,6 +19,8 @@ static int tick_time = 0;
 static int int_time = 0;
 static double last_ask_price;
 static double last_bid_price;
+static char local_time[64];
+
 
 static int kdb_handle = khpu("localhost", 5000, "");
 static char kdb_sql[KDBLEN];
@@ -72,11 +74,13 @@ int my_on_book(int type, int length, void *book) {
 		sdp_handler->cancel_all_orders();
 	}
 
+	get_time_record(local_time);
+
 	//当行情时间和本地时间相差5分钟，认为是无效行情，注意这里的时间已做过0点处理。
-	int local_time = get_seconds_from_char_time(now_format());
-	PRINT_INFO("tick_time:%d,local_time:%d", tick_time, local_time);
-	if (abs(local_time - tick_time) > 5 * 60) {
-		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, now_format(), abs(local_time - tick_time));
+	int l_local_time = get_seconds_from_char_time(local_time);
+	PRINT_INFO("tick_time:%d,local_time:%d", tick_time, l_local_time);
+	if (abs(l_local_time - tick_time) > 5 * 60) {
+		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, local_time, abs(l_local_time - tick_time));
 		return;
 	}
 
@@ -127,10 +131,10 @@ int my_on_book(int type, int length, void *book) {
 		}
 		else if (length > cuSignalcount) {
 			cuSignalcount = length;
-			printf("[%s]signal:%d\n", now(), signal);
+			printf("[%s]signal:%d\n", local_time, signal);
 			//产生Short信号
 			if (signal == -1) {
-				PRINT_SUCCESS("[%s] Short\n", now());
+				PRINT_SUCCESS("[%s] Short\n", local_time);
 				//先平所有的
 				if (currentPositionDirection == 1) {
 					PRINT_INFO("Close Long\n");
@@ -138,7 +142,7 @@ int my_on_book(int type, int length, void *book) {
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE_YES);
 				}
 				//再开所有的
-				PRINT_INFO("[%s]OPEN SHORT\n", now());
+				PRINT_INFO("[%s]OPEN SHORT\n", local_time);
 				sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_OPEN);
 
 				// simple way: curent postion Direction should be write in on_response 
@@ -146,7 +150,7 @@ int my_on_book(int type, int length, void *book) {
 			}
 			else if (signal == 1) {
 				//产生LONG信号
-				PRINT_SUCCESS("[%s]Long\n", now());
+				PRINT_SUCCESS("[%s]Long\n", local_time);
 				//先平所有的
 				if (currentPositionDirection == -1) {
 					PRINT_INFO("Close Short\n");
@@ -154,7 +158,7 @@ int my_on_book(int type, int length, void *book) {
 					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE_YES);
 				}
 				//再开。
-				PRINT_INFO("[%s]OPEN LONG\n", now());
+				PRINT_INFO("[%s]OPEN LONG\n", local_time);
 				sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_OPEN);
 				currentPositionDirection = 1;
 			}
@@ -189,12 +193,13 @@ int my_on_response(int type, int length, void *resp) {
 			LOG_LN("OrderID: %lld Strategy received CancelRejected", rsp->order_id);
 		case SIG_STATUS_CANCELED:
 			LOG_LN("OrderID: %lld Strategy received Canceled", rsp->order_id);
-			PRINT_WARN("[%s]Cancel Succeed!\n", now());
+			get_time_record(local_time);
+			PRINT_WARN("[%s]Cancel Succeed!\n", local_time);
 		case SIG_STATUS_REJECTED:
 			LOG_LN("OrderID: %lld Strategy received Rejected, Error: %s",
 				rsp->order_id, rsp->error_info);
 
-			PRINT_SUCCESS("[%s]Not into OrderList\n", now());
+			PRINT_SUCCESS("[%s]Not into OrderList\n", local_time);
 			
 			PRINT_ERROR("Send again\n");
 			Contract *instr = sdp_handler->find_contract(rsp->symbol);
@@ -216,12 +221,11 @@ int my_on_response(int type, int length, void *resp) {
 				rsp->order_id, rsp->symbol,
 				(rsp->direction == ORDER_BUY ? "Buy" : "Sell"));
 
-			PRINT_ERROR("[%s]Has Been in OrderList;Waiting Deal...", now());
+			get_time_record(local_time);
+			PRINT_ERROR("[%s]Has Been in OrderList;Waiting Deal...", local_time);
 			PRINT_WARN("%s,%s\n", rsp->direction == ORDER_SELL ? "ORDER_SELL" : "ORDER_BUY",
 				rsp->open_close == ORDER_CLOSE ? "ORDER_CLOSE" : "ORDER_OPEN");
-			insert_time = get_seconds_from_char_time(pOrder->InsertTime);
-			PRINT_ERROR("debug time:%s,%d\n", pOrder->InsertTime, insert_time);
-
+			insert_time = get_seconds_from_int_time(int_time);
 			break;
 		}
 		return 0;
@@ -245,8 +249,9 @@ void my_destroy() {
 		delete sdp_handler;
 		sdp_handler = NULL;
 
-		PRINT_ERROR("[%s]Aaron> ERROR or DISCONNECT,Come into error_deal\n", now());
-		PRINT_ERROR("[%s]save kdb tables:", now());
+		get_time_record(local_time);
+		PRINT_ERROR("[%s]Aaron> ERROR or DISCONNECT,Come into error_deal\n", local_time);
+		PRINT_ERROR("[%s]save kdb tables:", local_time);
 		char sql[KDBLEN] = "{save hsym `$\"tbls/\",string x } each  tables `.";
 		k(-kdb_handle, sql, (K)0);
 	}
