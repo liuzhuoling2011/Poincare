@@ -13,18 +13,60 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="头文件\core">
+      <UniqueIdentifier>{8beb1e2a-16b2-427f-8ceb-c091f4ad6172}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\utils">
+      <UniqueIdentifier>{6dacc146-0263-45aa-a751-4344903c45ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="资源文件\core">
+      <UniqueIdentifier>{1411e38e-19cb-4f58-8d59-ee2c6c0d6749}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="资源文件\utils">
+      <UniqueIdentifier>{9c6590ec-2a37-401f-881b-88f519e27bc8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\CTP\strategy_interface.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="sdp_handler\core\base_define.h">
+      <Filter>头文件\core</Filter>
     </ClInclude>
-    <ClInclude Include="..\CTP\quote_format_define.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="sdp_handler\core\sdp_handler.h">
+      <Filter>头文件\core</Filter>
+    </ClInclude>
+    <ClInclude Include="sdp_handler\utils\list.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="sdp_handler\utils\log.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="sdp_handler\utils\MyArray.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="sdp_handler\utils\MyHash.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="sdp_handler\utils\order_hash.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="sdp_handler\utils\utils.h">
+      <Filter>头文件\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="strategy.cpp">
       <Filter>资源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="sdp_handler\core\sdp_handler.cpp">
+      <Filter>资源文件\core</Filter>
+    </ClCompile>
+    <ClCompile Include="sdp_handler\utils\log.cpp">
+      <Filter>资源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="sdp_handler\utils\order_hash.cpp">
+      <Filter>资源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="sdp_handler\utils\utils.cpp">
+      <Filter>资源文件\utils</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

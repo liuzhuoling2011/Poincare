@@ -14,7 +14,7 @@ RCOMPILE_FLAGS = -O3 -fPIC
 # Additional debug-specific flags
 DCOMPILE_FLAGS = -g3 -fPIC -D DEBUG
 # Add additional include paths
-INCLUDES = -I $(SRC_PATH) -I ../CTP
+INCLUDES = -I $(SRC_PATH) -I ../include -I ./sdp_handler
 # General linker settings
 LINK_FLAGS = -fPIC -shared
 # Additional release-specific linker settings
