@@ -7,6 +7,7 @@
     "begin_time": 85800000,
     "end_time": 153000000,
     "day_night_flag": 0,
+    "settle_flag": false,
     "so_path": ["strat_so/sample_tradelist.so", "strat_so/SmartExecution.so"],
     "match_param": [
         "5,SHFE,any,0.2",

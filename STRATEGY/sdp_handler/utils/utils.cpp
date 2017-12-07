@@ -359,8 +359,8 @@ int get_seconds_from_int_time(int int_time)
 }
 
 int get_seconds_from_char_time(char* char_time) {
-	int hour = (char_time[10] - '0') * 10 + (char_time[11] - '0');
-	int minute = (char_time[12] - '0') * 10 + (char_time[13] - '0');
-	int second = (char_time[14] - '0') * 10 + (char_time[15] - '0');
+	int hour = (char_time[9] - '0') * 10 + (char_time[10] - '0');
+	int minute = (char_time[11] - '0') * 10 + (char_time[12] - '0');
+	int second = (char_time[13] - '0') * 10 + (char_time[14] - '0');
 	return hour * 60 * 60 + minute * 60 + second;
 }

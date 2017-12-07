@@ -16,7 +16,7 @@ from components.me_wrapper import me
 from components.st_wrapper import base as st_base
 from components.st_wrapper import strategy
 from config import client, config_json, kdb_config, mysql_config, PROFILE, DEBUG
-from new_settlement import settle_one_session
+#from new_settlement import settle_one_session
 from simulator.agent_defines import TaskStatus, CallbackMsgType
 from simulator.simu_defines import *
 from simulator.tools import sw_fn_timer
@@ -98,7 +98,7 @@ class AtomTaskProcessor:
         ],
         """
         settle_results = self.settle_result
-        strategy_settle_results = settle_results[str(self.strat_id)]
+        #strategy_settle_results = settle_results[str(self.strat_id)]
 
         st_cfg_item = self.task['strat_item']
         account = np.zeros(64, dtype=st_base.st_account)
@@ -108,13 +108,14 @@ class AtomTaskProcessor:
             account['currency'][idx] = self.currency[currency_type][0]  # currency type
             account['exch_rate'][idx] = self.currency[currency_type][1]
             account['account'][idx] = acc_item[0]
-            if self.first_init_strat_flag:  # 第一次初始化的时候使用配置中的信息
+            if True:
+                #self.first_init_strat_flag:  # 第一次初始化的时候使用配置中的信息
                 account['cash_available'][idx] = float(acc_item[1])
                 account['cash_asset'][idx] = float(acc_item[1])
-            else:
-                account_data = strategy_settle_results['accounts'][acc_item[0]]
-                account['cash_available'][idx] = account_data['available_cash']
-                account['cash_asset'][idx] = account_data['asset_cash']
+            #else:
+            #    account_data = strategy_settle_results['accounts'][acc_item[0]]
+            #    account['cash_available'][idx] = account_data['available_cash']
+            #    account['cash_asset'][idx] = account_data['asset_cash']
             idx += 1
         contract = np.zeros(4096, dtype=st_base.st_contract)
 
@@ -152,7 +153,8 @@ class AtomTaskProcessor:
             else:  # 如果清算中存在对应symbol的仓位信息，则用清算的，清算没有的，清零仓位
                 if isinstance(symbol, bytes):
                     symbol = symbol.decode()
-                if symbol in strategy_settle_results['data']:
+                if False: 
+                #symbol in strategy_settle_results['data']:
                     symbol_data = strategy_settle_results['data'][symbol]
                     # if trading day changed then the settlement result should be ajustedn then feed into strategy
                     if self.cur_day != self.pre_day:
@@ -245,20 +247,20 @@ class AtomTaskProcessor:
         conf['default_mt'] = default_match_type
         self.me_hdl = me.create(conf)
 
-    @sw_fn_timer(PROFILE)
-    def _init_settle_position(self):
-        _id = self.strat_id
-        _date = business.to_settlement_date(self.cur_day)
-        _day_night = business.to_day_night_str(self.day_night)
-        _start_point = self._get_pre_day_night(_day_night)
-        pos = business.construct_settlement_position(_id, _date, _day_night, self.accounts_cfg,
-                                                     self.pos_info, self.symbol_exch)
-
-        trade_msg = self.tl_colloctor.get_trade_msg()
-        no_trade_msg = self.tl_colloctor.get_no_trade_msg()
-        self.settle_result = settle_one_session(kdb_config, _id, _date, self.day_night, pos, trade_msg,
-                                                _start_point, mysql_config=mysql_config, task_id=self.task['task_id'],
-                                                tlogs=no_trade_msg)
+#    @sw_fn_timer(PROFILE)
+#    def _init_settle_position(self):
+#        _id = self.strat_id
+#        _date = business.to_settlement_date(self.cur_day)
+#        _day_night = business.to_day_night_str(self.day_night)
+#        _start_point = self._get_pre_day_night(_day_night)
+#        pos = business.construct_settlement_position(_id, _date, _day_night, self.accounts_cfg,
+#                                                     self.pos_info, self.symbol_exch)
+#
+#        trade_msg = self.tl_colloctor.get_trade_msg()
+#        no_trade_msg = self.tl_colloctor.get_no_trade_msg()
+#        self.settle_result = settle_one_session(kdb_config, _id, _date, self.day_night, pos, trade_msg,
+#                                                _start_point, mysql_config=mysql_config, task_id=self.task['task_id'],
+#                                                tlogs=no_trade_msg)
 
     def _get_pre_day_night(self, day_night):
         if self.task['day_night_flag'] == DAY_NIGHT_FLAG.DAY_AND_NIGHT.value:
@@ -272,28 +274,28 @@ class AtomTaskProcessor:
             else:
                 return 1
 
-    @sw_fn_timer(PROFILE)
-    def _get_settle_resp(self):
-        """ do settle calculation, store the pos and settle result
-        """
-        _id = self.strat_id
-        _date = business.to_settlement_date(self.cur_day)
-        _day_night = business.to_day_night_str(self.day_night)
-        _start_point = self._get_pre_day_night(_day_night)
-
-        trade_msg = self.tl_colloctor.get_trade_msg()
-        no_trade_msg = self.tl_colloctor.get_no_trade_msg()
-
-        if self.debug_mode_flag == True:
-            self.write_agent_log('--------------->before settle: \n', self.settle_result)
-            self.write_agent_log('--------------->trade msg: \n', trade_msg)
-
-        self.settle_result = settle_one_session(kdb_config, _id, _date, self.day_night, self.settle_result, trade_msg,
-                                                _start_point, mysql_config=mysql_config, task_id=self.task['task_id'],
-                                                tlogs=no_trade_msg)
-        self.tl_colloctor.reset()
-        if self.debug_mode_flag == True:
-            self.write_agent_log('--------------->after settle: \n', self.settle_result)
+#    @sw_fn_timer(PROFILE)
+#    def _get_settle_resp(self):
+#        """ do settle calculation, store the pos and settle result
+#        """
+#        _id = self.strat_id
+#        _date = business.to_settlement_date(self.cur_day)
+#        _day_night = business.to_day_night_str(self.day_night)
+#        _start_point = self._get_pre_day_night(_day_night)
+#
+#        trade_msg = self.tl_colloctor.get_trade_msg()
+#        no_trade_msg = self.tl_colloctor.get_no_trade_msg()
+#
+#        if self.debug_mode_flag == True:
+#            self.write_agent_log('--------------->before settle: \n', self.settle_result)
+#            self.write_agent_log('--------------->trade msg: \n', trade_msg)
+#
+#        self.settle_result = settle_one_session(kdb_config, _id, _date, self.day_night, self.settle_result, trade_msg,
+#                                                _start_point, mysql_config=mysql_config, task_id=self.task['task_id'],
+#                                                tlogs=no_trade_msg)
+#        self.tl_colloctor.reset()
+#        if self.debug_mode_flag == True:
+#            self.write_agent_log('--------------->after settle: \n', self.settle_result)
 
     def _enter_idle_mode(self, exchange_time):
         time_diff = exchange_time - self.last_idle_time
@@ -312,46 +314,46 @@ class AtomTaskProcessor:
                 self.last_idle_time += (st_idle_cnt - 1) * self.idle_interval
                 break
 
-    @sw_fn_timer(PROFILE)
-    def _deal_result(self):
-        """ deal with the result information
+   # @sw_fn_timer(PROFILE)
+   # def _deal_result(self):
+   #     """ deal with the result information
 
-        1. send back the result data
-        2. update the position
-        3. update the account cash
-        """
-        day_pnl_node = {}
-        day_pnl_node['task_id'] = self.task['task_id']
-        day_pnl_node['status'] = 0
-        day_pnl_node['date'] = self.cur_day
-        day_pnl_node['day_night'] = self.day_night
-        day_pnl_node['progress'] = self.process_session_count * 100 / self.total_session_num
-        strategy_settle_results = self.settle_result[str(self.strat_id)]
-        day_pnl_node['cash'] = strategy_settle_results['cash']
-        day_pnl_node['asset_cash'] = strategy_settle_results['asset_cash']
-        if self.first_init_strat_flag and self.debug_mode_flag:
-            day_pnl_node['log_name'] = ['nlogs/' + self.strategy_log_name, self.agent_log_file]
-        else:
-            day_pnl_node['log_name'] = ['nlogs/' + self.strategy_log_name]
-        day_pnl_node['pnl_nodes'] = []
-        for symbol in strategy_settle_results['data']:
-            symbol_pnl = {}
-            symbol_data = strategy_settle_results['data'][symbol]
-            symbol_pnl['symbol'] = symbol
-            exch_str = business.get_exchange(self.symbol_exch, symbol)
-            symbol_pnl['exchange'] = business.exch_str_to_int(exch_str)
-            symbol_pnl['product'] = business.convert_symbol_to_product(symbol, exch_str)
-            symbol_pnl['fee'] = symbol_data['fee']
-            symbol_pnl['net_pnl'] = symbol_data['symbol_net_pnl']
-            symbol_pnl['gross_pnl'] = symbol_pnl['net_pnl'] + symbol_pnl['fee']
-            symbol_pnl['long_price'] = symbol_data['today_long_avg_price']
-            symbol_pnl['long_volume'] = symbol_data['today_long_pos']
-            symbol_pnl['short_price'] = symbol_data['today_short_avg_price']
-            symbol_pnl['short_volume'] = symbol_data['today_short_pos']
-            day_pnl_node['pnl_nodes'].append(symbol_pnl)
-        result_msg = json.dumps(day_pnl_node)
-        self.send_back(result_msg)
-        # update message locally for st_init
+   #     1. send back the result data
+   #     2. update the position
+   #     3. update the account cash
+   #     """
+   #     day_pnl_node = {}
+   #     day_pnl_node['task_id'] = self.task['task_id']
+   #     day_pnl_node['status'] = 0
+   #     day_pnl_node['date'] = self.cur_day
+   #     day_pnl_node['day_night'] = self.day_night
+   #     day_pnl_node['progress'] = self.process_session_count * 100 / self.total_session_num
+   #     strategy_settle_results = self.settle_result[str(self.strat_id)]
+   #     day_pnl_node['cash'] = strategy_settle_results['cash']
+   #     day_pnl_node['asset_cash'] = strategy_settle_results['asset_cash']
+   #     if self.first_init_strat_flag and self.debug_mode_flag:
+   #         day_pnl_node['log_name'] = ['nlogs/' + self.strategy_log_name, self.agent_log_file]
+   #     else:
+   #         day_pnl_node['log_name'] = ['nlogs/' + self.strategy_log_name]
+   #     day_pnl_node['pnl_nodes'] = []
+   #     for symbol in strategy_settle_results['data']:
+   #         symbol_pnl = {}
+   #         symbol_data = strategy_settle_results['data'][symbol]
+   #         symbol_pnl['symbol'] = symbol
+   #         exch_str = business.get_exchange(self.symbol_exch, symbol)
+   #         symbol_pnl['exchange'] = business.exch_str_to_int(exch_str)
+   #         symbol_pnl['product'] = business.convert_symbol_to_product(symbol, exch_str)
+   #         symbol_pnl['fee'] = symbol_data['fee']
+   #         symbol_pnl['net_pnl'] = symbol_data['symbol_net_pnl']
+   #         symbol_pnl['gross_pnl'] = symbol_pnl['net_pnl'] + symbol_pnl['fee']
+   #         symbol_pnl['long_price'] = symbol_data['today_long_avg_price']
+   #         symbol_pnl['long_volume'] = symbol_data['today_long_pos']
+   #         symbol_pnl['short_price'] = symbol_data['today_short_avg_price']
+   #         symbol_pnl['short_volume'] = symbol_data['today_short_pos']
+   #         day_pnl_node['pnl_nodes'].append(symbol_pnl)
+   #     result_msg = json.dumps(day_pnl_node)
+   #     self.send_back(result_msg)
+   #     # update message locally for st_init
 
     def _process_send_order_request(self):
         while len(self.ord_request) > 0:
@@ -401,7 +403,7 @@ class AtomTaskProcessor:
             if self.idle_interval > 0:
                 self._enter_idle_mode(self.exchange_time)
             # _preserve_quote.append(quote)
-        self._get_settle_resp()
+#        self._get_settle_resp()
 
     def destory(self):
         self.first_init_strat_flag = True
@@ -471,7 +473,7 @@ class AtomTaskProcessor:
             self._init_strategy_extra()
 
             if self.first_init_strat_flag:
-                self._init_settle_position()
+               # self._init_settle_position()
                 self._init_st()
                 self.first_init_strat_flag = False
             else:
@@ -487,7 +489,7 @@ class AtomTaskProcessor:
                 self._init_me()
                 self.me_init_success_flag = True
                 self._process_historical_data()
-                self._deal_result()
+               # self._deal_result()
             else:
                 err_msg = 'Processing: %d %s, quote_def %s, quote size: %d' % (
                 cur_day, day_night, self.quote_def, qsize)

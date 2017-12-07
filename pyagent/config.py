@@ -8,8 +8,8 @@ from raven import Client
 LOCAL_POSITION = 0
 IDC_POSITION = 1
 ##################### CONFIG SWITCHES ##################
-DEBUG = False
-RELEASE = True
+DEBUG = True
+RELEASE = False
 PROFILE = False
 POSITION = IDC_POSITION
 ##################### PyAgent PART CONFIG  #############

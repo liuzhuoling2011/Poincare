@@ -11,18 +11,18 @@
 
     "QUOTE_FRONT": "tcp://180.168.146.187:10011",      // 行情前置
     "QBROKER_ID": "9999",
-    "QUSER_ID": "106409",
-    "QPASSWORD": "123456",
+    "QUSER_ID": "106407",
+    "QPASSWORD": "a.123456",
 
     "TRADER_FRONT": "tcp://180.168.146.187:10001",     //交易前置
     "TBROKER_ID": "9999",
-    "TUSER_ID": "106409",
-    "TPASSWORD": "123456",
+    "TUSER_ID": "106407",
+    "TPASSWORD": "a.123456",
     
-    "INSTRUMENTS": ["cu1712"],
+    "INSTRUMENTS": ["cu1801"],
 
     "STRAT_ID": 564335,
-    "STRAT_NAME": "test_strategy",
+    "STRAT_NAME": "taoli_strategy",
     "STRAT_PATH": "./strategy.so",
     "STRAT_EV": "./ev.txt",
     "STRAT_OUTPUT": "./output",

@@ -11,6 +11,8 @@ static st_config_t *g_config = NULL;
 #include <string>
 
 #define KDBLEN 1024
+#define SIMULATION 
+
 static int count = 0;
 
 static int insert_time = 0;
@@ -62,6 +64,8 @@ int my_on_book(int type, int length, void *book) {
 
 	Futures_Internal_Book *f_book = (Futures_Internal_Book *)((st_data_t*)book)->info;
 	int_time = f_book->int_time;
+    LOG("int_time:%d,ap1 = %f\n",int_time,f_book->ap_array[0]);
+
 	tick_time = get_seconds_from_int_time(f_book->int_time);
 
 	//6秒撤单机制
@@ -71,6 +75,7 @@ int my_on_book(int type, int length, void *book) {
 		sdp_handler->cancel_all_orders();
 	}
 
+#ifndef SIMULATION 
 	get_time_record(local_time);
 
 	//当行情时间和本地时间相差5分钟，认为是无效行情，注意这里的时间已做过0点处理。
@@ -80,6 +85,7 @@ int my_on_book(int type, int length, void *book) {
 		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, local_time, abs(l_local_time - tick_time));
 		return -1;
 	}
+#endif
 
 	//过滤一些极端时间段
 	if (not_working_time(int_time)) return -1;
@@ -157,7 +163,6 @@ int my_on_response(int type, int length, void *resp) {
 
 		st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
 		Contract *instr = sdp_handler->find_contract(rsp->symbol);
-		get_time_record(local_time);
 
 		switch (rsp->status) {
 		case SIG_STATUS_PARTED:
@@ -176,13 +181,12 @@ int my_on_response(int type, int length, void *resp) {
 			LOG_LN("OrderID: %lld Strategy received CancelRejected", rsp->order_id);
 		case SIG_STATUS_CANCELED:
 			LOG_LN("OrderID: %lld Strategy received Canceled", rsp->order_id);
-			get_time_record(local_time);
-			PRINT_WARN("[%s]Cancel Succeed!\n", local_time);
+			PRINT_WARN("[%d]Cancel Succeed!\n",int_time);
 		case SIG_STATUS_REJECTED:
 			LOG_LN("OrderID: %lld Strategy received Rejected, Error: %s",
 				rsp->order_id, rsp->error_info);
 
-			PRINT_SUCCESS("[%s]Not into OrderList\n", local_time);
+			PRINT_SUCCESS("[%d]Not into OrderList\n",int_time);
 			
 			PRINT_ERROR("Send again\n");
 			if(rsp->direction == ORDER_BUY)
@@ -203,7 +207,7 @@ int my_on_response(int type, int length, void *resp) {
 				rsp->order_id, rsp->symbol,
 				(rsp->direction == ORDER_BUY ? "Buy" : "Sell"));
 
-			PRINT_ERROR("[%s]Has Been in OrderList;Waiting Deal...", local_time);
+			PRINT_ERROR("[%d]Has Been in OrderList;Waiting Deal...",int_time);
 			PRINT_WARN("%s,%s\n", rsp->direction == ORDER_SELL ? "ORDER_SELL" : "ORDER_BUY",
 				rsp->open_close == ORDER_CLOSE ? "ORDER_CLOSE" : "ORDER_OPEN");
 			insert_time = get_seconds_from_int_time(int_time);
@@ -230,9 +234,8 @@ void my_destroy() {
 		delete sdp_handler;
 		sdp_handler = NULL;
 
-		get_time_record(local_time);
-		PRINT_ERROR("[%s]Aaron> ERROR or DISCONNECT,Come into error_deal\n", local_time);
-		PRINT_ERROR("[%s]save kdb tables:", local_time);
+		PRINT_ERROR("[%d]Aaron> ERROR or DISCONNECT,Come into error_deal\n",int_time);
+		PRINT_ERROR("[%d]save kdb tables:",int_time);
 		char sql[KDBLEN] = "{save hsym `$\"tbls/\",string x } each  tables `.";
 		k(-kdb_handle, sql, (K)0);
 	}

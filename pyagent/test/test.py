@@ -16,6 +16,7 @@ sys.path.append(os.path.join(base_path, "lib"))
 from config import config_json
 
 sys.path.append(config_json['SETTLEMENT_PATH'])
+print(sys.path, config_json['SETTLEMENT_PATH'])
 
 from simulator.simu_handler import execute_task
 
@@ -26,8 +27,8 @@ def rsp_handler(msg):
 
 def signal_handler(signum, frame):
     if signum == 2:
-        print("Recv abort signal and exit success", frame)
-        sys.exit(0)
+        print("Recv abort signal and exit success")
+        exit(0)
 
 
 def extra_handler(msg_type, msg):
@@ -46,7 +47,7 @@ def run_test(cfg_file):
     if task_obj:
         print(task_obj)
         t1 = time.time()
-        execute_task(task_obj, '', rsp_handler, extra_handler)
+        execute_task(task_obj, 'agent_log', rsp_handler, extra_handler)
         print("time consumption %s seconds" % (time.time() - t1))
 
 

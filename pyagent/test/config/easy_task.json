@@ -7,6 +7,7 @@
     "begin_time": 85800000,
     "end_time": 153000000,
     "day_night_flag": 0,
+    "settle_flag": false,
     "so_path": ["strat_so/sample_easy.so"],
     "flag_write_tunnel_log": 1,
     "match_param": [
