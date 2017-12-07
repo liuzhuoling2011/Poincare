@@ -567,7 +567,7 @@ void get_time_record(char *time_str) {
 	struct tm *p;
 	time(&timep);
 	p = localtime(&timep); //取得当地时间
-	sprintf(time_str, "%d%02d%02d %02d:%02d:%02d", (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+	sprintf(time_str, "%d%02d%02d_%02d%02d%02d", (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
 }
 
 int get_seconds_from_char_time(char * time_str)

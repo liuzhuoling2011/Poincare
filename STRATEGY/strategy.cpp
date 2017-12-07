@@ -7,7 +7,6 @@
 static SDPHandler *sdp_handler = NULL;
 static st_config_t *g_config = NULL;
 
-#include <sys/time.h>
 #include "utils/k.h"
 #include <string>
 
@@ -26,8 +25,6 @@ static int kdb_handle = khpu("localhost", 5000, "");
 static char kdb_sql[KDBLEN];
 static int RoundCount = 0;
 static int cuSignalcount = 0;
-//1 or -1
-static int currentPositionDirection = 0;
 
 int my_st_init(int type, int length, void *cfg) {
 	if (sdp_handler == NULL) {
@@ -131,36 +128,22 @@ int my_on_book(int type, int length, void *book) {
 		}
 		else if (length > cuSignalcount) {
 			cuSignalcount = length;
-			printf("[%s]signal:%d\n", local_time, signal);
 			//产生Short信号
 			if (signal == -1) {
-				PRINT_SUCCESS("[%s] Short\n", local_time);
-				//先平所有的
-				if (currentPositionDirection == 1) {
-					PRINT_INFO("Close Long\n");
-					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE);
+				if(instr->pre_long_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE_YES);
-				}
-				//再开所有的
-				PRINT_INFO("[%s]OPEN SHORT\n", local_time);
-				sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_OPEN);
-
-				// simple way: curent postion Direction should be write in on_response 
-				currentPositionDirection = -1;
+				else if(long_position(instr) > 0)
+					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE);
+				else
+					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_OPEN);
 			}
 			else if (signal == 1) {
-				//产生LONG信号
-				PRINT_SUCCESS("[%s]Long\n", local_time);
-				//先平所有的
-				if (currentPositionDirection == -1) {
-					PRINT_INFO("Close Short\n");
-					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE);
+				if (instr->pre_short_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE_YES);
-				}
-				//再开。
-				PRINT_INFO("[%s]OPEN LONG\n", local_time);
-				sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_OPEN);
-				currentPositionDirection = 1;
+				else if (short_position(instr) > 0)
+					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE);
+				else 
+					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_OPEN);
 			}
 		}
 	}
@@ -174,9 +157,10 @@ int my_on_response(int type, int length, void *resp) {
 	if (sdp_handler != NULL) {
 		sdp_handler->on_response(type, length, resp);
 
-		/* write your logic here */
 		st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
 		Contract *instr = sdp_handler->find_contract(rsp->symbol);
+		get_time_record(local_time);
+
 		switch (rsp->status) {
 		case SIG_STATUS_PARTED:
 			LOG_LN("OrderID: %lld Strategy received Partial Filled: %s %s %d@%f",
@@ -221,7 +205,6 @@ int my_on_response(int type, int length, void *resp) {
 				rsp->order_id, rsp->symbol,
 				(rsp->direction == ORDER_BUY ? "Buy" : "Sell"));
 
-			get_time_record(local_time);
 			PRINT_ERROR("[%s]Has Been in OrderList;Waiting Deal...", local_time);
 			PRINT_WARN("%s,%s\n", rsp->direction == ORDER_SELL ? "ORDER_SELL" : "ORDER_BUY",
 				rsp->open_close == ORDER_CLOSE ? "ORDER_CLOSE" : "ORDER_OPEN");
@@ -235,7 +218,7 @@ int my_on_response(int type, int length, void *resp) {
 
 int my_on_timer(int type, int length, void *info) {
 	if (sdp_handler != NULL) {
-		sdp_handler->on_book(type, length, info);
+		sdp_handler->on_timer(type, length, info);
 
 		/* write your logic here */
 		printf("on timer!\n");

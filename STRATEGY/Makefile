@@ -16,7 +16,7 @@ DCOMPILE_FLAGS = -g3 -fPIC -D DEBUG -DKXVER=3
 # Add additional include paths
 INCLUDES = -I $(SRC_PATH) -I ../include -I ./sdp_handler
 # General linker settings
-LINK_FLAGS = -fPIC -shared
+LINK_FLAGS = ./sdp_handler/utils/c.o -fPIC -shared 
 # Additional release-specific linker settings
 RLINK_FLAGS = 
 # Additional debug-specific linker settings
