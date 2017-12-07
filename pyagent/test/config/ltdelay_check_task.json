@@ -1,0 +1,45 @@
+{
+    "task_id" : "110",
+    "business": 2,
+    "base_path": "./test",
+    "start_date": 20171020,
+    "end_date": 20171020,
+    "begin_time": 85800000,
+    "end_time": 153000000,
+    "day_night_flag": 1,
+    "so_path": ["strat_so/lt91delay_shannon.so", "strat_so/CheckHandler.so"],
+    "match_param": [
+        "5,SHFE,any,0.2",
+        "5,DCE,any,0.4",
+        "5,CZCE,any,1.0",
+        "1,CFFEX,any,0.7",
+        "1,SSE,any,0.8",
+        "1,SZSE,any,0.8",
+        "1,BMD,any,0.7",
+        "1,CBOT,any,0.7",
+        "1,CME,any,0.7",
+        "1,HKEX,any,0.7",
+        "1,ICESG,any,0.7",
+        "1,ICEU,any,0.7",
+        "1,LME,any,0.7",
+        "1,NYMEX,any,0.7",
+        "1,SGX,any,0.7",
+        "1,TOCOM,any,0.7",
+        "1,INDEX,any,0.7",
+        "1,SGE,any,0.7"
+    ],
+    "strat_item": {
+        "so_name": "lt91delay_shannon",
+        "strat_id": 291,
+        "output_file_path": "./output",
+        "strat_name": ["lt91d20"],
+        "accounts": [
+            "Account1|999999999.99|888888888.88|CNY|1.0"
+        ],
+        "contracts": [
+            "rb|R1|SHFE|6|20|0|Account1"
+        ],
+        "log_name": "logs/[DATE]_[PRODUCT]_[DAYNIGHT]_strategy1.log",
+        "strat_param_file": "config/Lt91SimuNight.txt"
+    }
+}

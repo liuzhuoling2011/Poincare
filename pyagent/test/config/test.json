@@ -1,0 +1,58 @@
+{
+    "time_interval": 60,
+    "task_id": "3fac42decb5711e7b1512c44fd945f24",
+    "is_test": 1,
+    "db_conf": "192.168.1.44,9000,superuser1,password",
+    "strat_item": {
+        "strat_id": 202753,
+        "strat_param_file": "",
+        "output_file_path": "./output",
+        "strat_name": [
+            "yinsong_test11172"
+        ],
+        "contracts": [
+            "sr|R1|CZCE|7|1000000|0|testaccount1"
+        ],
+        "log_name": "logs/202753/[DATE]_[PRODUCT]_[DAYNIGHT]_strategy.log",
+        "accounts": [
+            "testaccount1|1000000.0|1000000.0|CNY|1.0"
+        ]
+    },
+    "type": 110,
+    "flag_cross_day_position": true,
+    "match_param": [
+        "1,SHFE,any,0.2",
+        "1,DCE,any,0.4",
+        "1,CZCE,any,0.8",
+        "1,CFFEX,any,0.7",
+        "1,SSE,any,0.8",
+        "1,SZSE,any,0.8",
+        "1,BMD,any,0.7",
+        "1,CBOT,any,0.7",
+        "1,CME,any,0.7",
+        "1,HKEX,any,0.7",
+        "1,ICESG,any,0.7",
+        "1,ICEU,any,0.7",
+        "1,LME,any,0.7",
+        "1,NYMEX,any,0.7",
+        "1,SGX,any,0.7",
+        "1,TOCOM,any,0.7",
+        "1,INDEX,any,0.7",
+        "1,SGE,any,0.7"
+    ],
+    "business": 2,
+    "flag_write_strat_log": true,
+    "day_night_flag": 2,
+    "flag_write_tunnel_log": false,
+    "start_date": 20170901,
+    "end_time": 273000000,
+    "trader_type": 1,
+    "user": "yinsong",
+    "match_type": 1,
+    "agent": "",
+    "begin_time": 85800000,
+    "end_date": 20170915,
+    "so_path": [
+        "strategy_upload/so_files/82_20171117132204_sample_easy.so"
+    ]
+}

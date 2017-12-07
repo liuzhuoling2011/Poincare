@@ -1,0 +1,27 @@
+{
+    "task_id" : "110",
+    "business": 2,
+    "base_path": "./",
+    "start_date": 20170901,
+    "end_date": 20170901,
+    "begin_time": 85800000,
+    "end_time": 153000000,
+    "day_night_flag": 0,
+    "time_interval": 60,
+    "flag_write_tunnel_log": 1,
+    "flag_debug_mode": true,
+    "so_path": ["..\\..\\pysdp\\core\\st.py"],
+    "strat_item":{
+        "strat_id": 564335,
+        "output_file_path": "./output",
+        "strat_name": "sample",
+        "accounts": [
+            "Account1|999999.99|888888.88|CNY|1.0"
+        ],
+        "contracts": [
+            "sr|R1|CZCE|7|20|0|Account1"
+        ],
+        "log_name": "logs/[DATE]_[PRODUCT]_[DAYNIGHT]_strategy.log",
+        "strat_param_file": "config/ev.txt"
+    }
+}
