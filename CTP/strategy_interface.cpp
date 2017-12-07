@@ -29,6 +29,7 @@ void load_strategy() {
 	if (strategy_handler == NULL) {
 		char err_msg[256];
 		snprintf(err_msg, sizeof(err_msg), "Strategy dlopen failed: %s, %s", g_strategy_path, dlerror());
+		PRINT_ERROR("load strategy failed! %s", err_msg);
 	}
 	st_init = (st_data_func_t)dlsym(strategy_handler, "my_st_init");
 	on_book = (st_data_func_t)dlsym(strategy_handler, "my_on_book");

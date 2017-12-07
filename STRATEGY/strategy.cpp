@@ -81,13 +81,13 @@ int my_on_book(int type, int length, void *book) {
 	PRINT_INFO("tick_time:%d,local_time:%d", tick_time, l_local_time);
 	if (abs(l_local_time - tick_time) > 5 * 60) {
 		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, local_time, abs(l_local_time - tick_time));
-		return;
+		return -1;
 	}
 
 	//过滤一些极端时间段
-	if (not_working_time(int_time)) return;
+	if (not_working_time(int_time)) return -1;
 	if (int_time < 40000000) int_time += 240000000;
-	if (is_working_time(int_time) == false)	return;
+	if (is_working_time(int_time) == false)	return -1;
 
 	last_ask_price = f_book->ap_array[0];
 	last_bid_price = f_book->bp_array[0];
@@ -176,6 +176,7 @@ int my_on_response(int type, int length, void *resp) {
 
 		/* write your logic here */
 		st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
+		Contract *instr = sdp_handler->find_contract(rsp->symbol);
 		switch (rsp->status) {
 		case SIG_STATUS_PARTED:
 			LOG_LN("OrderID: %lld Strategy received Partial Filled: %s %s %d@%f",
@@ -202,7 +203,6 @@ int my_on_response(int type, int length, void *resp) {
 			PRINT_SUCCESS("[%s]Not into OrderList\n", local_time);
 			
 			PRINT_ERROR("Send again\n");
-			Contract *instr = sdp_handler->find_contract(rsp->symbol);
 			if(rsp->direction == ORDER_BUY)
 				sdp_handler->send_single_order(instr, instr->exch, last_ask_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
 			else

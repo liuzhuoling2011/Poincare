@@ -10,9 +10,9 @@ SRC_PATH = .
 # General compiler flags
 COMPILE_FLAGS = -std=c++11 -w
 # Additional release-specific flags
-RCOMPILE_FLAGS = -O3 -fPIC
+RCOMPILE_FLAGS = -O3 -fPIC -DKXVER=3
 # Additional debug-specific flags
-DCOMPILE_FLAGS = -g3 -fPIC -D DEBUG
+DCOMPILE_FLAGS = -g3 -fPIC -D DEBUG -DKXVER=3
 # Add additional include paths
 INCLUDES = -I $(SRC_PATH) -I ../include -I ./sdp_handler
 # General linker settings
