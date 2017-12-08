@@ -7,7 +7,7 @@
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "quote_format_define.h"
-#include "core/Trader_handler.h"
+#include "core/Trader_Handler.h"
 
 char g_strategy_path[256];
 Trader_Handler* g_trader_handler;
@@ -32,6 +32,8 @@ void st_flush_log()
 	st_log_buffer[0] = '\0';
 	st_start_point = st_log_buffer;
 	st_log_buffer_len = 0;
+
+	flush_log(); // flush treder log
 }
 
 int process_strategy_order(int type, int length, void *data) {

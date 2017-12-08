@@ -86,6 +86,7 @@ struct Order {
 	long orig_ord_id;
 
 	bool pending_cancel;
+	int  insert_time;
 
 	list_t hs_link; // hash link
 	list_t pd_link; // pending link

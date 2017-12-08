@@ -1,4 +1,4 @@
-#include "strategy_interface.h"
+ï»¿#include "strategy_interface.h"
 #include "core/sdp_handler.h"
 #include "utils/log.h"
 #include "utils/utils.h"
@@ -15,7 +15,6 @@ static st_config_t *g_config = NULL;
 
 static int count = 0;
 
-static int insert_time = 0;
 static int tick_time = 0;
 static int int_time = 0;
 static double last_ask_price;
@@ -58,6 +57,31 @@ inline bool is_working_time(int atime) {
 	return false;
 }
 
+void cancel_old_order(int tick_time) {
+	list_t *pos, *n;
+	Order *l_ord;
+
+	list_t *ord_list = sdp_handler->m_orders->get_order_by_side(ORDER_BUY);
+	list_for_each_prev_safe(pos, n, ord_list) {
+		l_ord = list_entry(pos, Order, pd_link);
+		// The Contract Address is the sameï¿½ï¿½ Save time do string compare
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
+			PRINT_ERROR("%d Order in OrderList Waiting over 6 Secs; Cancelling...\n", int_time);
+			sdp_handler->cancel_single_order(l_ord);
+		}
+	}
+
+	ord_list = sdp_handler->m_orders->get_order_by_side(ORDER_SELL);
+	list_for_each_prev_safe(pos, n, ord_list) {
+		l_ord = list_entry(pos, Order, pd_link);
+		// The Contract Address is the sameï¿½ï¿½ Save time do string compare
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
+			PRINT_ERROR("%d Order in OrderList Waiting over 6 Secs; Cancelling...\n", int_time);
+			sdp_handler->cancel_single_order(l_ord);
+		}
+	}
+}
+
 int my_on_book(int type, int length, void *book) {
 	if (sdp_handler == NULL) return -1;
 	sdp_handler->on_book(type, length, book);
@@ -66,20 +90,14 @@ int my_on_book(int type, int length, void *book) {
 	int_time = f_book->int_time;
     LOG("int_time:%d,ap1 = %f\n",int_time,f_book->ap_array[0]);
 
+	//6ç§’æ’¤å•æœºåˆ¶
 	tick_time = get_seconds_from_int_time(f_book->int_time);
-
-	//6Ãë³·µ¥»úÖÆ
-	if (insert_time > 0 && tick_time >= insert_time + 6) {
-		//if 6 secs in orderlist:cancel order
-
-		PRINT_ERROR("%d Order in OrderList Waiting over 6 Secs;CanCelling...\n", int_time);
-		sdp_handler->cancel_all_orders();
-	}
+	cancel_old_order(tick_time);
 
 #ifndef SIMULATION 
 	get_time_record(local_time);
 
-	//µ±ĞĞÇéÊ±¼äºÍ±¾µØÊ±¼äÏà²î5·ÖÖÓ£¬ÈÏÎªÊÇÎŞĞ§ĞĞÇé£¬×¢ÒâÕâÀïµÄÊ±¼äÒÑ×ö¹ı0µã´¦Àí¡£
+	//å½“è¡Œæƒ…æ—¶é—´å’Œæœ¬åœ°æ—¶é—´ç›¸å·®5åˆ†é’Ÿï¼Œè®¤ä¸ºæ˜¯æ— æ•ˆè¡Œæƒ…ï¼Œæ³¨æ„è¿™é‡Œçš„æ—¶é—´å·²åšè¿‡0ç‚¹å¤„ç†ã€‚
 	int l_local_time = get_seconds_from_char_time(local_time);
 	PRINT_INFO("tick_time:%d,local_time:%d", tick_time, l_local_time);
 	if (abs(l_local_time - tick_time) > 5 * 60) {
@@ -88,7 +106,7 @@ int my_on_book(int type, int length, void *book) {
 	}
 #endif
 
-	//¹ıÂËÒ»Ğ©¼«¶ËÊ±¼ä¶Î
+	//è¿‡æ»¤ä¸€äº›æç«¯æ—¶é—´æ®µ
 	if (not_working_time(int_time)) return -1;
 	if (int_time < 40000000) int_time += 240000000;
 	if (is_working_time(int_time) == false)	return -1;
@@ -96,7 +114,7 @@ int my_on_book(int type, int length, void *book) {
 	last_ask_price = f_book->ap_array[0];
 	last_bid_price = f_book->bp_array[0];
 
-	//½«×îĞÂµÄĞĞÇéÍÆ½økdbÍ¬Ê±Ö´ĞĞkdb²ßÂÔ´úÂë
+	//å°†æœ€æ–°çš„è¡Œæƒ…æ¨è¿›kdbåŒæ—¶æ‰§è¡Œkdbç­–ç•¥ä»£ç 
 	sprintf(kdb_sql, "ctpAskpx:%lf;ctpBidpx:%lf;", last_ask_price, last_bid_price);
 	k(kdb_handle, kdb_sql, (K)0);
 	sprintf(kdb_sql, "quote:update Date:.z.D+.z.N,LegOneBid1:%s,LegOneAsk1:%s,LegTwoBid1:%s,LegTwoAsk1:%s from quote;system \"l strategy.q\"",
@@ -107,12 +125,12 @@ int my_on_book(int type, int length, void *book) {
 	);
 	k(-kdb_handle, kdb_sql, (K)0);
 
-	//Îª·ÀÖ¹kdbÖĞĞĞÇé±í¸ñ¹ı´ó£¬Ã¿600¸ötickÇåÀíÒ»´Îkdb±í¸ñ¡£Ö»±£Áô2000ĞĞ¡£
+	//ä¸ºé˜²æ­¢kdbä¸­è¡Œæƒ…è¡¨æ ¼è¿‡å¤§ï¼Œæ¯600ä¸ªtickæ¸…ç†ä¸€æ¬¡kdbè¡¨æ ¼ã€‚åªä¿ç•™2000è¡Œã€‚
 	if (++count % 600 == 0)
 		k(-kdb_handle, "quoteData: select [-2000] from quoteData;", (K)0);
 	PRINT_SUCCESS("i:%d\n", count);
 
-	//´Ókdb»ñÈ¡ĞÅºÅ¡£ĞÅºÅ°üÀ¨ËÄ¸ö¶«Î÷
+	//ä»kdbè·å–ä¿¡å·ã€‚ä¿¡å·åŒ…æ‹¬å››ä¸ªä¸œè¥¿
 	K table = k(kdb_handle, "select from res ", (K)0);
 	K values = kK(table->k)[1];
 	K col1_length = kK(values)[0];
@@ -123,8 +141,8 @@ int my_on_book(int type, int length, void *book) {
 	Contract *instr = sdp_handler->find_contract(f_book->symbol);
 
 	for (int i = 0; i < col1_length->n; i++) {
-		//ÕâÊÇ´Ókdb»ñÈ¡µÄËÄ¸ö¶«Î÷¡£
-		int length = kI(col1_length)[i]; //³¤¶È£¬ÓÃÓÚâ§·¢ÊÇ·ñ²úÉúĞÅºÅ
+		//è¿™æ˜¯ä»kdbè·å–çš„å››ä¸ªä¸œè¥¿ã€‚
+		int length = kI(col1_length)[i]; //é•¿åº¦ï¼Œç”¨äºçŒå‘æ˜¯å¦äº§ç”Ÿä¿¡å·
 		double bid1 = kF(col2_bid1)[i];  //bid price
 		double ask1 = kF(col3_ask1)[i];   //ask price
 		int signal = kI(col4_signal)[i];  //short or long
@@ -135,7 +153,7 @@ int my_on_book(int type, int length, void *book) {
 		}
 		else if (length > cuSignalcount) {
 			cuSignalcount = length;
-			//²úÉúShortĞÅºÅ
+			//äº§ç”ŸShortä¿¡å·
 			if (signal == -1) {
 				if(instr->pre_long_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE_YES);
@@ -152,7 +170,7 @@ int my_on_book(int type, int length, void *book) {
 			}
 		}
 	}
-	//ÊÍ·Å ÄÚ´æ£¬´Ókdb»ñµÃµÄres ĞÅºÅ±í¡£
+	//é‡Šæ”¾ å†…å­˜ï¼Œä»kdbè·å¾—çš„res ä¿¡å·è¡¨ã€‚
 	r0(table);
 	PRINT_SUCCESS("FINISHED...");
 	return 0;
@@ -163,7 +181,8 @@ int my_on_response(int type, int length, void *resp) {
 		sdp_handler->on_response(type, length, resp);
 
 		st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
-		Contract *instr = sdp_handler->find_contract(rsp->symbol);
+		Order* l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
+		Contract *instr = l_ord->contr;
 
 		switch (rsp->status) {
 		case SIG_STATUS_PARTED:
@@ -211,7 +230,8 @@ int my_on_response(int type, int length, void *resp) {
 			PRINT_ERROR("[%d]Has Been in OrderList;Waiting Deal...",int_time);
 			PRINT_WARN("%s,%s\n", rsp->direction == ORDER_SELL ? "ORDER_SELL" : "ORDER_BUY",
 				rsp->open_close == ORDER_CLOSE ? "ORDER_CLOSE" : "ORDER_OPEN");
-			insert_time = get_seconds_from_int_time(int_time);
+			
+			l_ord->insert_time = get_seconds_from_int_time(int_time);
 			break;
 		}
 		return 0;
