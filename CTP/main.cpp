@@ -6,10 +6,12 @@
 #include "utils/log.h"		 
 #include "core/Quote_Handler.h"
 #include "core/Trader_Handler.h"
-//#include "utils/utils.h"
+#include "utils/utils.h"
 
-extern char log_name[1024];
+#define LOG_DIR './logs'
 extern FILE* log_handle;
+
+char local_time[1024];
 
 void DumpBacktrace() {
 	pid_t dying_pid = getpid();
@@ -40,26 +42,19 @@ void recv_signal(int sig)
 CThostFtdcMdApi *MdUserApi;	// after strategy init finished, call MdUserApi->Init();
 extern Trader_Handler *g_trader_handler;
 
-void call_idle(int sig) {
-	g_trader_handler->st_idle();
-}
-
 int main(int argc, char **argv)
 {
 	PRINT_INFO("Welcome to CTP demo!");
 	signal(SIGSEGV, recv_signal);
 	signal(SIGABRT, recv_signal);
 	signal(SIGINT, recv_signal);
-	signal(SIGALRM, call_idle);
-
-	if (log_handle == NULL) {
-		get_time_record(log_name);
-		strcat(log_name, ".log");
-		log_handle = fopen(log_name, "w");
-	}
 
 	TraderConfig trader_config = { 0 };
 	read_json_config(trader_config);
+
+	if (log_handle == NULL) {
+		log_handle = fopen(trader_config.TRADER_LOG, "w");
+	}
 
 	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/tr");
 	Trader_Handler* trader_handler = new Trader_Handler(TraderApi, &trader_config);

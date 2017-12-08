@@ -31,53 +31,7 @@ static st_response_t g_resp_t = { 0 };
 static st_data_t g_data_t = { 0 };
 static int g_sig_count = 0;
 
-Trader_Handler *g_trader_handler;
-
-int process_strategy_order(int type, int length, void *data){
-	int ret = 0;
-	switch (type) {
-		case S_PLACE_ORDER_DEFAULT: {
-			order_t *ord = (order_t*)((st_data_t*)data)->info;
-
-			PRINT_INFO("Send Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
-				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
-				ord->investor_type, ord->order_type, ord->time_in_force,
-				ord->st_id, ord->order_id, ord->org_ord_id);
-
-			ret = g_trader_handler->send_single_order(ord);
-			break;
-		}
-		case S_CANCEL_ORDER_DEFAULT: {
-			order_t *ord = (order_t*)((st_data_t*)data)->info;
-
-			PRINT_INFO("Cancel Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
-				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
-				ord->investor_type, ord->order_type, ord->time_in_force,
-				ord->st_id, ord->order_id, ord->org_ord_id);
-
-			ret = g_trader_handler->cancel_single_order(ord);
-			break;
-		}
-	}
-	return ret;
-}
-
-int process_strategy_info(int type, int length, void *data) {
-	switch (type) {
-		case S_STRATEGY_DEBUG_LOG: {
-			printf("[STRAT LOG] %s\n", (char*)data);
-			break;
-		}
-	}
-	return 0;
-}
-
-// top process resp level do nothing
-int process_strategy_resp(int type, int length, void *data) {
-	PRINT_INFO("lalala");
-	return 0;
-}
-
+extern Trader_Handler *g_trader_handler;
 
 // 流控判断
 bool IsFlowControl(int iResult)
@@ -125,10 +79,6 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	strlcpy(g_config_t.st_name, m_trader_config->STRAT_NAME, 256);
 	strlcpy(g_config_t.param_file_path, m_trader_config->STRAT_EV, 256);
 	strlcpy(g_config_t.output_file_path, m_trader_config->STRAT_OUTPUT, 256);
-
-	g_config_t.proc_order_hdl = process_strategy_order;
-	g_config_t.send_info_hdl = process_strategy_info;
-	g_config_t.pass_rsp_hdl = process_strategy_resp;
 }
 
 Trader_Handler::~Trader_Handler()
@@ -410,8 +360,6 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			PRINT_INFO("Starting load strategy!");
 			my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
 			MdUserApi->Init();
-			alarm(m_trader_config->TIME_INTERVAL);
-
 
 			PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
 				g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);

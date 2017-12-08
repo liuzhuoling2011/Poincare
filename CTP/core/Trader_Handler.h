@@ -91,9 +91,10 @@ private:
 
 	CThostFtdcInputOrderField& get_order_info(uint64_t order_id);
 
+public:
+	TraderConfig *m_trader_config;
 private:
 	CThostFtdcTraderApi* m_trader_api = NULL;
-	TraderConfig *m_trader_config;
 	TraderInfo m_trader_info;
 
 	int m_request_id = 0;

@@ -71,6 +71,7 @@ int my_on_book(int type, int length, void *book) {
 	//6Ãë³·µ¥»úÖÆ
 	if (insert_time > 0 && tick_time >= insert_time + 6) {
 		//if 6 secs in orderlist:cancel order
+
 		PRINT_ERROR("%d Order in OrderList Waiting over 6 Secs;CanCelling...\n", int_time);
 		sdp_handler->cancel_all_orders();
 	}

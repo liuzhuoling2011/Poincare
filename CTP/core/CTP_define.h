@@ -3,9 +3,9 @@
 #define PATH_LEN 256
 #define SYMBOL_LEN 64#define TRADING_DAY_LEN 9#define BROKER_ID_LEN 8#define ORDER_REF_LEN 13
 
-const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_YES" };
-const static char BUY_SELL_STR[][8] = { "BUY", "SELL" };
-const static char DAY_NIGHT_STR[][8] = { "DAY", "NIGHT" };
+//const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_YES" };
+//const static char BUY_SELL_STR[][8] = { "BUY", "SELL" };
+//const static char DAY_NIGHT_STR[][8] = { "DAY", "NIGHT" };
 
 enum TraderDirection
 {
@@ -32,6 +32,8 @@ struct TraderConfig
 	char  STRAT_OUTPUT[PATH_LEN];
 
 	int   TIME_INTERVAL;
+	char  TRADER_LOG[PATH_LEN];
+	char  STRAT_LOG[PATH_LEN];
 };
 
 struct TraderInfo

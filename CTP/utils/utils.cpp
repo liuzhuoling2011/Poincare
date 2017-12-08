@@ -444,7 +444,7 @@ int code_convert(char *inbuf, size_t inlen, char *outbuf, size_t outlen)
 	return 0;
 }
 
-#define CONFIG_FILE    "./config.json"
+#define CONFIG_FILE "./config.json"
 
 void read_config_file(std::string& content)
 {
@@ -453,6 +453,41 @@ void read_config_file(std::string& content)
 	buffer << fin.rdbuf();
 	content = buffer.str();
 	fin.close();
+}
+
+
+static char local_time[256];
+
+char* get_time_record() {
+	time_t timep;
+	struct tm *p;
+	time(&timep);
+	p = localtime(&timep); //取得当地时间
+	sprintf(local_time, "%d%02d%02d_%02d%02d%02d", (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+	return local_time;
+}
+
+void update_trader_log_name(TraderConfig& trader_config) {
+	create_dir("./logs");
+	std::string logname = trader_config.TRADER_LOG;
+	char* l_time = get_time_record();
+	size_t pos;
+	if ((pos = logname.find("[TIME]")) != std::string::npos) {
+		logname.replace(pos, 6, l_time);
+	}
+	strlcpy(trader_config.TRADER_LOG, logname.c_str(), 256);
+}
+
+void update_strategy_log_name(TraderConfig& trader_config) {
+	std::string logname = trader_config.STRAT_LOG;
+	size_t pos;
+	if ((pos = logname.find("[TIME]")) != std::string::npos) {
+		logname.replace(pos, 6, local_time);
+	}
+	if ((pos = logname.find("[NAME]")) != std::string::npos) {
+		logname.replace(pos, 6, trader_config.STRAT_NAME);
+	}
+	strlcpy(trader_config.STRAT_LOG, logname.c_str(), 256);
 }
 
 bool read_json_config(TraderConfig& trader_config) {
@@ -491,6 +526,10 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.STRAT_NAME, l_json["STRAT_NAME"].string_value().c_str(), 64);
 	
 	trader_config.TIME_INTERVAL = l_json["TIME_INTERVAL"].int_value();
+	strlcpy(trader_config.TRADER_LOG, l_json["TRADER_LOG"].string_value().c_str(), 256);
+	strlcpy(trader_config.STRAT_LOG, l_json["STRAT_LOG"].string_value().c_str(), 256);
+	update_trader_log_name(trader_config);
+	update_strategy_log_name(trader_config);
 }
 
 void free_config(TraderConfig& trader_config) {
@@ -560,14 +599,6 @@ void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_
 	//internal_book->implied_ask_size[0]=
 	//internal_book->implied_bid_size[0]=
 
-}
-
-void get_time_record(char *time_str) {
-	time_t timep;
-	struct tm *p;
-	time(&timep);
-	p = localtime(&timep); //取得当地时间
-	sprintf(time_str, "%d%02d%02d_%02d%02d%02d", (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
 }
 
 int get_seconds_from_char_time(char * time_str)

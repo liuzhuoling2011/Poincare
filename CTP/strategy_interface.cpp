@@ -7,12 +7,85 @@
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "quote_format_define.h"
+#include "core/Trader_handler.h"
 
 char g_strategy_path[256];
+Trader_Handler* g_trader_handler;
 
 const static char STATUS[][64] = { "SUCCEED", "ENTRUSTED", "PARTED", "CANCELED", "REJECTED", "CANCEL_REJECTED", "INTRREJECTED", "UNDEFINED_STATUS" };
 const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_YES" };
 const static char BUY_SELL_STR[][8] = { "BUY", "SELL" };
+
+#define MAX_LOG_BUFF_SIZE 1024 * 1024 * 8
+static FILE*      st_log_handle = NULL;
+static char       st_log_buffer[MAX_LOG_BUFF_SIZE + 1];
+static char*      st_start_point = st_log_buffer;
+static int        st_log_buffer_len = 0;
+extern int        int_time;
+
+void st_flush_log()
+{
+	if (st_log_handle != NULL) {
+		fwrite(st_log_buffer, st_log_buffer_len, 1, st_log_handle);
+		fflush(st_log_handle);
+	}
+	st_log_buffer[0] = '\0';
+	st_start_point = st_log_buffer;
+	st_log_buffer_len = 0;
+}
+
+int process_strategy_order(int type, int length, void *data) {
+	int ret = 0;
+	switch (type) {
+		case S_PLACE_ORDER_DEFAULT: {
+			order_t *ord = (order_t*)((st_data_t*)data)->info;
+
+			LOG_LN("Send Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
+				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
+				ord->investor_type, ord->order_type, ord->time_in_force,
+				ord->st_id, ord->order_id, ord->org_ord_id);
+
+			ret = g_trader_handler->send_single_order(ord);
+			break;
+		}
+		case S_CANCEL_ORDER_DEFAULT: {
+			order_t *ord = (order_t*)((st_data_t*)data)->info;
+
+			LOG_LN("Cancel Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
+				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
+				ord->investor_type, ord->order_type, ord->time_in_force,
+				ord->st_id, ord->order_id, ord->org_ord_id);
+
+			ret = g_trader_handler->cancel_single_order(ord);
+			break;
+		}
+	}
+	st_flush_log();
+	return ret;
+}
+
+int process_strategy_info(int type, int length, void *data) {
+	switch (type) {
+		case S_STRATEGY_DEBUG_LOG: {
+			if (st_log_handle == NULL) return 1;
+			if (length + st_log_buffer_len >= MAX_LOG_BUFF_SIZE)
+				st_flush_log();
+
+			strncpy(st_start_point, (char*)data, length);
+			if (length > 0) {
+				st_start_point += length;
+				st_log_buffer_len += length;
+			}
+			break;
+		}
+	}
+	return 0;
+}
+
+// top process resp level do nothing
+int process_strategy_resp(int type, int length, void *data) {
+	return 0;
+}
 
 typedef int(*st_data_func_t)(int type, int length, void *data);
 typedef int(*st_none_func_t)();
@@ -63,7 +136,7 @@ void log_config(st_config_t* config) {
 }
 
 void log_quote(Futures_Internal_Book* quote) {
-	LOG_LN("int_time: %d, symbol: %s, feed_type: %d, exch: %c, pre_close_px: %f, pre_settle_px: %f, pre_open_interest: %f, open_interest: %f \n"
+	LOG_LN("int_time: %d, symbol: %s, feed_type: %d, exch: %d, pre_close_px: %f, pre_settle_px: %f, pre_open_interest: %f, open_interest: %f \n"
 		"open_px: %f, high_px: %f, low_px: %f, avg_px: %f, last_px: %f \n"
 		"ap1: %f, av1: %d, ap2: %f, av2: %d, ap3: %f, av3: %d, ap4: %f, av4: %d, ap5: %f, av5: %d \n"
 		"bp1: %f, bv1: %d, bp2: %f, bv2: %d, bp3: %f, bv3: %d, bp4: %f, bv4: %d, bp5: %f, bv5: %d \n"
@@ -82,13 +155,27 @@ void log_resp(st_response_t* resp) {
 }
 
 int my_st_init(int type, int length, void *cfg) {
+	if (st_log_handle == NULL) {
+		st_log_handle = fopen(g_trader_handler->m_trader_config->STRAT_LOG, "w");
+		if (st_log_handle == NULL) {
+			PRINT_ERROR("Can't open writing log file: %s", g_trader_handler->m_trader_config->STRAT_LOG);
+			return NULL;
+		}
+	}
 	load_strategy();
-	log_config((st_config_t*)cfg);
-	return st_init(type, length, cfg);
+	st_config_t* config = (st_config_t*)cfg;
+	config->proc_order_hdl = process_strategy_order;
+	config->send_info_hdl = process_strategy_info;
+	config->pass_rsp_hdl = process_strategy_resp;
+	log_config(config);
+	int ret = st_init(type, length, cfg);
+	st_flush_log();
+	return ret;
 }
 
 int my_on_book(int type, int length, void *book) {
 	Futures_Internal_Book *f_book = (Futures_Internal_Book *)((st_data_t*)book)->info;
+	int_time = f_book->int_time;
 	log_quote(f_book);
 	return on_book(type, length, book);
 }
@@ -96,6 +183,7 @@ int my_on_book(int type, int length, void *book) {
 int my_on_response(int type, int length, void *resp) {
 	st_response_t* l_resp = (st_response_t*)((st_data_t*)resp)->info;
 	log_resp(l_resp);
+	st_flush_log();
 	return on_response(type, length, resp);
 }
 
@@ -107,5 +195,12 @@ int my_on_timer(int type, int length, void *info) {
 void my_destroy() {
 	LOG_LN("It is finished!");
 	st_destroy();
+	if (st_log_handle != NULL) {
+		fwrite(st_log_buffer, st_log_buffer_len, 1, st_log_handle);
+		fclose(st_log_handle);
+		st_log_handle = NULL;
+		st_start_point = st_log_buffer;
+		st_log_buffer_len = 0;
+	}
 	dlclose(strategy_handler);
 }

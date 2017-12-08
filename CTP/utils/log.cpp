@@ -6,8 +6,7 @@
 
 #define MAX_LOG_BUFF_SIZE (1024 * 1024 * 8)
 
-char       log_name[1024];
-FILE*      log_handle = NULL;
+FILE*             log_handle = NULL;
 static char       log_buffer[MAX_LOG_BUFF_SIZE + 1];
 static char       log_buffer_temp[MAX_LOG_BUFF_SIZE + 1];
 static char*      start_point = log_buffer;

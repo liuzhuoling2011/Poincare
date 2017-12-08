@@ -30,8 +30,20 @@ HP_TIMING_NOW(end);
 
 printf("%ld\n", end - start);
 */
+
+#include <errno.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#define ACCESS access  
+#define MKDIR(a) mkdir((a),0755) 
 #else
 #define HP_TIMING_NOW(Var)
+
+#include <direct.h>  
+#include <io.h>  
+#define ACCESS _access
+#define MKDIR(a) _mkdir((a))
 #endif
 
 /* Compare two doubles, if less return -1, if more return 1, or return 0 when equal */
@@ -103,7 +115,7 @@ void free_config(TraderConfig& trader_config);
 
 void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_Book * internal_book);
 
-void get_time_record(char *time_str);
+char* get_time_record();
 
 int get_seconds_from_char_time(char *time_str);
 
@@ -116,5 +128,9 @@ ORDER_STATUS convert_status(char status);
 ORDER_STATUS get_final_status(ORDER_STATUS pre, ORDER_STATUS cur);
 
 int reverse_index(uint64_t ord_id);
+
+inline void create_dir(const char *path) {
+	if (ACCESS(path, 0) != 0) MKDIR(path);
+}
 
 #endif
