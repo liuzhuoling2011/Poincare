@@ -359,7 +359,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			// 在这里我们结束了config的配置，开始初始化策略
 			PRINT_INFO("Starting load strategy!");
 			my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
-			MdUserApi->Init();
+			//MdUserApi->Init();
 
 			PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
 				g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
@@ -624,8 +624,10 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pOrder->OrderRef];
 		
 		int index = cur_order_field.RequestID;
-		if (index == 0) //手工下单
+		if (index == 0) {	//手工下单
 			index = hand_index;
+			cur_order_field.BusinessUnit[0] = SIG_STATUS_INIT;
+		}
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pOrder->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pOrder->Direction - '0';
@@ -634,11 +636,12 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		g_resp_t.exe_volume = pOrder->VolumeTotalOriginal;
 		
 		ORDER_STATUS pre_status = (ORDER_STATUS)cur_order_field.BusinessUnit[0];
-		ORDER_STATUS cur_status = convert_status(pOrder->OrderStatus);
+		ORDER_STATUS cur_status = convert_status(pOrder->OrderStatus, pOrder->OrderSysID);
 		g_resp_t.status = get_final_status(pre_status, cur_status);
-		
+		PRINT_ERROR("pre %d cure %d, final %d", pre_status, cur_status, g_resp_t.status);
+
 		g_data_t.info = (void*)&g_resp_t;
-		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED) {
+		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED && g_resp_t.status != SIG_STATUS_INIT) {
 			my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 		}
 

@@ -39,19 +39,24 @@ char get_feedtype_by_exch(const char *name)
 
 int convert_open_close_flag(char openclose)
 {
-	if(openclose == '0' || openclose == '1') {
-		return openclose - '0';
-	}
-	else if (openclose == '3' || openclose == '4') {
-		return openclose - '1';
+	switch (openclose) {
+		case '0': case '1':
+			return openclose - '0';
+		case '3':
+			return ORDER_CLOSE;
+		case '4':
+			return ORDER_CLOSE_YES;
+		default: break;
 	}
 	return UNDEFINED_OPEN_CLOSE;
 }
 
-ORDER_STATUS convert_status(char status)
+ORDER_STATUS convert_status(char status, char* entrust_no)
 {
 	switch(status) {
 		case 'a': {
+			if (atoi(entrust_no) > 0)
+				return SIG_STATUS_ENTRUSTED;
 			return UNDEFINED_STATUS;
 		}
 		case '0': {

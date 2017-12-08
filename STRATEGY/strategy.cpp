@@ -177,66 +177,39 @@ int my_on_book(int type, int length, void *book) {
 }
 
 int my_on_response(int type, int length, void *resp) {
-	if (sdp_handler != NULL) {
-		sdp_handler->on_response(type, length, resp);
+	if (sdp_handler == NULL) return -1;
+	sdp_handler->on_response(type, length, resp);
 
-		st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
+	st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
+	Contract *instr = sdp_handler->find_contract(rsp->symbol);
+
+	switch (rsp->status) {
+	case SIG_STATUS_PARTED:
+		break;
+	case SIG_STATUS_SUCCEED:
+		break;
+	case SIG_STATUS_CANCEL_REJECTED:
+	case SIG_STATUS_CANCELED:
+		PRINT_WARN("[%d]Cancel Succeed!\n", int_time);
+	case SIG_STATUS_REJECTED:
+		PRINT_ERROR("Send order again\n");
+		if(rsp->direction == ORDER_BUY)
+			sdp_handler->send_single_order(instr, instr->exch, last_ask_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
+		else
+			sdp_handler->send_single_order(instr, instr->exch, last_bid_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
+		break;
+	case SIG_STATUS_INTRREJECTED:
+		break;
+	case SIG_STATUS_INIT:
+		break;
+	case SIG_STATUS_ENTRUSTED:
+		PRINT_ERROR("[%d]Has Been in OrderList;Waiting Deal...",int_time);
 		Order* l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
-		Contract *instr = l_ord->contr;
-
-		switch (rsp->status) {
-		case SIG_STATUS_PARTED:
-			LOG_LN("OrderID: %lld Strategy received Partial Filled: %s %s %d@%f",
-				rsp->order_id,
-				rsp->symbol, (rsp->direction == ORDER_BUY ? "Bought" : "Sold"),
-				rsp->exe_volume, rsp->exe_price);
-			break;
-		case SIG_STATUS_SUCCEED:
-			LOG_LN("OrderID: %lld Strategy received Filled: %s %s %d@%f",
-				rsp->order_id,
-				rsp->symbol, (rsp->direction == ORDER_BUY ? "Bought" : "Sold"),
-				rsp->exe_volume, rsp->exe_price);
-			break;
-		case SIG_STATUS_CANCEL_REJECTED:
-			LOG_LN("OrderID: %lld Strategy received CancelRejected", rsp->order_id);
-		case SIG_STATUS_CANCELED:
-			LOG_LN("OrderID: %lld Strategy received Canceled", rsp->order_id);
-			PRINT_WARN("[%d]Cancel Succeed!\n",int_time);
-		case SIG_STATUS_REJECTED:
-			LOG_LN("OrderID: %lld Strategy received Rejected, Error: %s",
-				rsp->order_id, rsp->error_info);
-
-			PRINT_SUCCESS("[%d]Not into OrderList\n",int_time);
-			
-			PRINT_ERROR("Send again\n");
-			if(rsp->direction == ORDER_BUY)
-				sdp_handler->send_single_order(instr, instr->exch, last_ask_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
-			else
-				sdp_handler->send_single_order(instr, instr->exch, last_bid_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
-
-			break;
-		case SIG_STATUS_INTRREJECTED:
-			LOG_LN("OrderID: %lld Strategy received Rejected, Error: %s",
-				rsp->order_id, rsp->error_info);
-			break;
-		case SIG_STATUS_INIT:
-			LOG_LN("OrderID: %lld Strategy received PendingNew", rsp->order_id);
-			break;
-		case SIG_STATUS_ENTRUSTED:
-			LOG_LN("OrderID: %lld Strategy received Entrusted, %s %s",
-				rsp->order_id, rsp->symbol,
-				(rsp->direction == ORDER_BUY ? "Buy" : "Sell"));
-
-			PRINT_ERROR("[%d]Has Been in OrderList;Waiting Deal...",int_time);
-			PRINT_WARN("%s,%s\n", rsp->direction == ORDER_SELL ? "ORDER_SELL" : "ORDER_BUY",
-				rsp->open_close == ORDER_CLOSE ? "ORDER_CLOSE" : "ORDER_OPEN");
-			
+		if(l_ord != NULL)
 			l_ord->insert_time = get_seconds_from_int_time(int_time);
-			break;
-		}
-		return 0;
+		break;
 	}
-	return -1;
+	return 0;
 }
 
 int my_on_timer(int type, int length, void *info) {
