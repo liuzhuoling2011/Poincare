@@ -31,16 +31,18 @@ void DumpBacktrace() {
 	}
 }
 
+
+CThostFtdcMdApi *MdUserApi;	// after strategy init finished, call MdUserApi->Init();
+extern Trader_Handler *g_trader_handler;
+
 void recv_signal(int sig)
 {
 	DumpBacktrace();
 	flush_log();
 	fclose(log_handle);
+	delete g_trader_handler;
 	exit(0);
 }
-
-CThostFtdcMdApi *MdUserApi;	// after strategy init finished, call MdUserApi->Init();
-extern Trader_Handler *g_trader_handler;
 
 int main(int argc, char **argv)
 {
