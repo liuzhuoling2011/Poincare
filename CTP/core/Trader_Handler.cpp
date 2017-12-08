@@ -615,13 +615,17 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 	IsErrorRspInfo(pRspInfo);
 }
 
+static int hand_index = 100; //手工下单
+
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if (pOrder) {
 		PRINT_SUCCESS("--->>> OnRtnOrder %s", pOrder->InsertTime);
-		CThostFtdcInputOrderField& cur_order_field = m_orders->at(pOrder->OrderRef);
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pOrder->OrderRef];
 		
 		int index = cur_order_field.RequestID;
+		if (index == 0) //手工下单
+			index = hand_index;
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pOrder->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pOrder->Direction - '0';
@@ -634,11 +638,14 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		g_resp_t.status = get_final_status(pre_status, cur_status);
 		
 		g_data_t.info = (void*)&g_resp_t;
-		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED)
+		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED) {
 			my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
+		}
 
-		if (g_resp_t.status == SIG_STATUS_CANCELED || g_resp_t.status == SIG_STATUS_REJECTED)
+		if (g_resp_t.status == SIG_STATUS_CANCELED || g_resp_t.status == SIG_STATUS_REJECTED) {
+			hand_index++;
 			m_orders->erase(cur_order_field.OrderRef);
+		}
 
 		cout << "经纪公司代码 "	<< pOrder->BrokerID << endl;
 		cout << "投资者代码 "		<< pOrder->InvestorID << endl;
@@ -680,9 +687,11 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
 		PRINT_SUCCESS("--->>> OnRtnTrade %s", pTrade->TradeTime);
-		CThostFtdcInputOrderField& cur_order_field = m_orders->at(pTrade->OrderRef);
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pTrade->OrderRef];
 
 		int index = cur_order_field.RequestID;
+		if (index == 0) //手工下单
+			index = hand_index++;
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pTrade->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pTrade->Direction - '0';
