@@ -73,12 +73,6 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
 
 	g_trader_handler = this;
-
-	strlcpy(g_strategy_path, m_trader_config->STRAT_PATH, 256);
-	g_config_t.vst_id = m_trader_config->STRAT_ID;
-	strlcpy(g_config_t.st_name, m_trader_config->STRAT_NAME, 256);
-	strlcpy(g_config_t.param_file_path, m_trader_config->STRAT_EV, 256);
-	strlcpy(g_config_t.output_file_path, m_trader_config->STRAT_OUTPUT, 256);
 }
 
 Trader_Handler::~Trader_Handler()
@@ -89,6 +83,13 @@ Trader_Handler::~Trader_Handler()
 
 void Trader_Handler::OnFrontConnected()
 {
+	memset(&g_config_t, 0, sizeof(st_config_t));
+	strlcpy(g_strategy_path, m_trader_config->STRAT_PATH, 256);
+	g_config_t.vst_id = m_trader_config->STRAT_ID;
+	strlcpy(g_config_t.st_name, m_trader_config->STRAT_NAME, 256);
+	strlcpy(g_config_t.param_file_path, m_trader_config->STRAT_EV, 256);
+	strlcpy(g_config_t.output_file_path, m_trader_config->STRAT_OUTPUT, 256);
+
 	CThostFtdcReqUserLoginField req = { 0 };
 	strcpy(req.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(req.UserID, m_trader_config->TUSER_ID);
@@ -281,7 +282,7 @@ void Trader_Handler::ReqQryInvestorPositionDetail()
 void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInvestorPositionDetail) {
-		//对于所有合约，不保存已平仓的，只保存未平仓的
+		// 对于所有合约，不保存已平仓的，只保存未平仓的
 		if (pInvestorPositionDetail->Volume > 0) {
 			if (pInvestorPositionDetail->Direction == TRADER_BUY)
 				m_contracts_long.push_back(pInvestorPositionDetail);
@@ -355,34 +356,35 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 				g_config_t.contracts[0].yesterday_pos.short_price = yes_short_price / yes_short_size;
 				g_config_t.contracts[0].yesterday_pos.short_volume = yes_short_size;
 			}
-			
-			// 在这里我们结束了config的配置，开始初始化策略
-			PRINT_INFO("Starting load strategy!");
-			my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
-			//MdUserApi->Init();
+		}
+	}
+	if (bIsLast) {
+		// 在这里我们结束了config的配置，开始初始化策略
+		PRINT_INFO("Starting load strategy!");
+		my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
+		MdUserApi->Init();
 
-			PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
-				g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
+		PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
+			g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
 
-			for (int i = 0; i < ACCOUNT_MAX; i++) {
-				if (g_config_t.accounts[i].account[0] == '\0') break;
-				account_t& l_account = g_config_t.accounts[i];
-				PRINT_SUCCESS("account: %s, cash_available: %f, cash_asset: %f, exch_rate: %f, currency: %d",
-					l_account.account, l_account.cash_available, l_account.cash_asset, l_account.exch_rate, l_account.currency);
-			}
+		for (int i = 0; i < ACCOUNT_MAX; i++) {
+			if (g_config_t.accounts[i].account[0] == '\0') break;
+			account_t& l_account = g_config_t.accounts[i];
+			PRINT_SUCCESS("account: %s, cash_available: %f, cash_asset: %f, exch_rate: %f, currency: %d",
+				l_account.account, l_account.cash_available, l_account.cash_asset, l_account.exch_rate, l_account.currency);
+		}
 
-			for (int i = 0; i < SYMBOL_MAX; i++) {
-				if (g_config_t.contracts[i].symbol[0] == '\0') break;
-				contract_t& l_config_instr = g_config_t.contracts[i];
-				PRINT_SUCCESS("symbol: %s, account: %s, exch: %c, max_accum_open_vol: %d, max_cancel_limit: %d, expiration_date: %d, "
-					"today_long_pos: %d, today_long_price: %f, today_short_pos: %d, today_short_price: %f, "
-					"yesterday_long_pos: %d, yesterday_long_price: %f, yesterday_short_pos: %d, yesterday_short_price: %f, "
-					"fee_by_lot: %d, exchange_fee : %f, yes_exchange_fee : %f, broker_fee : %f, stamp_tax : %f, acc_transfer_fee : %f, tick_size : %f, multiplier : %f",
-					l_config_instr.symbol, l_config_instr.account, l_config_instr.exch, l_config_instr.max_accum_open_vol, l_config_instr.max_cancel_limit, l_config_instr.expiration_date,
-					l_config_instr.today_pos.long_volume, l_config_instr.today_pos.long_price, l_config_instr.today_pos.short_volume, l_config_instr.today_pos.short_price,
-					l_config_instr.yesterday_pos.long_volume, l_config_instr.yesterday_pos.long_price, l_config_instr.yesterday_pos.short_volume, l_config_instr.yesterday_pos.short_price,
-					l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
-			}
+		for (int i = 0; i < SYMBOL_MAX; i++) {
+			if (g_config_t.contracts[i].symbol[0] == '\0') break;
+			contract_t& l_config_instr = g_config_t.contracts[i];
+			PRINT_SUCCESS("symbol: %s, account: %s, exch: %c, max_accum_open_vol: %d, max_cancel_limit: %d, expiration_date: %d, "
+				"today_long_pos: %d, today_long_price: %f, today_short_pos: %d, today_short_price: %f, "
+				"yesterday_long_pos: %d, yesterday_long_price: %f, yesterday_short_pos: %d, yesterday_short_price: %f, "
+				"fee_by_lot: %d, exchange_fee : %f, yes_exchange_fee : %f, broker_fee : %f, stamp_tax : %f, acc_transfer_fee : %f, tick_size : %f, multiplier : %f",
+				l_config_instr.symbol, l_config_instr.account, l_config_instr.exch, l_config_instr.max_accum_open_vol, l_config_instr.max_cancel_limit, l_config_instr.expiration_date,
+				l_config_instr.today_pos.long_volume, l_config_instr.today_pos.long_price, l_config_instr.today_pos.short_volume, l_config_instr.today_pos.short_price,
+				l_config_instr.yesterday_pos.long_volume, l_config_instr.yesterday_pos.long_price, l_config_instr.yesterday_pos.short_volume, l_config_instr.yesterday_pos.short_price,
+				l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
 		}
 	}
 }
