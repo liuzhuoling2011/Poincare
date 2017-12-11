@@ -18,6 +18,7 @@
 
 static Futures_Internal_Book g_f_book;
 static st_data_t g_data_t;
+static char ERROR_MSG[4096];
 
 Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_api_, TraderConfig *trader_config)
 {
@@ -50,7 +51,11 @@ void Quote_Handler::OnFrontConnected()
 void Quote_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo,
                        int nRequestID, bool bIsLast)
 {
-	IsErrorRspInfo(pRspInfo);
+	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+	}
 }
 
 void Quote_Handler::OnHeartBeatWarning(int nTimeLapse)
@@ -62,22 +67,26 @@ void Quote_Handler::OnRspUserLogin(
     CThostFtdcRspUserLoginField *pRspUserLogin,
     CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-    if (!IsErrorRspInfo(pRspInfo)) {
-		PRINT_SUCCESS("Login quote front successful!");
-		PRINT_SUCCESS("TradingDay: %s", pRspUserLogin->TradingDay);
+	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+	}
+
+	PRINT_SUCCESS("Login quote front successful!");
+	PRINT_SUCCESS("TradingDay: %s", pRspUserLogin->TradingDay);
 	
-		int ret = m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
-		if (ret == 0) {
-			/*for(int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
-				char* symbol = m_trader_config->INSTRUMENTS[i];
-				if (!Quotes.exist(symbol)) {
-					QuoteArray* qarray = new QuoteArray(MAX_QUOTE_SIZE);
-					Quotes.insert(symbol, qarray);
-					PRINT_SUCCESS("Subscribe %s", symbol);
-				}
-			}*/
-		}
-    }
+	int ret = m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
+	if (ret == 0) {
+		/*for(int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+			char* symbol = m_trader_config->INSTRUMENTS[i];
+			if (!Quotes.exist(symbol)) {
+				QuoteArray* qarray = new QuoteArray(MAX_QUOTE_SIZE);
+				Quotes.insert(symbol, qarray);
+				PRINT_SUCCESS("Subscribe %s", symbol);
+			}
+		}*/
+	}
 }
 
 void Quote_Handler::OnRspSubMarketData(
