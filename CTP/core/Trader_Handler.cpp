@@ -442,11 +442,11 @@ int Trader_Handler::send_single_order(order_t *order)
 		order_field.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //市价单
 															///买卖方向: 
 	order_field.Direction = order->direction == ORDER_BUY ? '0' : '1';
-	///组合开平标志: 开仓
+	///组合开平标志: 开仓  for SHFE
 	if (order->open_close == ORDER_OPEN)
 		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
-	else if (order->open_close == ORDER_CLOSE)
-		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
+	else if (order->open_close == ORDER_CLOSE || order->open_close == ORDER_CLOSE_TOD)
+		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_CloseToday;
 	else if (order->open_close == ORDER_CLOSE_YES)
 		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_CloseYesterday;
 
@@ -658,9 +658,10 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		ORDER_STATUS cur_status = convert_status(pOrder->OrderStatus, pOrder->OrderSysID);
 		g_resp_t.status = get_final_status(pre_status, cur_status);
 		PRINT_ERROR("pre %d cure %d, final %d", pre_status, cur_status, g_resp_t.status);
+		LOG_LN("pre %d cure %d, final %d", pre_status, cur_status, g_resp_t.status);
 
 		g_data_t.info = (void*)&g_resp_t;
-		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED && g_resp_t.status != SIG_STATUS_INIT) {
+		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED && g_resp_t.status != SIG_STATUS_INIT && g_resp_t.status != UNDEFINED_STATUS) {
 			my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 		}
 
