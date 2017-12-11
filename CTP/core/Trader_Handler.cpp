@@ -107,6 +107,7 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	if (pRspInfo != NULL && pRspInfo->ErrorID == 0) {
 		m_is_ready = true;
 		update_trader_info(m_trader_info, pRspUserLogin);
+		PRINT_SUCCESS("TradingDay: %s DayNight: %s", pRspUserLogin->TradingDay, pRspUserLogin->LoginTime);
 		PRINT_SUCCESS("TradingDay: %d DayNight: %d", g_config_t.trading_date, g_config_t.day_night);
 
 		//投资者结算结果确认
@@ -262,6 +263,8 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 	PRINT_INFO("%s", pInstrumentCommissionRate->InstrumentID);
 	
 	//请求查询投资者持仓
+	ReqQryInvestorPosition();
+	sleep(1);
 	ReqQryInvestorPositionDetail();
 }
 
@@ -293,15 +296,17 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			else if (pInvestorPositionDetail->Direction == TRADER_SELL)
 				m_contracts_short.push_back(pInvestorPositionDetail);
 
-			bool find_instId = false;
-			for (int i = 0; i< m_trader_config->INSTRUMENT_COUNT; i++) {
-				if (strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//合约已存在，已订阅过行情
-					find_instId = true;
-					break;
+			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE == false) {
+				bool find_instId = false;
+				for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+					if (my_strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//合约已存在，已订阅过行情
+						find_instId = true;
+						break;
+					}
 				}
-			}
-			if (find_instId == false) {
-				strlcpy(m_trader_config->INSTRUMENTS[m_trader_config->INSTRUMENT_COUNT++], pInvestorPositionDetail->InstrumentID, SYMBOL_LEN);
+				if (find_instId == false) {
+					strlcpy(m_trader_config->INSTRUMENTS[m_trader_config->INSTRUMENT_COUNT++], pInvestorPositionDetail->InstrumentID, SYMBOL_LEN);
+				}
 			}
 		}
 
@@ -366,6 +371,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 		// 在这里我们结束了config的配置，开始初始化策略
 		PRINT_INFO("Starting load strategy!");
 		my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
+		MdUserApi->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
 		MdUserApi->Init();
 
 		PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
@@ -416,6 +422,9 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 	PRINT_INFO("is_last: %d", bIsLast); //todo 过滤重复的
 	if (pInvestorPosition) {
 		PRINT_INFO("%s %d %d %d %f", pInvestorPosition->InstrumentID, pInvestorPosition->Position, pInvestorPosition->TodayPosition, pInvestorPosition->YdPosition, pInvestorPosition->UseMargin);
+		std::cout << "仓位方向" << pInvestorPosition->PosiDirection << std::endl;
+		std::cout << "开仓成本" << pInvestorPosition->OpenCost << std::endl;
+		std::cout << "持仓成本" << pInvestorPosition->PositionCost << std::endl;
 	}
 }
 

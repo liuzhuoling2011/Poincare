@@ -74,26 +74,13 @@ void Quote_Handler::OnRspUserLogin(
 	}
 
 	PRINT_SUCCESS("Login quote front successful!");
-	PRINT_SUCCESS("TradingDay: %s", pRspUserLogin->TradingDay);
-	
-	int ret = m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
-	if (ret == 0) {
-		/*for(int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
-			char* symbol = m_trader_config->INSTRUMENTS[i];
-			if (!Quotes.exist(symbol)) {
-				QuoteArray* qarray = new QuoteArray(MAX_QUOTE_SIZE);
-				Quotes.insert(symbol, qarray);
-				PRINT_SUCCESS("Subscribe %s", symbol);
-			}
-		}*/
-	}
 }
 
 void Quote_Handler::OnRspSubMarketData(
     CThostFtdcSpecificInstrumentField *pSpecificInstrument,
     CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	//PRINT_SUCCESS("lalala");
+	if(pSpecificInstrument) PRINT_SUCCESS("Subscribe %s", pSpecificInstrument->InstrumentID);
 }
 
 void Quote_Handler::print(CThostFtdcDepthMarketDataField *pDepthMarketData){
@@ -157,7 +144,7 @@ void Quote_Handler::OnRtnDepthMarketData(
     //print(pDepthMarketData);
     //PRINT_INFO("%s quote size: %d\n", symbol, Quotes[symbol]->size());
 	
-	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_config_t), &g_data_t);
+	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data_t);
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)

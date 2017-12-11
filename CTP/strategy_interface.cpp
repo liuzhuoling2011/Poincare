@@ -138,10 +138,10 @@ void log_config(st_config_t* config) {
 }
 
 void log_quote(Futures_Internal_Book* quote) {
-	LOG_LN("int_time: %d, symbol: %s, feed_type: %d, exch: %d, pre_close_px: %f, pre_settle_px: %f, pre_open_interest: %f, open_interest: %f \n"
-		"open_px: %f, high_px: %f, low_px: %f, avg_px: %f, last_px: %f \n"
-		"ap1: %f, av1: %d, ap2: %f, av2: %d, ap3: %f, av3: %d, ap4: %f, av4: %d, ap5: %f, av5: %d \n"
-		"bp1: %f, bv1: %d, bp2: %f, bv2: %d, bp3: %f, bv3: %d, bp4: %f, bv4: %d, bp5: %f, bv5: %d \n"
+	LOG_LN("int_time: %d, symbol: %s, feed_type: %d, exch: %d, pre_close_px: %f, pre_settle_px: %f, pre_open_interest: %f, open_interest: %f "
+		"open_px: %f, high_px: %f, low_px: %f, avg_px: %f, last_px: %f "
+		"ap1: %f, av1: %d, ap2: %f, av2: %d, ap3: %f, av3: %d, ap4: %f, av4: %d, ap5: %f, av5: %d "
+		"bp1: %f, bv1: %d, bp2: %f, bv2: %d, bp3: %f, bv3: %d, bp4: %f, bv4: %d, bp5: %f, bv5: %d "
 		"total_vol: %lld, total_notional: %f, upper_limit_px: %f, lower_limit_px: %f, close_px: %f, settle_px: %f",
 		quote->int_time, quote->symbol, quote->feed_type, quote->exchange, quote->pre_close_px, quote->pre_settle_px, quote->pre_open_interest, quote->open_interest,
 		quote->open_px, quote->high_px, quote->low_px, quote->avg_px, quote->last_px,
@@ -179,14 +179,17 @@ int my_on_book(int type, int length, void *book) {
 	Futures_Internal_Book *f_book = (Futures_Internal_Book *)((st_data_t*)book)->info;
 	int_time = f_book->int_time;
 	log_quote(f_book);
-	return on_book(type, length, book);
+	int ret = on_book(type, length, book);
+	st_flush_log();
+	return ret;
 }
 
 int my_on_response(int type, int length, void *resp) {
 	st_response_t* l_resp = (st_response_t*)((st_data_t*)resp)->info;
 	log_resp(l_resp);
+	int ret = on_response(type, length, resp);
 	st_flush_log();
-	return on_response(type, length, resp);
+	return ret;
 }
 
 int my_on_timer(int type, int length, void *info) {

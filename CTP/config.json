@@ -20,6 +20,7 @@
     "TPASSWORD": "a.123456",
     
     "INSTRUMENTS": ["cu1801"],
+    "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": false,
 
     "STRAT_ID": 564335,
     "STRAT_NAME": "taoli",
