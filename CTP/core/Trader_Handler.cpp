@@ -33,6 +33,7 @@ static st_config_t g_config_t = { 0 };
 static st_response_t g_resp_t = { 0 };
 static st_data_t g_data_t = { 0 };
 static int g_sig_count = 0;
+static char ERROR_MSG[4096];
 
 extern Trader_Handler *g_trader_handler;
 
@@ -448,7 +449,7 @@ int Trader_Handler::send_single_order(order_t *order)
 	else if (order->open_close == ORDER_CLOSE || order->open_close == ORDER_CLOSE_TOD)
 		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_CloseToday;
 	else if (order->open_close == ORDER_CLOSE_YES)
-		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_CloseYesterday;
+		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
 
 	///组合投机套保标志
 	if (order->investor_type == ORDER_SPECULATOR)
@@ -546,7 +547,11 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 		PRINT_SUCCESS("%s", g_ss.str().c_str());
 		g_ss.str("");
 	}
-	IsErrorRspInfo(pRspInfo);
+	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+	}
 }
 
 int Trader_Handler::cancel_single_order(order_t * order)
@@ -632,7 +637,11 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 		PRINT_SUCCESS("%s", g_ss.str().c_str());
 		g_ss.str("");
 	}
-	IsErrorRspInfo(pRspInfo);
+	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+	}
 }
 
 static int hand_index = 100; //手工下单
@@ -776,7 +785,11 @@ void Trader_Handler::OnHeartBeatWarning(int nTimeLapse)
 
 void Trader_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	IsErrorRspInfo(pRspInfo);
+	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+	}
 }
 
 bool Trader_Handler::IsMyOrder(CThostFtdcOrderField *pOrder)

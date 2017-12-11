@@ -343,22 +343,6 @@ void reset_order_count_for_test() {
 	order_count = 0;
 }
 
-static char ERROR_MSG[1024];
-
-bool IsErrorRspInfo(CThostFtdcRspInfoField * pRspInfo)
-{
-	if (pRspInfo == NULL) return true;
-
-	// 如果ErrorID != 0, 说明收到了错误的响应
-	if (pRspInfo->ErrorID != 0) {
-		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 1024);
-		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
-		return true;
-	}
-	else
-		return false;
-}
-
 int process_debug_info(int type, int length, void *data) {
 	switch (type) {
 	case S_STRATEGY_DEBUG_LOG: {
