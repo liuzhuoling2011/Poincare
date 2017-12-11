@@ -88,7 +88,7 @@ int my_on_book(int type, int length, void *book) {
 
 	Futures_Internal_Book *f_book = (Futures_Internal_Book *)((st_data_t*)book)->info;
 	int_time = f_book->int_time;
-    LOG("int_time:%d,ap1 = %f\n",int_time,f_book->ap_array[0]);
+    LOG("int_time:%d, ap1 = %f\n",int_time,f_book->ap_array[0]);
 
 	//6秒撤单机制
 	tick_time = get_seconds_from_int_time(f_book->int_time);
@@ -128,7 +128,6 @@ int my_on_book(int type, int length, void *book) {
 	//为防止kdb中行情表格过大，每600个tick清理一次kdb表格。只保留2000行。
 	if (++count % 600 == 0)
 		k(-kdb_handle, "quoteData: select [-2000] from quoteData;", (K)0);
-	PRINT_SUCCESS("i:%d\n", count);
 
 	//从kdb获取信号。信号包括四个东西
 	K table = k(kdb_handle, "select from res ", (K)0);
@@ -146,15 +145,18 @@ int my_on_book(int type, int length, void *book) {
 		double bid1 = kF(col2_bid1)[i];  //bid price
 		double ask1 = kF(col3_ask1)[i];   //ask price
 		int signal = kI(col4_signal)[i];  //short or long
-											//printf("%d %f %f %d\n", kI(col1_length)[i], kF(col2_bid1)[i],kF(col3_ask1)[i],kI(col4_signal)[i]); 
+		LOG_LN("KDB: %d %f %f %d", kI(col1_length)[i], kF(col2_bid1)[i],kF(col3_ask1)[i],kI(col4_signal)[i]);
 		if (RoundCount == 0) {
+			LOG_LN("enter if, length %d, RoundCount %d", length, RoundCount);
 			cuSignalcount = length;
 			RoundCount++;
 		}
 		else if (length > cuSignalcount) {
+			LOG_LN("enter elseif, length %d", length);
 			cuSignalcount = length;
 			//产生Short信号
 			if (signal == -1) {
+				LOG_LN("short %d", int_time);
 				if(instr->pre_long_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE_YES);
 				if(long_position(instr) > 0)
@@ -162,6 +164,7 @@ int my_on_book(int type, int length, void *book) {
 				sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_OPEN);
 			}
 			else if (signal == 1) {
+				LOG_LN("long %d", int_time);
 				if (instr->pre_short_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE_YES);
 				if (short_position(instr) > 0)
@@ -172,7 +175,6 @@ int my_on_book(int type, int length, void *book) {
 	}
 	//释放 内存，从kdb获得的res 信号表。
 	r0(table);
-	PRINT_SUCCESS("FINISHED...");
 	return 0;
 }
 
@@ -190,9 +192,11 @@ int my_on_response(int type, int length, void *resp) {
 		break;
 	case SIG_STATUS_CANCEL_REJECTED:
 	case SIG_STATUS_CANCELED:
-		PRINT_WARN("[%d]Cancel Succeed!\n", int_time);
+		PRINT_WARN("[%d]Cancel Succeed!", int_time);
+		LOG_LN("[%d]Cancel Succeed!", int_time);
 	case SIG_STATUS_REJECTED:
-		PRINT_ERROR("Send order again\n");
+		PRINT_ERROR("Send order again");
+		LOG_LN("Send order again");
 		if(rsp->direction == ORDER_BUY)
 			sdp_handler->send_single_order(instr, instr->exch, last_ask_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
 		else
@@ -204,6 +208,7 @@ int my_on_response(int type, int length, void *resp) {
 		break;
 	case SIG_STATUS_ENTRUSTED:
 		PRINT_ERROR("[%d]Has Been in OrderList;Waiting Deal...",int_time);
+		LOG_LN("[%d]Has Been in OrderList;Waiting Deal...", int_time);
 		Order* l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
 		if(l_ord != NULL)
 			l_ord->insert_time = get_seconds_from_int_time(int_time);
@@ -229,7 +234,8 @@ void my_destroy() {
 		sdp_handler = NULL;
 
 		PRINT_ERROR("[%d]Aaron> ERROR or DISCONNECT,Come into error_deal\n",int_time);
-		PRINT_ERROR("[%d]save kdb tables:",int_time);
+		PRINT_ERROR("[%d]save kdb tables:", int_time);
+		LOG_LN("[%d]save kdb tables:",int_time);
 		char sql[KDBLEN] = "{save hsym `$\"tbls/\",string x } each  tables `.";
 		k(-kdb_handle, sql, (K)0);
 	}

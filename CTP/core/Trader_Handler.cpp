@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string.h>
+#include <sstream>
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
@@ -21,6 +22,8 @@ using namespace std;
 #define ACC_TRANSFER_FEE 0.00002
 
 #define SERIAL_NO_MULTI 10000000000
+
+static stringstream g_ss;
 
 extern char g_strategy_path[256];
 extern CThostFtdcMdApi *MdUserApi;
@@ -489,24 +492,27 @@ int Trader_Handler::send_single_order(order_t *order)
 
 	m_orders->insert_current_node(order_field.OrderRef);
 
-	PRINT_SUCCESS("<<<>>> OrderInsert");
-	cout << "经纪公司代码 " << order_field.BrokerID << endl;
-	cout << "投资者代码 " << order_field.InvestorID << endl;
-	cout << "合约代码 " << order_field.InstrumentID << endl;
-	cout << "报单引用 " << order_field.OrderRef << endl;
-	cout << "用户代码 " << order_field.UserID << endl;
-	cout << "报单价格条件 " << order_field.OrderPriceType << endl;
-	cout << "买卖方向 " << order_field.Direction << endl;
-	cout << "组合开平标志 " << order_field.CombOffsetFlag << endl;
-	cout << "组合投机套保标志 " << order_field.CombHedgeFlag << endl;
-	cout << "价格 " << order_field.LimitPrice << endl;
-	cout << "数量 " << order_field.VolumeTotalOriginal << endl;
-	cout << "有效期类型 " << order_field.TimeCondition << endl;
-	cout << "成交量类型 " << order_field.VolumeCondition << endl;
-	cout << "最小成交量 " << order_field.MinVolume << endl;
-	cout << "触发条件 " << order_field.ContingentCondition << endl;
-	cout << "请求编号 " << order_field.RequestID << endl;
-	cout << "交易所代码 " << order_field.ExchangeID << endl;
+	g_ss << "<<<>>> OrderInsert" << endl;
+	g_ss << "经纪公司代码 " << order_field.BrokerID << endl;
+	g_ss << "投资者代码 " << order_field.InvestorID << endl;
+	g_ss << "合约代码 " << order_field.InstrumentID << endl;
+	g_ss << "报单引用 " << order_field.OrderRef << endl;
+	g_ss << "用户代码 " << order_field.UserID << endl;
+	g_ss << "报单价格条件 " << order_field.OrderPriceType << endl;
+	g_ss << "买卖方向 " << order_field.Direction << endl;
+	g_ss << "组合开平标志 " << order_field.CombOffsetFlag << endl;
+	g_ss << "组合投机套保标志 " << order_field.CombHedgeFlag << endl;
+	g_ss << "价格 " << order_field.LimitPrice << endl;
+	g_ss << "数量 " << order_field.VolumeTotalOriginal << endl;
+	g_ss << "有效期类型 " << order_field.TimeCondition << endl;
+	g_ss << "成交量类型 " << order_field.VolumeCondition << endl;
+	g_ss << "最小成交量 " << order_field.MinVolume << endl;
+	g_ss << "触发条件 " << order_field.ContingentCondition << endl;
+	g_ss << "请求编号 " << order_field.RequestID << endl;
+	g_ss << "交易所代码 " << order_field.ExchangeID << endl;
+	LOG_LN("%s", g_ss.str().c_str());
+	PRINT_SUCCESS("%s", g_ss.str().c_str());
+	g_ss.str("");
 
 	m_trader_info.MaxOrderRef++;
 	int ret = m_trader_api->ReqOrderInsert(&order_field, ++m_request_id);
@@ -517,24 +523,28 @@ int Trader_Handler::send_single_order(order_t *order)
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrder) {
-		PRINT_SUCCESS("--->>> OnRspOrderInsert");
-		cout << "经纪公司代码 " << pInputOrder->BrokerID << endl;
-		cout << "投资者代码 " << pInputOrder->InvestorID << endl;
-		cout << "合约代码 " << pInputOrder->InstrumentID << endl;
-		cout << "报单引用 " << pInputOrder->OrderRef << endl;
-		cout << "用户代码 " << pInputOrder->UserID << endl;
-		cout << "报单价格条件 " << pInputOrder->OrderPriceType << endl;
-		cout << "买卖方向 " << pInputOrder->Direction << endl;
-		cout << "组合开平标志 " << pInputOrder->CombOffsetFlag << endl;
-		cout << "组合投机套保标志 " << pInputOrder->CombHedgeFlag << endl;
-		cout << "价格 " << pInputOrder->LimitPrice << endl;
-		cout << "数量 " << pInputOrder->VolumeTotalOriginal << endl;
-		cout << "有效期类型 " << pInputOrder->TimeCondition << endl;
-		cout << "成交量类型 " << pInputOrder->VolumeCondition << endl;
-		cout << "最小成交量 " << pInputOrder->MinVolume << endl;
-		cout << "触发条件 " << pInputOrder->ContingentCondition << endl;
-		cout << "请求编号 " << pInputOrder->RequestID << endl;
-		cout << "交易所代码 " << pInputOrder->ExchangeID << endl;
+		g_ss << "--->>> OnRspOrderInsert" << endl;
+		g_ss << "经纪公司代码 " << pInputOrder->BrokerID << endl;
+		g_ss << "投资者代码 " << pInputOrder->InvestorID << endl;
+		g_ss << "合约代码 " << pInputOrder->InstrumentID << endl;
+		g_ss << "报单引用 " << pInputOrder->OrderRef << endl;
+		g_ss << "用户代码 " << pInputOrder->UserID << endl;
+		g_ss << "报单价格条件 " << pInputOrder->OrderPriceType << endl;
+		g_ss << "买卖方向 " << pInputOrder->Direction << endl;
+		g_ss << "组合开平标志 " << pInputOrder->CombOffsetFlag << endl;
+		g_ss << "组合投机套保标志 " << pInputOrder->CombHedgeFlag << endl;
+		g_ss << "价格 " << pInputOrder->LimitPrice << endl;
+		g_ss << "数量 " << pInputOrder->VolumeTotalOriginal << endl;
+		g_ss << "有效期类型 " << pInputOrder->TimeCondition << endl;
+		g_ss << "成交量类型 " << pInputOrder->VolumeCondition << endl;
+		g_ss << "最小成交量 " << pInputOrder->MinVolume << endl;
+		g_ss << "触发条件 " << pInputOrder->ContingentCondition << endl;
+		g_ss << "请求编号 " << pInputOrder->RequestID << endl;
+		g_ss << "交易所代码 " << pInputOrder->ExchangeID << endl;
+
+		LOG_LN("%s", g_ss.str().c_str());
+		PRINT_SUCCESS("%s", g_ss.str().c_str());
+		g_ss.str("");
 	}
 	IsErrorRspInfo(pRspInfo);
 }
@@ -571,20 +581,24 @@ int Trader_Handler::cancel_single_order(order_t * order)
 	///合约代码
 	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
 
-	PRINT_SUCCESS("<<<>>> OrderAction");
-	cout << "经纪公司代码 " << g_order_action_t.BrokerID << endl;
-	cout << "投资者代码 " << g_order_action_t.InvestorID << endl;
-	cout << "合约代码 " << g_order_action_t.InstrumentID << endl;
-	cout << "报单编号 " << g_order_action_t.OrderSysID << endl;
-	cout << "报单引用 " << g_order_action_t.OrderRef << endl;
-	cout << "用户代码 " << g_order_action_t.UserID << endl;
-	cout << "价格 " << g_order_action_t.LimitPrice << endl;
-	cout << "数量变化 " << g_order_action_t.VolumeChange << endl;
-	cout << "操作标志 " << g_order_action_t.ActionFlag << endl;
-	cout << "交易所代码 " << g_order_action_t.ExchangeID << endl;
-	cout << "请求编号 " << g_order_action_t.RequestID << endl;
-	cout << "前置编号 " << g_order_action_t.FrontID << endl;
-	cout << "会话编号 " << g_order_action_t.SessionID << endl;
+	g_ss << "<<<>>> OrderAction" << endl;
+	g_ss << "经纪公司代码 " << g_order_action_t.BrokerID << endl;
+	g_ss << "投资者代码 " << g_order_action_t.InvestorID << endl;
+	g_ss << "合约代码 " << g_order_action_t.InstrumentID << endl;
+	g_ss << "报单编号 " << g_order_action_t.OrderSysID << endl;
+	g_ss << "报单引用 " << g_order_action_t.OrderRef << endl;
+	g_ss << "用户代码 " << g_order_action_t.UserID << endl;
+	g_ss << "价格 " << g_order_action_t.LimitPrice << endl;
+	g_ss << "数量变化 " << g_order_action_t.VolumeChange << endl;
+	g_ss << "操作标志 " << g_order_action_t.ActionFlag << endl;
+	g_ss << "交易所代码 " << g_order_action_t.ExchangeID << endl;
+	g_ss << "请求编号 " << g_order_action_t.RequestID << endl;
+	g_ss << "前置编号 " << g_order_action_t.FrontID << endl;
+	g_ss << "会话编号 " << g_order_action_t.SessionID << endl;
+
+	LOG_LN("%s", g_ss.str().c_str());
+	PRINT_SUCCESS("%s", g_ss.str().c_str());
+	g_ss.str("");
 
 	int ret = m_trader_api->ReqOrderAction(&g_order_action_t, ++m_request_id);
 	PRINT_DEBUG("Cancel order %s", ret == 0 ? ", success" : ", fail");
@@ -599,20 +613,24 @@ int Trader_Handler::st_idle()
 void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrderAction) {
-		PRINT_SUCCESS("--->>> OnRspOrderAction");
-		cout << "经纪公司代码 " << pInputOrderAction->BrokerID << endl;
-		cout << "投资者代码 " << pInputOrderAction->InvestorID << endl;
-		cout << "合约代码 " << pInputOrderAction->InstrumentID << endl;
-		cout << "报单编号 " << pInputOrderAction->OrderSysID << endl;
-		cout << "报单引用 " << pInputOrderAction->OrderRef << endl;
-		cout << "用户代码 " << pInputOrderAction->UserID << endl;
-		cout << "价格 " << pInputOrderAction->LimitPrice << endl;
-		cout << "数量变化 " << pInputOrderAction->VolumeChange << endl;
-		cout << "操作标志 " << pInputOrderAction->ActionFlag << endl;
-		cout << "交易所代码 " << pInputOrderAction->ExchangeID << endl;
-		cout << "请求编号 " << pInputOrderAction->RequestID << endl;
-		cout << "前置编号 " << pInputOrderAction->FrontID << endl;
-		cout << "会话编号 " << pInputOrderAction->SessionID << endl;
+		g_ss << "--->>> OnRspOrderAction" << endl;
+		g_ss << "经纪公司代码 " << pInputOrderAction->BrokerID << endl;
+		g_ss << "投资者代码 " << pInputOrderAction->InvestorID << endl;
+		g_ss << "合约代码 " << pInputOrderAction->InstrumentID << endl;
+		g_ss << "报单编号 " << pInputOrderAction->OrderSysID << endl;
+		g_ss << "报单引用 " << pInputOrderAction->OrderRef << endl;
+		g_ss << "用户代码 " << pInputOrderAction->UserID << endl;
+		g_ss << "价格 " << pInputOrderAction->LimitPrice << endl;
+		g_ss << "数量变化 " << pInputOrderAction->VolumeChange << endl;
+		g_ss << "操作标志 " << pInputOrderAction->ActionFlag << endl;
+		g_ss << "交易所代码 " << pInputOrderAction->ExchangeID << endl;
+		g_ss << "请求编号 " << pInputOrderAction->RequestID << endl;
+		g_ss << "前置编号 " << pInputOrderAction->FrontID << endl;
+		g_ss << "会话编号 " << pInputOrderAction->SessionID << endl;
+
+		LOG_LN("%s", g_ss.str().c_str());
+		PRINT_SUCCESS("%s", g_ss.str().c_str());
+		g_ss.str("");
 	}
 	IsErrorRspInfo(pRspInfo);
 }
@@ -622,7 +640,6 @@ static int hand_index = 100; //手工下单
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if (pOrder) {
-		PRINT_SUCCESS("--->>> OnRtnOrder %s", pOrder->InsertTime);
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pOrder->OrderRef];
 		
 		int index = cur_order_field.RequestID;
@@ -652,46 +669,50 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 			m_orders->erase(cur_order_field.OrderRef);
 		}
 
-		cout << "经纪公司代码 "	<< pOrder->BrokerID << endl;
-		cout << "投资者代码 "		<< pOrder->InvestorID << endl;
-		cout << "合约代码 "		<< pOrder->InstrumentID << endl;
-		cout << "报单引用 "		<< pOrder->OrderRef << endl;
-		cout << "用户代码 "		<< pOrder->UserID << endl;
-		cout << "报单价格条件 "	<< pOrder->OrderPriceType << endl;
-		cout << "买卖方向 "		<< pOrder->Direction << endl;
-		cout << "组合开平标志 "	<< pOrder->CombOffsetFlag << endl;
-		cout << "组合投机套保标志 " << pOrder->CombHedgeFlag << endl;
-		cout << "价格 "			<< pOrder->LimitPrice << endl;
-		cout << "数量 "			<< pOrder->VolumeTotalOriginal << endl;
-		cout << "有效期类型 "		<< pOrder->TimeCondition << endl;
-		cout << "成交量类型 "		<< pOrder->VolumeCondition << endl;
-		cout << "最小成交量 "		<< pOrder->MinVolume << endl;
-		cout << "触发条件 "		<< pOrder->ContingentCondition << endl;
-		cout << "请求编号 "		<< pOrder->RequestID << endl;
-		cout << "本地报单编号 "	<< pOrder->OrderLocalID << endl;
-		cout << "交易所代码 "		<< pOrder->ExchangeID << endl;
-		cout << "合约在交易所的代码 "	<< pOrder->ExchangeInstID << endl;
-		cout << "报单提交状态 "	<< pOrder->OrderSubmitStatus << endl;
-		cout << "报单提示序号 "	<< pOrder->NotifySequence << endl;
-		cout << "交易日 "		<< pOrder->TradingDay << endl;
-		cout << "报单编号 "		<< pOrder->OrderSysID << endl;
-		cout << "报单状态 "		<< pOrder->OrderStatus << endl;
-		cout << "今成交数量 "		<< pOrder->VolumeTraded << endl;
-		cout << "剩余数量 "		<< pOrder->VolumeTotal << endl;
-		cout << "报单日期 "		<< pOrder->InsertDate << endl;
-		cout << "报单时间 "		<< pOrder->InsertTime << endl;
-		cout << "最后修改时间 "	<< pOrder->UpdateTime << endl;
-		cout << "撤销时间 "		<< pOrder->CancelTime << endl;
-		cout << "序号 "			<< pOrder->SequenceNo << endl;
-		cout << "前置编号 "		<< pOrder->FrontID << endl;
-		cout << "会话编号 "		<< pOrder->SessionID << endl;
+		g_ss << "--->>> OnRtnOrder " << pOrder->InsertTime << endl;
+		g_ss << "经纪公司代码 "	<< pOrder->BrokerID << endl;
+		g_ss << "投资者代码 "		<< pOrder->InvestorID << endl;
+		g_ss << "合约代码 "		<< pOrder->InstrumentID << endl;
+		g_ss << "报单引用 "		<< pOrder->OrderRef << endl;
+		g_ss << "用户代码 "		<< pOrder->UserID << endl;
+		g_ss << "报单价格条件 "	<< pOrder->OrderPriceType << endl;
+		g_ss << "买卖方向 "		<< pOrder->Direction << endl;
+		g_ss << "组合开平标志 "	<< pOrder->CombOffsetFlag << endl;
+		g_ss << "组合投机套保标志 " << pOrder->CombHedgeFlag << endl;
+		g_ss << "价格 "			<< pOrder->LimitPrice << endl;
+		g_ss << "数量 "			<< pOrder->VolumeTotalOriginal << endl;
+		g_ss << "有效期类型 "		<< pOrder->TimeCondition << endl;
+		g_ss << "成交量类型 "		<< pOrder->VolumeCondition << endl;
+		g_ss << "最小成交量 "		<< pOrder->MinVolume << endl;
+		g_ss << "触发条件 "		<< pOrder->ContingentCondition << endl;
+		g_ss << "请求编号 "		<< pOrder->RequestID << endl;
+		g_ss << "本地报单编号 "	<< pOrder->OrderLocalID << endl;
+		g_ss << "交易所代码 "		<< pOrder->ExchangeID << endl;
+		g_ss << "合约在交易所的代码 "	<< pOrder->ExchangeInstID << endl;
+		g_ss << "报单提交状态 "	<< pOrder->OrderSubmitStatus << endl;
+		g_ss << "报单提示序号 "	<< pOrder->NotifySequence << endl;
+		g_ss << "交易日 "		<< pOrder->TradingDay << endl;
+		g_ss << "报单编号 "		<< pOrder->OrderSysID << endl;
+		g_ss << "报单状态 "		<< pOrder->OrderStatus << endl;
+		g_ss << "今成交数量 "		<< pOrder->VolumeTraded << endl;
+		g_ss << "剩余数量 "		<< pOrder->VolumeTotal << endl;
+		g_ss << "报单日期 "		<< pOrder->InsertDate << endl;
+		g_ss << "报单时间 "		<< pOrder->InsertTime << endl;
+		g_ss << "最后修改时间 "	<< pOrder->UpdateTime << endl;
+		g_ss << "撤销时间 "		<< pOrder->CancelTime << endl;
+		g_ss << "序号 "			<< pOrder->SequenceNo << endl;
+		g_ss << "前置编号 "		<< pOrder->FrontID << endl;
+		g_ss << "会话编号 "		<< pOrder->SessionID << endl;
+
+		LOG_LN("%s", g_ss.str().c_str());
+		PRINT_SUCCESS("%s", g_ss.str().c_str());
+		g_ss.str("");
 	}
 }
 
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
-		PRINT_SUCCESS("--->>> OnRtnTrade %s", pTrade->TradeTime);
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pTrade->OrderRef];
 
 		int index = cur_order_field.RequestID;
@@ -711,27 +732,32 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		if (g_resp_t.status == SIG_STATUS_SUCCEED)
 			m_orders->erase(cur_order_field.OrderRef);
 
-		cout << "经纪公司代码 "	<< pTrade->BrokerID << endl;
-		cout << "投资者代码 "		<< pTrade->InvestorID << endl;
-		cout << "合约代码 "		<< pTrade->InstrumentID << endl;
-		cout << "报单引用 "		<< pTrade->OrderRef << endl;
-		cout << "用户代码 "		<< pTrade->UserID << endl;
-		cout << "交易所代码 "		<< pTrade->ExchangeID << endl;
-		cout << "成交编号 "		<< pTrade->TradeID << endl;
-		cout << "买卖方向 "		<< pTrade->Direction << endl;
-		cout << "报单编号 "		<< pTrade->OrderSysID << endl;
-		cout << "会员代码 "		<< pTrade->ParticipantID << endl;
-		cout << "客户代码 "		<< pTrade->ClientID << endl;
-		cout << "合约在交易所的代码 " << pTrade->ExchangeInstID << endl;
-		cout << "开平标志 "		<< pTrade->OffsetFlag << endl;
-		cout << "投机套保标志 "	<< pTrade->HedgeFlag << endl;
-		cout << "价格 "			<< pTrade->Price << endl;
-		cout << "数量 "			<< pTrade->Volume << endl;
-		cout << "成交时期 "		<< pTrade->TradeDate << endl;
-		cout << "成交时间 "		<< pTrade->TradeTime << endl;
-		cout << "本地报单编号 "	<< pTrade->OrderLocalID << endl;
-		cout << "序号 "			<< pTrade->SequenceNo << endl;
-		cout << "交易日 "		<< pTrade->TradingDay << endl;
+		g_ss << "--->>> OnRtnTrade " << pTrade->TradeTime << endl;
+		g_ss << "经纪公司代码 "	<< pTrade->BrokerID << endl;
+		g_ss << "投资者代码 "		<< pTrade->InvestorID << endl;
+		g_ss << "合约代码 "		<< pTrade->InstrumentID << endl;
+		g_ss << "报单引用 "		<< pTrade->OrderRef << endl;
+		g_ss << "用户代码 "		<< pTrade->UserID << endl;
+		g_ss << "交易所代码 "		<< pTrade->ExchangeID << endl;
+		g_ss << "成交编号 "		<< pTrade->TradeID << endl;
+		g_ss << "买卖方向 "		<< pTrade->Direction << endl;
+		g_ss << "报单编号 "		<< pTrade->OrderSysID << endl;
+		g_ss << "会员代码 "		<< pTrade->ParticipantID << endl;
+		g_ss << "客户代码 "		<< pTrade->ClientID << endl;
+		g_ss << "合约在交易所的代码 " << pTrade->ExchangeInstID << endl;
+		g_ss << "开平标志 "		<< pTrade->OffsetFlag << endl;
+		g_ss << "投机套保标志 "	<< pTrade->HedgeFlag << endl;
+		g_ss << "价格 "			<< pTrade->Price << endl;
+		g_ss << "数量 "			<< pTrade->Volume << endl;
+		g_ss << "成交时期 "		<< pTrade->TradeDate << endl;
+		g_ss << "成交时间 "		<< pTrade->TradeTime << endl;
+		g_ss << "本地报单编号 "	<< pTrade->OrderLocalID << endl;
+		g_ss << "序号 "			<< pTrade->SequenceNo << endl;
+		g_ss << "交易日 "		<< pTrade->TradingDay << endl;
+
+		LOG_LN("%s", g_ss.str().c_str());
+		PRINT_SUCCESS("%s", g_ss.str().c_str());
+		g_ss.str("");
 	}
 }
 
