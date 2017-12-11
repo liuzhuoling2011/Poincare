@@ -11,7 +11,9 @@ static st_config_t *g_config = NULL;
 #include <string>
 
 #define KDBLEN 1024
+
 #define SIMULATION 
+#define BREAK_GO_ON 
 
 static int count = 0;
 
@@ -27,9 +29,15 @@ static char kdb_sql[KDBLEN];
 static int RoundCount = 0;
 static int cuSignalcount = 0;
 
+
+
 int my_st_init(int type, int length, void *cfg) {
 	if (sdp_handler == NULL) {
 		sdp_handler = new SDPHandler(type, length, cfg);
+
+#ifdef BREAK_GO_ON
+		k(-kdb_handle, "ibAskpx:0f;ibBidpx:0f;system \"l tbls\"; system \"cd ..\"", (K)0);
+#endif
 
 		/* write your logic here */
 		char init_kdb_sql[KDBLEN] = "if[not `quoteData in tables `.;ibAskpx:0f;ibBidpx:0f;res:([]a:enlist 0i;b:enlist 0f;c:enlist 0f;d:enlist 0i);quoteData:();FinalSignal2:();"
