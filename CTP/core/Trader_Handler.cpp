@@ -12,6 +12,8 @@ using namespace std;
 
 #ifndef _WIN32
 #include <unistd.h>
+#include <strategy_interface.h>
+
 #else
 #include <windows.h>
 #define sleep Sleep
@@ -25,6 +27,7 @@ using namespace std;
 static stringstream g_ss;					
 static int hand_index = 100; //手工下单
 static int total_contract_num = 0;
+static bool mutex_flag = false;
 static int mutex_count = 0;
 
 extern char g_strategy_path[256];
@@ -272,13 +275,14 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 		}
 
 		//请求查询合约
-		total_contract_num = mutex_count = g_contract_config_hash.size();
+		total_contract_num = g_contract_config_hash.size();
+        mutex_count = 0; mutex_flag = false;
 		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
-			if(mutex_count != total_contract_num) {
+			while(mutex_flag == true) {
 				sleep(0.5);
 			}
 			ReqInstrument(iter->first);
-			mutex_count--;
+            mutex_flag == true;
 		}
 	}
 }
@@ -304,10 +308,20 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	contract_config.multiple = pInstrument->VolumeMultiple; // to correct
 	strlcpy(contract_config.account, g_config_t.accounts[0].account, ACCOUNT_LEN);
 
-	if (bIsLast == true) {
-		//查询最大报单数量请求
-		ReqQueryMaxOrderVolume(pInstrument->InstrumentID);
-	}
+    mutex_flag == false;
+    mutex_count ++;
+
+    if(mutex_count == total_contract_num){
+        //查询最大报单数量请求
+        mutex_count = 0; mutex_flag = false;
+        for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
+            while(mutex_flag == true) {
+                sleep(0.5);
+            }
+            ReqQueryMaxOrderVolume(iter->first);
+            mutex_flag == true;
+        }
+    }
 }
 
 void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
@@ -326,8 +340,21 @@ void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField
 	contract_t& contract_config = g_contract_config_hash[pQueryMaxOrderVolume->InstrumentID];
 	contract_config.max_accum_open_vol = pQueryMaxOrderVolume->MaxVolume;
 
-	//请求查询合约手续费率
-	ReqQryInstrumentCommissionRate(pQueryMaxOrderVolume->InstrumentID);
+    mutex_flag == false;
+    mutex_count ++;
+
+    if(mutex_count == total_contract_num) {
+        //请求查询合约手续费率
+        mutex_count = 0;
+        mutex_flag = false;
+        for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
+            while (mutex_flag == true) {
+                sleep(0.5);
+            }
+            ReqQryInstrumentCommissionRate(iter->first);
+            mutex_flag == true;
+        }
+    }
 }
 
 void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
@@ -353,9 +380,16 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 	contract_config.fee.broker_fee = BROKER_FEE;
 
 	PRINT_INFO("%s", pInstrumentCommissionRate->InstrumentID);
-	
-	//在这里我们结束了config的配置，开始初始化策略
-	init_strategy();
+
+    mutex_count ++;
+    if(mutex_count == total_contract_num) {
+        int index = 0;
+        for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
+            g_config_t.contracts[index++] = iter->second;
+        }
+        //在这里我们结束了config的配置，开始初始化策略
+        init_strategy();
+    }
 }
 
 void Trader_Handler::init_strategy()
