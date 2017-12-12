@@ -37,12 +37,6 @@ static char ERROR_MSG[4096];
 
 extern Trader_Handler *g_trader_handler;
 
-// 流控判断
-bool IsFlowControl(int iResult)
-{
-	return ((iResult == -2) || (iResult == -3));
-}
-
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
 	// 保存会话参数
 	info.FrontID = pRspUserLogin->FrontID;
@@ -141,16 +135,8 @@ void Trader_Handler::ReqTradingAccount()
 	strcpy(requ.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(requ.InvestorID, m_trader_config->TUSER_ID);
 	strcpy(requ.CurrencyID, "CNY");
-	while (true) {
-		int iResult = m_trader_api->ReqQryTradingAccount(&requ, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query account: %s %s", requ.InvestorID, iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	} // while
+	int iResult = m_trader_api->ReqQryTradingAccount(&requ, ++m_request_id);
+	PRINT_INFO("send query account: %s %s", requ.InvestorID, iResult == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -170,17 +156,9 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 }
 
 void Trader_Handler::ReqInstrument(char* symbol) {
-	while (true) {
-		strcpy(m_req_contract.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInstrument(&m_req_contract, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query contract: %s %s", m_req_contract.InstrumentID, iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
+	strcpy(m_req_contract.InstrumentID, symbol);
+	int iResult = m_trader_api->ReqQryInstrument(&m_req_contract, ++m_request_id);
+	PRINT_INFO("send query contract: %s %s", m_req_contract.InstrumentID, iResult == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -210,16 +188,8 @@ void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
 	strcpy(ReqMaxOrdSize.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(ReqMaxOrdSize.InvestorID, m_trader_config->TUSER_ID);
 	strcpy(ReqMaxOrdSize.InstrumentID, symbol);
-	while (true) {
-		int iResult = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query max order size %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
+	int iResult = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
+	PRINT_INFO("send query max order size %s", iResult == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField * pQueryMaxOrderVolume, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -237,17 +207,9 @@ void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
 	strcpy(ReqCommissionRate.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(ReqCommissionRate.InvestorID, m_trader_config->TUSER_ID);
 	strcpy(ReqCommissionRate.InstrumentID, symbol);
-	while (true) {
-		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query commission rate %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
+	//strcpy(m_req_pos.InstrumentID, symbol);
+	int iResult = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
+	PRINT_INFO("send query commission rate %s", iResult == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField * pInstrumentCommissionRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -273,17 +235,8 @@ void Trader_Handler::ReqQryInvestorPositionDetail()
 	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
 	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
-	while (true) {
-		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
+	int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
+	PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -404,17 +357,9 @@ void Trader_Handler::ReqQryInvestorPosition()
 	CThostFtdcQryInvestorPositionField req_pos = { 0 };
 	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
-	while (true) {
 		//strcpy(m_req_pos.InstrumentID, symbol);
-		int iResult = m_trader_api->ReqQryInvestorPosition(&req_pos, ++m_request_id);
-		if (!IsFlowControl(iResult)) {
-			PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
-			break;
-		}
-		else {
-			sleep(1);
-		}
-	}
+	int iResult = m_trader_api->ReqQryInvestorPosition(&req_pos, ++m_request_id);
+	PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
