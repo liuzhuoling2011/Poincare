@@ -20,10 +20,10 @@ using namespace std;
 #define BROKER_FEE 0.0002
 #define STAMP_TAX 0.001
 #define ACC_TRANSFER_FEE 0.00002
-
 #define SERIAL_NO_MULTI 10000000000
 
-static stringstream g_ss;
+static stringstream g_ss;					
+static int hand_index = 100; //手工下单
 
 extern char g_strategy_path[256];
 extern CThostFtdcMdApi *MdUserApi;
@@ -533,6 +533,26 @@ int Trader_Handler::send_single_order(order_t *order)
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrder) {
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pInputOrder->OrderRef];
+		
+		int index = cur_order_field.RequestID;
+		if (index == 0) {	//手工下单
+			index = hand_index;
+			cur_order_field.BusinessUnit[0] = SIG_STATUS_INIT;
+		}
+		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
+		strlcpy(g_resp_t.symbol, pInputOrder->InstrumentID, SYMBOL_LEN);
+		g_resp_t.direction = pInputOrder->Direction - '0';
+		g_resp_t.open_close = convert_open_close_flag(pInputOrder->CombOffsetFlag[0]);
+		g_resp_t.exe_price = pInputOrder->LimitPrice;
+		g_resp_t.exe_volume = pInputOrder->VolumeTotalOriginal;
+		g_resp_t.status = SIG_STATUS_REJECTED;
+		g_data_t.info = (void*)&g_resp_t;
+		my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
+
+		hand_index++;
+		m_orders->erase(cur_order_field.OrderRef);
+
 		g_ss << "--->>> OnRspOrderInsert" << endl;
 		g_ss << "经纪公司代码 " << pInputOrder->BrokerID << endl;
 		g_ss << "投资者代码 " << pInputOrder->InvestorID << endl;
@@ -652,8 +672,6 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 	}
 }
-
-static int hand_index = 100; //手工下单
 
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {

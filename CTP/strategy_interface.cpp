@@ -41,24 +41,20 @@ int process_strategy_order(int type, int length, void *data) {
 	switch (type) {
 		case S_PLACE_ORDER_DEFAULT: {
 			order_t *ord = (order_t*)((st_data_t*)data)->info;
-
+			ret = g_trader_handler->send_single_order(ord);
 			LOG_LN("Send Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
 				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
 				ord->investor_type, ord->order_type, ord->time_in_force,
 				ord->st_id, ord->order_id, ord->org_ord_id);
-
-			ret = g_trader_handler->send_single_order(ord);
 			break;
 		}
 		case S_CANCEL_ORDER_DEFAULT: {
 			order_t *ord = (order_t*)((st_data_t*)data)->info;
-
+			ret = g_trader_handler->cancel_single_order(ord);
 			LOG_LN("Cancel Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
 				ord->volume, ord->price, BUY_SELL_STR[ord->direction], OPEN_CLOSE_STR[ord->open_close],
 				ord->investor_type, ord->order_type, ord->time_in_force,
 				ord->st_id, ord->order_id, ord->org_ord_id);
-
-			ret = g_trader_handler->cancel_single_order(ord);
 			break;
 		}
 	}
