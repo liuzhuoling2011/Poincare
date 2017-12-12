@@ -24,16 +24,30 @@ using namespace std;
 
 static stringstream g_ss;					
 static int hand_index = 100; //手工下单
+static int total_contract_num = 0;
+static int mutex_count = 0;
 
 extern char g_strategy_path[256];
 extern CThostFtdcMdApi *MdUserApi;
 
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
+static contract_t empty_contract_t = { 0 };
 static st_config_t g_config_t = { 0 };
 static st_response_t g_resp_t = { 0 };
 static st_data_t g_data_t = { 0 };
 static int g_sig_count = 0;
-static char ERROR_MSG[4096];
+static char ERROR_MSG[512];
+
+typedef MyArray<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
+
+struct ContractPosition
+{
+	ContractPositionArray long_pos;
+	ContractPositionArray short_pos;
+};
+
+static MyHash<contract_t> g_contract_config_hash;
+static MyHash<ContractPosition> g_contract_pos_hash;
 
 extern Trader_Handler *g_trader_handler;
 
@@ -149,11 +163,126 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 	g_config_t.accounts[0].currency = CNY;
 	g_config_t.accounts[0].exch_rate = 1.0;
 
-	//请求查询合约
-	for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
-		ReqInstrument(m_trader_config->INSTRUMENTS[i]);
+	//请求查询投资者持仓
+	ReqQryInvestorPositionDetail();
+}
+
+void Trader_Handler::ReqQryInvestorPositionDetail()
+{
+	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
+	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
+	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
+	int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
+	PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
+}
+
+void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (pInvestorPositionDetail) {
+		// 对于所有合约，不保存已平仓的，只保存未平仓的
+		ContractPosition &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
+		if (pInvestorPositionDetail->Volume > 0) {
+			if (pInvestorPositionDetail->Direction == TRADER_BUY)
+				contract_position.long_pos.push_back(pInvestorPositionDetail);
+			else if (pInvestorPositionDetail->Direction == TRADER_SELL)
+				contract_position.short_pos.push_back(pInvestorPositionDetail);
+
+			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE == false) {
+				bool find_instId = false;
+				for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+					if (my_strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//合约已存在，已订阅过行情
+						find_instId = true;
+						break;
+					}
+				}
+				if (find_instId == false) {
+					strlcpy(m_trader_config->INSTRUMENTS[m_trader_config->INSTRUMENT_COUNT++], pInvestorPositionDetail->InstrumentID, SYMBOL_LEN);
+				}
+			}
+		}
+	}
+
+	if (bIsLast) {
+		for (auto iter = g_contract_pos_hash.begin(); iter != g_contract_pos_hash.end(); iter++) {
+			contract_t& contract_config = g_contract_config_hash[iter->first];
+			ContractPositionArray &contracts_long = iter->second.long_pos;
+			ContractPositionArray &contracts_short = iter->second.short_pos;
+
+			int long_size = 0, short_size = 0, yes_long_size = 0, yes_short_size = 0;
+			double long_price = 0, short_price = 0, yes_long_price = 0, yes_short_price = 0;
+
+			for (int i = 0; i < iter->second.long_pos.size(); i++) {
+				if (atoi(contracts_long[i].OpenDate) != g_config_t.trading_date) {
+					yes_long_price += contracts_long[i].OpenPrice * contracts_long[i].Volume;
+					yes_long_size += contracts_long[i].Volume;
+				}
+				long_price += contracts_long[i].OpenPrice * contracts_long[i].Volume;
+				long_size += contracts_long[i].Volume;
+			}
+			if (long_size == 0) {
+				contract_config.today_pos.long_price = 0;
+				contract_config.today_pos.long_volume = 0;
+			}
+			else {
+				contract_config.today_pos.long_price = long_price / long_size;
+				contract_config.today_pos.long_volume = long_size;
+			}
+
+			if (yes_long_size == 0) {
+				contract_config.yesterday_pos.long_price = 0;
+				contract_config.yesterday_pos.long_volume = 0;
+			}
+			else {
+				contract_config.yesterday_pos.long_price = yes_long_price / yes_long_size;
+				contract_config.yesterday_pos.long_volume = yes_long_size;
+			}
+
+			for (int i = 0; i < contracts_short.size(); i++) {
+				if (atoi(contracts_short[i].OpenDate) != g_config_t.trading_date) {
+					yes_short_price += contracts_short[i].OpenPrice * contracts_short[i].Volume;
+					yes_short_size += contracts_short[i].Volume;
+				}
+				short_price += contracts_short[i].OpenPrice * contracts_short[i].Volume;
+				short_size += contracts_short[i].Volume;
+			}
+
+			if (short_size == 0) {
+				contract_config.today_pos.short_price = 0;
+				contract_config.today_pos.short_volume = 0;
+			}
+			else {
+				contract_config.today_pos.short_price = short_price / short_size;
+				contract_config.today_pos.short_volume = short_size;
+			}
+
+			if (yes_short_size == 0) {
+				contract_config.yesterday_pos.short_price = 0;
+				contract_config.yesterday_pos.short_volume = 0;
+			}
+			else {
+				contract_config.yesterday_pos.short_price = yes_short_price / yes_short_size;
+				contract_config.yesterday_pos.short_volume = yes_short_size;
+			}
+		}
+		for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+			char* l_symbol = m_trader_config->INSTRUMENTS[i];
+			if (!g_contract_config_hash.exist(l_symbol)) {
+				g_contract_config_hash.insert(l_symbol, empty_contract_t);
+			}
+		}
+
+		//请求查询合约
+		total_contract_num = mutex_count = g_contract_config_hash.size();
+		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
+			if(mutex_count != total_contract_num) {
+				sleep(0.5);
+			}
+			ReqInstrument(iter->first);
+			mutex_count--;
+		}
 	}
 }
+
 
 void Trader_Handler::ReqInstrument(char* symbol) {
 	strcpy(m_req_contract.InstrumentID, symbol);
@@ -165,16 +294,15 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 {
 	if (pInstrument == NULL) return;
 	PRINT_DEBUG("%s %s %s %s %s %f", pInstrument->InstrumentID, pInstrument->ExchangeID, pInstrument->ProductID, pInstrument->CreateDate, pInstrument->ExpireDate, pInstrument->PriceTick);
-	//todo 补全合约信息，先考虑一个合约
-
-	strlcpy(g_config_t.contracts[0].symbol, pInstrument->InstrumentID, SYMBOL_LEN);
-	g_config_t.contracts[0].exch = get_exch_by_name(pInstrument->ExchangeID);
-	g_config_t.contracts[0].max_accum_open_vol = 10000;
-	g_config_t.contracts[0].max_cancel_limit = 1000;
-	g_config_t.contracts[0].expiration_date = atoi(pInstrument->EndDelivDate); // to correct
-	g_config_t.contracts[0].tick_size = pInstrument->PriceTick;
-	g_config_t.contracts[0].multiple = pInstrument->VolumeMultiple; // to correct
-	strlcpy(g_config_t.contracts[0].account, g_config_t.accounts[0].account, ACCOUNT_LEN);
+	contract_t& contract_config = g_contract_config_hash[pInstrument->InstrumentID];
+	strlcpy(contract_config.symbol, pInstrument->InstrumentID, SYMBOL_LEN);
+	contract_config.exch = get_exch_by_name(pInstrument->ExchangeID);
+	contract_config.max_accum_open_vol = 10000;
+	contract_config.max_cancel_limit = 1000;
+	contract_config.expiration_date = atoi(pInstrument->EndDelivDate); // to correct
+	contract_config.tick_size = pInstrument->PriceTick;
+	contract_config.multiple = pInstrument->VolumeMultiple; // to correct
+	strlcpy(contract_config.account, g_config_t.accounts[0].account, ACCOUNT_LEN);
 
 	if (bIsLast == true) {
 		//查询最大报单数量请求
@@ -195,7 +323,8 @@ void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
 void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField * pQueryMaxOrderVolume, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pQueryMaxOrderVolume == NULL) return;
-	g_config_t.contracts[0].max_accum_open_vol = pQueryMaxOrderVolume->MaxVolume;
+	contract_t& contract_config = g_contract_config_hash[pQueryMaxOrderVolume->InstrumentID];
+	contract_config.max_accum_open_vol = pQueryMaxOrderVolume->MaxVolume;
 
 	//请求查询合约手续费率
 	ReqQryInstrumentCommissionRate(pQueryMaxOrderVolume->InstrumentID);
@@ -215,142 +344,52 @@ void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
 void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField * pInstrumentCommissionRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInstrumentCommissionRate == NULL) return;
-	g_config_t.contracts[0].fee.exchange_fee = pInstrumentCommissionRate->OpenRatioByMoney;
-	g_config_t.contracts[0].fee.fee_by_lot = false;
-	g_config_t.contracts[0].fee.yes_exchange_fee = pInstrumentCommissionRate->CloseRatioByMoney;
-	g_config_t.contracts[0].fee.acc_transfer_fee = ACC_TRANSFER_FEE;
-	g_config_t.contracts[0].fee.stamp_tax = STAMP_TAX;
-	g_config_t.contracts[0].fee.broker_fee = BROKER_FEE;
+	contract_t& contract_config = g_contract_config_hash[pInstrumentCommissionRate->InstrumentID];
+	contract_config.fee.exchange_fee = pInstrumentCommissionRate->OpenRatioByMoney;
+	contract_config.fee.fee_by_lot = false;
+	contract_config.fee.yes_exchange_fee = pInstrumentCommissionRate->CloseRatioByMoney;
+	contract_config.fee.acc_transfer_fee = ACC_TRANSFER_FEE;
+	contract_config.fee.stamp_tax = STAMP_TAX;
+	contract_config.fee.broker_fee = BROKER_FEE;
 
 	PRINT_INFO("%s", pInstrumentCommissionRate->InstrumentID);
 	
-	//请求查询投资者持仓
-	ReqQryInvestorPosition();
-	sleep(1);
-	ReqQryInvestorPositionDetail();
+	//在这里我们结束了config的配置，开始初始化策略
+	init_strategy();
 }
 
-void Trader_Handler::ReqQryInvestorPositionDetail()
+void Trader_Handler::init_strategy()
 {
-	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
-	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
-	int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
-	PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
-}
+	// 在这里我们结束了config的配置，开始初始化策略
+	PRINT_INFO("Starting load strategy!");
+	my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
+	MdUserApi->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
+	MdUserApi->Init();
 
-void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
-{
-	if (pInvestorPositionDetail) {
-		// 对于所有合约，不保存已平仓的，只保存未平仓的
-		if (pInvestorPositionDetail->Volume > 0) {
-			if (pInvestorPositionDetail->Direction == TRADER_BUY)
-				m_contracts_long.push_back(pInvestorPositionDetail);
-			else if (pInvestorPositionDetail->Direction == TRADER_SELL)
-				m_contracts_short.push_back(pInvestorPositionDetail);
+	PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
+		g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
 
-			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE == false) {
-				bool find_instId = false;
-				for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
-					if (my_strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//合约已存在，已订阅过行情
-						find_instId = true;
-						break;
-					}
-				}
-				if (find_instId == false) {
-					strlcpy(m_trader_config->INSTRUMENTS[m_trader_config->INSTRUMENT_COUNT++], pInvestorPositionDetail->InstrumentID, SYMBOL_LEN);
-				}
-			}
-		}
-
-		if (bIsLast) {
-			int long_size = 0, short_size = 0;
-			double long_price = 0, short_price = 0;
-
-			int yes_long_size = 0, yes_short_size = 0;
-			double yes_long_price = 0, yes_short_price = 0;
-
-			for (int i = 0; i < m_contracts_long.size(); i++) {
-				if (atoi(m_contracts_long[i].OpenDate) != g_config_t.trading_date) {
-					yes_long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
-					yes_long_size += m_contracts_long[i].Volume;
-				}
-				long_price += m_contracts_long[i].OpenPrice * m_contracts_long[i].Volume;
-				long_size += m_contracts_long[i].Volume;
-			}
-			if(long_size == 0) {
-				g_config_t.contracts[0].today_pos.long_price = 0;
-				g_config_t.contracts[0].today_pos.long_volume = 0;
-			} else {
-				g_config_t.contracts[0].today_pos.long_price = long_price / long_size;
-				g_config_t.contracts[0].today_pos.long_volume = long_size;
-			}
-			
-			if(yes_long_size == 0) {
-				g_config_t.contracts[0].yesterday_pos.long_price = 0;
-				g_config_t.contracts[0].yesterday_pos.long_volume = 0;
-			} else {
-				g_config_t.contracts[0].yesterday_pos.long_price = yes_long_price / yes_long_size;
-				g_config_t.contracts[0].yesterday_pos.long_volume = yes_long_size;
-			}
-
-			for (int i = 0; i < m_contracts_short.size(); i++) {
-				if (atoi(m_contracts_short[i].OpenDate) != g_config_t.trading_date) {
-					yes_short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
-					yes_short_size += m_contracts_short[i].Volume;
-				}
-				short_price += m_contracts_short[i].OpenPrice * m_contracts_short[i].Volume;
-				short_size += m_contracts_short[i].Volume;
-			}
-			
-			if (short_size == 0) {
-				g_config_t.contracts[0].today_pos.short_price = 0;
-				g_config_t.contracts[0].today_pos.short_volume = 0;
-			} else {
-				g_config_t.contracts[0].today_pos.short_price = short_price / short_size;
-				g_config_t.contracts[0].today_pos.short_volume = short_size;
-			}
-
-			if (yes_short_size == 0) {
-				g_config_t.contracts[0].yesterday_pos.short_price = 0;
-				g_config_t.contracts[0].yesterday_pos.short_volume = 0;
-			} else {
-				g_config_t.contracts[0].yesterday_pos.short_price = yes_short_price / yes_short_size;
-				g_config_t.contracts[0].yesterday_pos.short_volume = yes_short_size;
-			}
-		}
+	for (int i = 0; i < ACCOUNT_MAX; i++) {
+		if (g_config_t.accounts[i].account[0] == '\0') break;
+		account_t& l_account = g_config_t.accounts[i];
+		PRINT_SUCCESS("account: %s, cash_available: %f, cash_asset: %f, exch_rate: %f, currency: %d",
+			l_account.account, l_account.cash_available, l_account.cash_asset, l_account.exch_rate, l_account.currency);
 	}
-	if (bIsLast) {
-		// 在这里我们结束了config的配置，开始初始化策略
-		PRINT_INFO("Starting load strategy!");
-		my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
-		MdUserApi->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
-		MdUserApi->Init();
 
-		PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
-			g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
-
-		for (int i = 0; i < ACCOUNT_MAX; i++) {
-			if (g_config_t.accounts[i].account[0] == '\0') break;
-			account_t& l_account = g_config_t.accounts[i];
-			PRINT_SUCCESS("account: %s, cash_available: %f, cash_asset: %f, exch_rate: %f, currency: %d",
-				l_account.account, l_account.cash_available, l_account.cash_asset, l_account.exch_rate, l_account.currency);
-		}
-
-		for (int i = 0; i < SYMBOL_MAX; i++) {
-			if (g_config_t.contracts[i].symbol[0] == '\0') break;
-			contract_t& l_config_instr = g_config_t.contracts[i];
-			PRINT_SUCCESS("symbol: %s, account: %s, exch: %c, max_accum_open_vol: %d, max_cancel_limit: %d, expiration_date: %d, "
-				"today_long_pos: %d, today_long_price: %f, today_short_pos: %d, today_short_price: %f, "
-				"yesterday_long_pos: %d, yesterday_long_price: %f, yesterday_short_pos: %d, yesterday_short_price: %f, "
-				"fee_by_lot: %d, exchange_fee : %f, yes_exchange_fee : %f, broker_fee : %f, stamp_tax : %f, acc_transfer_fee : %f, tick_size : %f, multiplier : %f",
-				l_config_instr.symbol, l_config_instr.account, l_config_instr.exch, l_config_instr.max_accum_open_vol, l_config_instr.max_cancel_limit, l_config_instr.expiration_date,
-				l_config_instr.today_pos.long_volume, l_config_instr.today_pos.long_price, l_config_instr.today_pos.short_volume, l_config_instr.today_pos.short_price,
-				l_config_instr.yesterday_pos.long_volume, l_config_instr.yesterday_pos.long_price, l_config_instr.yesterday_pos.short_volume, l_config_instr.yesterday_pos.short_price,
-				l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
-		}
+	for (int i = 0; i < SYMBOL_MAX; i++) {
+		if (g_config_t.contracts[i].symbol[0] == '\0') break;
+		contract_t& l_config_instr = g_config_t.contracts[i];
+		PRINT_SUCCESS("symbol: %s, account: %s, exch: %c, max_accum_open_vol: %d, max_cancel_limit: %d, expiration_date: %d, "
+			"today_long_pos: %d, today_long_price: %f, today_short_pos: %d, today_short_price: %f, "
+			"yesterday_long_pos: %d, yesterday_long_price: %f, yesterday_short_pos: %d, yesterday_short_price: %f, "
+			"fee_by_lot: %d, exchange_fee : %f, yes_exchange_fee : %f, broker_fee : %f, stamp_tax : %f, acc_transfer_fee : %f, tick_size : %f, multiplier : %f",
+			l_config_instr.symbol, l_config_instr.account, l_config_instr.exch, l_config_instr.max_accum_open_vol, l_config_instr.max_cancel_limit, l_config_instr.expiration_date,
+			l_config_instr.today_pos.long_volume, l_config_instr.today_pos.long_price, l_config_instr.today_pos.short_volume, l_config_instr.today_pos.short_price,
+			l_config_instr.yesterday_pos.long_volume, l_config_instr.yesterday_pos.long_price, l_config_instr.yesterday_pos.short_volume, l_config_instr.yesterday_pos.short_price,
+			l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
 	}
 }
+
 
 void Trader_Handler::ReqQryInvestorPosition()
 {
@@ -492,6 +531,15 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 		g_resp_t.exe_price = pInputOrder->LimitPrice;
 		g_resp_t.exe_volume = pInputOrder->VolumeTotalOriginal;
 		g_resp_t.status = SIG_STATUS_REJECTED;
+
+		if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+			code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 512);
+			PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+			LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+			g_resp_t.error_no = pRspInfo->ErrorID;
+			strlcpy(g_resp_t.error_info, ERROR_MSG, 512);
+		}
+
 		g_data_t.info = (void*)&g_resp_t;
 		my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 
@@ -521,11 +569,7 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 		PRINT_SUCCESS("%s", g_ss.str().c_str());
 		g_ss.str("");
 	}
-	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
-		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
-		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
-		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
-	}
+	
 }
 
 int Trader_Handler::cancel_single_order(order_t * order)
@@ -762,20 +806,6 @@ void Trader_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID
 		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 	}
-}
-
-bool Trader_Handler::IsMyOrder(CThostFtdcOrderField *pOrder)
-{
-	return ((pOrder->FrontID == m_trader_info.FrontID) &&
-		(pOrder->SessionID == m_trader_info.SessionID) &&
-		atoi(pOrder->OrderRef) == m_trader_info.MaxOrderRef);
-}
-
-bool Trader_Handler::IsTradingOrder(CThostFtdcOrderField *pOrder)
-{
-	return ((pOrder->OrderStatus != THOST_FTDC_OST_PartTradedNotQueueing) &&
-		(pOrder->OrderStatus != THOST_FTDC_OST_Canceled) &&
-		(pOrder->OrderStatus != THOST_FTDC_OST_AllTraded));
 }
 
 CThostFtdcInputOrderField & Trader_Handler::get_order_info(uint64_t order_id)

@@ -84,10 +84,7 @@ private:
 	void ReqQryInvestorPositionDetail();
 	void ReqQryInvestorPosition();
 	
-	// 是否我的报单回报
-	bool IsMyOrder(CThostFtdcOrderField *pOrder);
-	// 是否正在交易的报单
-	bool IsTradingOrder(CThostFtdcOrderField *pOrder);
+	void init_strategy();
 
 	CThostFtdcInputOrderField& get_order_info(uint64_t order_id);
 
@@ -100,8 +97,6 @@ private:
 	int m_request_id = 0;
 	bool m_is_ready = false;
 
-	MyArray<CThostFtdcInvestorPositionDetailField> m_contracts_long;
-	MyArray<CThostFtdcInvestorPositionDetailField> m_contracts_short;
 	MyHash<CThostFtdcInputOrderField> *m_orders;
 
 	CThostFtdcInputOrderField m_cancel;

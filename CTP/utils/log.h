@@ -6,7 +6,7 @@
 void flush_log();
 void ctp_log(const char *fmt, ...);
 void ctp_log_ln(const char *fmt, ...);
-int get_curr_time();
+int  get_curr_time();
 
 #define LOG(format,...) do{\
 	get_curr_time() == 0 ? ctp_log("[CTP before_start] " format, ##__VA_ARGS__) : ctp_log("[CTP %d] " format, get_curr_time(), ##__VA_ARGS__);\

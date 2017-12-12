@@ -33,10 +33,6 @@ Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_ap
 
 Quote_Handler::~Quote_Handler()
 {
-	m_md_api->Release();
-	/*for(auto iter = Quotes.begin(); iter != Quotes.end(); iter++) {
-		delete iter->second;
-	}*/
 }
 
 void Quote_Handler::OnFrontConnected()
