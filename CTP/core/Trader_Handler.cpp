@@ -115,7 +115,6 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pRspInfo != NULL && pRspInfo->ErrorID == 0) {
-		m_is_ready = true;
 		update_trader_info(m_trader_info, pRspUserLogin);
 		PRINT_SUCCESS("TradingDay: %s DayNight: %s", pRspUserLogin->TradingDay, pRspUserLogin->LoginTime);
 		PRINT_SUCCESS("TradingDay: %d DayNight: %d", g_config_t.trading_date, g_config_t.day_night);
@@ -292,7 +291,6 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 	}
 }
 
-
 void Trader_Handler::ReqInstrument(char* symbol) {
 	strcpy(m_req_contract.InstrumentID, symbol);
 	int ret = 0;
@@ -444,7 +442,6 @@ void Trader_Handler::init_strategy()
 			l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
 	}
 }
-
 
 void Trader_Handler::ReqQryInvestorPosition()
 {

@@ -100,6 +100,12 @@ public:
 	int get_pos_by_side(Contract *a_instr, DIRECTION side);
 	double get_account_cash(char* account);
 
+	double get_realized_pnl(Contract *cont);
+	double get_unrealized_pnl(Contract *cont); 
+	double get_contract_pnl(Contract *cont);
+	double get_contract_pnl_cash(Contract *cont);
+	double get_strategy_pnl_cash();
+
 private:
 	void update_yes_pos(Contract *instr, DIRECTION side, int size);
 	bool process_order_resp(st_response_t* resp);

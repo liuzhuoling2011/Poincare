@@ -500,6 +500,67 @@ double SDPHandler::get_account_cash(char * account)
 	return m_accounts.at(account).cash_available;
 }
 
+double SDPHandler::get_realized_pnl(Contract * cont)
+{
+	double long_side_PNL = 0.0;
+	double short_side_PNL = 0.0;
+
+	int long_pos = MIN(cont->positions[LONG_OPEN].qty, cont->positions[SHORT_CLOSE].qty);
+	int short_pos = MIN(cont->positions[SHORT_OPEN].qty, cont->positions[LONG_CLOSE].qty);
+
+	if (long_pos > 0)
+		long_side_PNL = long_pos * (avg_px(cont->positions[SHORT_CLOSE]) - avg_px(cont->positions[LONG_OPEN]));
+
+	if (short_pos > 0)
+		short_side_PNL = short_pos * (avg_px(cont->positions[SHORT_OPEN]) - avg_px(cont->positions[LONG_CLOSE]));
+
+	return long_side_PNL + short_side_PNL;
+}
+
+double SDPHandler::get_unrealized_pnl(Contract * cont)
+{
+	double long_side_unrealized_PNL = 0.0;
+	double short_side_unrealized_PNL = 0.0;
+	int long_pos = long_position(cont);
+	int short_pos = short_position(cont);
+
+	if (double_compare(cont->last_price, 0) == 0) {
+		PRINT_WARN("%s Contract last_price is 0", cont->symbol);
+		return 0.0;
+	}
+
+	if (long_pos >= 0)
+		long_side_unrealized_PNL = long_pos * (cont->last_price - avg_px(cont->positions[LONG_OPEN]));
+	else
+		PRINT_ERROR("Sell Close Qty is higher than Buy Open, something is wrong");
+
+	if (short_pos >= 0)
+		short_side_unrealized_PNL = short_pos * (avg_px(cont->positions[SHORT_OPEN]) - cont->last_price);
+	else
+		PRINT_ERROR("Long Close Qty is higher than Sell Open, something is wrong");
+
+	return long_side_unrealized_PNL + short_side_unrealized_PNL;
+}
+
+double SDPHandler::get_contract_pnl(Contract * cont)
+{
+	return get_realized_pnl(cont) + get_unrealized_pnl(cont);
+}
+
+double SDPHandler::get_contract_pnl_cash(Contract * cont)
+{
+	return get_contract_pnl(cont) * cont->multiplier;
+}
+
+double SDPHandler::get_strategy_pnl_cash()
+{
+	double pnl = 0.0;
+	for(auto iter = m_contracts->begin(); iter != m_contracts->end(); iter++) {
+		pnl += get_contract_pnl_cash(&iter->second);
+	}
+	return pnl;
+}
+
 void SDPHandler::update_yes_pos(Contract * instr, DIRECTION side, int size)
 {
 	if (side == ORDER_BUY) {
@@ -754,6 +815,7 @@ bool SDPHandler::update_contracts(Stock_Internal_Book * a_book)
 	instr.lower_limit = a_book->lower_limit_px;
 	instr.upper_limit = a_book->upper_limit_px;
 	instr.pre_data_time = a_book->exch_time;
+	instr.last_price = a_book->last_px;
 	return true;
 }
 
@@ -767,6 +829,7 @@ bool SDPHandler::update_contracts(Futures_Internal_Book * a_book)
 	instr.lower_limit = a_book->lower_limit_px;
 	instr.upper_limit = a_book->upper_limit_px;
 	instr.pre_data_time = a_book->int_time;
+	instr.last_price = a_book->last_px;
 	return true;
 }
 
