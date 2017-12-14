@@ -96,6 +96,7 @@ private:
 
 	int m_request_id = 0;
 	bool m_is_ready = false;
+	int event_fd;
 
 	MyHash<CThostFtdcInputOrderField> *m_orders;
 

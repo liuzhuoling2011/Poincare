@@ -47,9 +47,9 @@ void recv_signal(int sig)
 int main(int argc, char **argv)
 {
 	PRINT_INFO("Welcome to CTP demo!");
-	signal(SIGSEGV, recv_signal);
-	signal(SIGABRT, recv_signal);
-	signal(SIGINT, recv_signal);
+	//signal(SIGSEGV, recv_signal);
+	//signal(SIGABRT, recv_signal);
+	//signal(SIGINT, recv_signal);
 
 	TraderConfig trader_config = { 0 };
 	read_json_config(trader_config);

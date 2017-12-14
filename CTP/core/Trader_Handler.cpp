@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string.h>
 #include <sstream>
+#include <vector>
+#include <stdint.h>
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
@@ -12,8 +14,6 @@ using namespace std;
 
 #ifndef _WIN32
 #include <unistd.h>
-#include <strategy_interface.h>
-
 #else
 #include <windows.h>
 #define sleep Sleep
@@ -26,9 +26,6 @@ using namespace std;
 
 static stringstream g_ss;					
 static int hand_index = 100; //手工下单
-static int total_contract_num = 0;
-static bool mutex_flag = false;
-static int mutex_count = 0;
 
 extern char g_strategy_path[256];
 extern CThostFtdcMdApi *MdUserApi;
@@ -41,7 +38,7 @@ static st_data_t g_data_t = { 0 };
 static int g_sig_count = 0;
 static char ERROR_MSG[512];
 
-typedef MyArray<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
+typedef vector<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
 
 struct ContractPosition
 {
@@ -50,7 +47,8 @@ struct ContractPosition
 };
 
 static MyHash<contract_t> g_contract_config_hash;
-static MyHash<ContractPosition> g_contract_pos_hash;
+static MyHash<ContractPosition*> g_contract_pos_hash;
+MyHash<contract_t>::Iterator g_iter;
 
 extern Trader_Handler *g_trader_handler;
 
@@ -78,7 +76,6 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 		g_config_t.day_night = NIGHT;
 }
 
-
 Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config)
 {
 	m_trader_config = trader_config;
@@ -88,6 +85,8 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
 
 	g_trader_handler = this;
+	/*event_fd = eventfd(0, 0);
+	if (event_fd == -1)	PRINT_ERROR("create event_fd error!");*/
 }
 
 Trader_Handler::~Trader_Handler()
@@ -175,20 +174,25 @@ void Trader_Handler::ReqQryInvestorPositionDetail()
 	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
 	strcpy(req_pos.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(req_pos.InvestorID, m_trader_config->TUSER_ID);
-	int iResult = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
-	PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
+	int ret = 0;
+	do {
+		ret = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
+		sleep(1);
+	} while (ret != 0);
+	PRINT_INFO("send query contract position %s", ret == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInvestorPositionDetail) {
 		// 对于所有合约，不保存已平仓的，只保存未平仓的
-		ContractPosition &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
+		ContractPosition* &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
+		if (contract_position == NULL) contract_position = new ContractPosition();
 		if (pInvestorPositionDetail->Volume > 0) {
 			if (pInvestorPositionDetail->Direction == TRADER_BUY)
-				contract_position.long_pos.push_back(pInvestorPositionDetail);
+				contract_position->long_pos.push_back(*pInvestorPositionDetail);
 			else if (pInvestorPositionDetail->Direction == TRADER_SELL)
-				contract_position.short_pos.push_back(pInvestorPositionDetail);
+				contract_position->short_pos.push_back(*pInvestorPositionDetail);
 
 			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE == false) {
 				bool find_instId = false;
@@ -208,13 +212,14 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 	if (bIsLast) {
 		for (auto iter = g_contract_pos_hash.begin(); iter != g_contract_pos_hash.end(); iter++) {
 			contract_t& contract_config = g_contract_config_hash[iter->first];
-			ContractPositionArray &contracts_long = iter->second.long_pos;
-			ContractPositionArray &contracts_short = iter->second.short_pos;
+
+			ContractPositionArray &contracts_long = iter->second->long_pos;
+			ContractPositionArray &contracts_short = iter->second->short_pos;
 
 			int long_size = 0, short_size = 0, yes_long_size = 0, yes_short_size = 0;
 			double long_price = 0, short_price = 0, yes_long_price = 0, yes_short_price = 0;
 
-			for (int i = 0; i < iter->second.long_pos.size(); i++) {
+			for (int i = 0; i < iter->second->long_pos.size(); i++) {
 				if (atoi(contracts_long[i].OpenDate) != g_config_t.trading_date) {
 					yes_long_price += contracts_long[i].OpenPrice * contracts_long[i].Volume;
 					yes_long_size += contracts_long[i].Volume;
@@ -275,23 +280,27 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 		}
 
 		//请求查询合约
-		total_contract_num = g_contract_config_hash.size();
-        mutex_count = 0; mutex_flag = false;
-		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
-			while(mutex_flag == true) {
-				sleep(0.5);
-			}
-			ReqInstrument(iter->first);
-            mutex_flag == true;
-		}
+		PRINT_INFO("Current we have:");
+		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++)
+			printf("%s ", iter->first);
+		printf("\n");
+
+		g_iter = g_contract_config_hash.begin();
+		PRINT_INFO("start query %s", g_iter->first);
+		ReqInstrument(g_iter->first);
+		g_iter++;
 	}
 }
 
 
 void Trader_Handler::ReqInstrument(char* symbol) {
 	strcpy(m_req_contract.InstrumentID, symbol);
-	int iResult = m_trader_api->ReqQryInstrument(&m_req_contract, ++m_request_id);
-	PRINT_INFO("send query contract: %s %s", m_req_contract.InstrumentID, iResult == 0 ? "success" : "fail");
+	int ret = 0;
+	do {
+		ret = m_trader_api->ReqQryInstrument(&m_req_contract, ++m_request_id);
+		sleep(1);
+	} while (ret != 0);
+	PRINT_INFO("send query contract: %s %s", m_req_contract.InstrumentID, ret == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -308,20 +317,17 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	contract_config.multiple = pInstrument->VolumeMultiple; // to correct
 	strlcpy(contract_config.account, g_config_t.accounts[0].account, ACCOUNT_LEN);
 
-    mutex_flag == false;
-    mutex_count ++;
-
-    if(mutex_count == total_contract_num){
-        //查询最大报单数量请求
-        mutex_count = 0; mutex_flag = false;
-        for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
-            while(mutex_flag == true) {
-                sleep(0.5);
-            }
-            ReqQueryMaxOrderVolume(iter->first);
-            mutex_flag == true;
-        }
-    }
+	if(g_iter != g_contract_config_hash.end()) {
+		PRINT_INFO("start query %s", g_iter->first);
+		ReqInstrument(g_iter->first);
+		g_iter++;
+	}else {
+		//查询最大报单数量请求
+		g_iter = g_contract_config_hash.begin();
+		PRINT_INFO("start query max open vol %s", g_iter->first);
+		ReqQueryMaxOrderVolume(g_iter->first);
+		g_iter++;
+	}
 }
 
 void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
@@ -330,31 +336,33 @@ void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
 	strcpy(ReqMaxOrdSize.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(ReqMaxOrdSize.InvestorID, m_trader_config->TUSER_ID);
 	strcpy(ReqMaxOrdSize.InstrumentID, symbol);
-	int iResult = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
-	PRINT_INFO("send query max order size %s", iResult == 0 ? "success" : "fail");
+	int ret = 0;
+	do {
+		ret = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
+		sleep(1);
+	} while (ret != 0);
+	PRINT_INFO("send query max order size %s", ret == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField * pQueryMaxOrderVolume, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pQueryMaxOrderVolume == NULL) return;
 	contract_t& contract_config = g_contract_config_hash[pQueryMaxOrderVolume->InstrumentID];
+	PRINT_DEBUG("max open vol: %s %d", pQueryMaxOrderVolume->InstrumentID, pQueryMaxOrderVolume->MaxVolume);
+
 	contract_config.max_accum_open_vol = pQueryMaxOrderVolume->MaxVolume;
 
-    mutex_flag == false;
-    mutex_count ++;
-
-    if(mutex_count == total_contract_num) {
-        //请求查询合约手续费率
-        mutex_count = 0;
-        mutex_flag = false;
-        for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
-            while (mutex_flag == true) {
-                sleep(0.5);
-            }
-            ReqQryInstrumentCommissionRate(iter->first);
-            mutex_flag == true;
-        }
-    }
+	if (g_iter != g_contract_config_hash.end()) {
+		PRINT_INFO("start query max open vol %s", g_iter->first);
+		ReqQueryMaxOrderVolume(g_iter->first);
+		g_iter++;
+	}else {
+		//请求查询合约手续费率
+		g_iter = g_contract_config_hash.begin();
+		PRINT_INFO("start query commission rate %s", g_iter->first);
+		ReqQryInstrumentCommissionRate(g_iter->first);
+		g_iter++;
+	}
 }
 
 void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
@@ -363,15 +371,27 @@ void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
 	strcpy(ReqCommissionRate.BrokerID, m_trader_config->TBROKER_ID);
 	strcpy(ReqCommissionRate.InvestorID, m_trader_config->TUSER_ID);
 	strcpy(ReqCommissionRate.InstrumentID, symbol);
-	//strcpy(m_req_pos.InstrumentID, symbol);
-	int iResult = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
-	PRINT_INFO("send query commission rate %s", iResult == 0 ? "success" : "fail");
+	int ret = 0;
+	do {
+		ret = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
+		sleep(1);
+	} while (ret != 0);
+	PRINT_INFO("send query commission rate %s", ret == 0 ? "success" : "fail");
+}
+
+contract_t& find_contract_by_product(char* product) {
+	for(auto iter = g_contract_config_hash.begin(); iter!= g_contract_config_hash.end(); iter++) {
+		if (strstr(iter->first, product) != NULL)
+			return iter->second;
+	}
 }
 
 void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField * pInstrumentCommissionRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInstrumentCommissionRate == NULL) return;
-	contract_t& contract_config = g_contract_config_hash[pInstrumentCommissionRate->InstrumentID];
+	PRINT_DEBUG("%s %f %f", pInstrumentCommissionRate->InstrumentID, pInstrumentCommissionRate->OpenRatioByMoney, pInstrumentCommissionRate->CloseRatioByMoney);
+
+	contract_t& contract_config = find_contract_by_product(pInstrumentCommissionRate->InstrumentID);
 	contract_config.fee.exchange_fee = pInstrumentCommissionRate->OpenRatioByMoney;
 	contract_config.fee.fee_by_lot = false;
 	contract_config.fee.yes_exchange_fee = pInstrumentCommissionRate->CloseRatioByMoney;
@@ -379,17 +399,18 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 	contract_config.fee.stamp_tax = STAMP_TAX;
 	contract_config.fee.broker_fee = BROKER_FEE;
 
-	PRINT_INFO("%s", pInstrumentCommissionRate->InstrumentID);
-
-    mutex_count ++;
-    if(mutex_count == total_contract_num) {
-        int index = 0;
-        for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
-            g_config_t.contracts[index++] = iter->second;
-        }
-        //在这里我们结束了config的配置，开始初始化策略
-        init_strategy();
-    }
+	if (g_iter != g_contract_config_hash.end()) {
+		PRINT_INFO("start query commission rate %s", g_iter->first);
+		ReqQryInstrumentCommissionRate(g_iter->first);
+		g_iter++;
+	} else {
+		int index = 0;
+		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
+			g_config_t.contracts[index++] = iter->second;
+		}
+		//在这里我们结束了config的配置，开始初始化策略
+		init_strategy();
+	}
 }
 
 void Trader_Handler::init_strategy()
