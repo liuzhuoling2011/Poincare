@@ -41,7 +41,7 @@ public:
 	*/
 	int send_single_order(Contract *instr, EXCHANGE exch,
 		double price, int size, DIRECTION side,
-		OPEN_CLOSE sig_openclose = ORDER_OPEN, bool flag_syn_cancel = false, bool flag_close_yesterday_pos = false,
+		OPEN_CLOSE sig_openclose = ORDER_OPEN, bool flag_close_yesterday_pos = false, bool flag_syn_cancel = false,
 		INVESTOR_TYPE investor_type = ORDER_SPECULATOR, ORDER_TYPE order_type = ORDER_TYPE_LIMIT, TIME_IN_FORCE time_in_force = ORDER_TIF_DAY);
 	
 	/**
@@ -95,6 +95,7 @@ public:
 	int cancel_all_orders();
 	int cancel_all_orders(Contract *instr);
 
+	int close_all_position();
 
 	Contract * find_contract(char* symbol);
 	int get_pos_by_side(Contract *a_instr, DIRECTION side);

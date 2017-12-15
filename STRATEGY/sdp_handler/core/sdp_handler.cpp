@@ -164,7 +164,7 @@ int get_pos_by_side(Contract *a_instr, DIRECTION side)
 	return 0;
 }
 
-int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price, int size, DIRECTION side, OPEN_CLOSE sig_openclose, bool flag_syn_cancel, bool flag_close_yesterday_pos, INVESTOR_TYPE investor_type, ORDER_TYPE order_type, TIME_IN_FORCE time_in_force)
+int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price, int size, DIRECTION side, OPEN_CLOSE sig_openclose, bool flag_close_yesterday_pos, bool flag_syn_cancel, INVESTOR_TYPE investor_type, ORDER_TYPE order_type, TIME_IN_FORCE time_in_force)
 {
 	if (size <= 0) {
 		if (size < 0)
@@ -478,6 +478,18 @@ int SDPHandler::cancel_all_orders(Contract * instr)
 	}
 
 	return 0;
+}
+
+int SDPHandler::close_all_position()
+{
+	cancel_all_orders();
+	for(auto iter = m_contracts->begin(); iter != m_contracts->end(); iter++) {
+		Contract &instr = iter->second;
+		send_single_order(&instr, instr.exch, instr.bp1, instr.pre_long_position, ORDER_SELL, ORDER_CLOSE, true);
+		send_single_order(&instr, instr.exch, instr.bp1, long_position(&instr) - instr.pre_long_position, ORDER_SELL, ORDER_CLOSE);
+		send_single_order(&instr, instr.exch, instr.ap1, instr.pre_short_position, ORDER_BUY, ORDER_CLOSE, true);
+		send_single_order(&instr, instr.exch, instr.ap1, short_position(&instr) - instr.pre_short_position, ORDER_BUY, ORDER_CLOSE);
+	}
 }
 
 Contract * SDPHandler::find_contract(char * symbol)
