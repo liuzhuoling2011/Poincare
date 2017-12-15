@@ -1,7 +1,5 @@
-//#include <iostream>
 #include <string.h>
 #include <sstream>
-#include <vector>
 #include <stdint.h>
 #include "utils/log.h"
 #include "strategy_interface.h"
@@ -37,7 +35,7 @@ static st_data_t g_data_t = { 0 };
 static int g_sig_count = 0;
 static char ERROR_MSG[512];
 
-typedef vector<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
+typedef MyArray<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
 
 struct ContractPosition
 {
@@ -57,7 +55,6 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	info.SessionID = pRspUserLogin->SessionID;
 	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
 	info.MaxOrderRef = iNextOrderRef++;
-	//sprintf(info.MaxOrderRef, "%d", iNextOrderRef);
 	strlcpy(info.TradingDay, pRspUserLogin->TradingDay, TRADING_DAY_LEN);
 	strlcpy(info.LoginTime, pRspUserLogin->LoginTime, TRADING_DAY_LEN);
 
@@ -65,9 +62,9 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	int hour = 0;
 	for (int i = 0; i < 6; i++) {
 		if (info.LoginTime[i] != ':') {
-			hour = 10 * hour + info.LoginTime[i];
-		}
-		break;
+			hour = 10 * hour + info.LoginTime[i] - '0';
+		} else
+			break;
 	}
 	if (hour > 8 && hour < 19)
 		g_config_t.day_night = DAY;
@@ -113,8 +110,8 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 {
 	if (pRspInfo != NULL && pRspInfo->ErrorID == 0) {
 		update_trader_info(m_trader_info, pRspUserLogin);
-		PRINT_SUCCESS("TradingDay: %s DayNight: %s", pRspUserLogin->TradingDay, pRspUserLogin->LoginTime);
-		PRINT_SUCCESS("TradingDay: %d DayNight: %d", g_config_t.trading_date, g_config_t.day_night);
+		PRINT_SUCCESS("TradingDay: %d DayNight: %s Time: %s", 
+			g_config_t.trading_date, g_config_t.day_night == 0 ? "Day":"Night", m_trader_info.LoginTime);
 
 		//投资者结算结果确认
 		ReqSettlementInfo();
@@ -276,7 +273,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 		}
 
 		//请求查询合约
-		PRINT_INFO("Current we have:");
+		PRINT_INFO("Current we have these contracts:");
 		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++)
 			printf("%s ", iter->first);
 		printf("\n");
@@ -289,13 +286,14 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 }
 
 void Trader_Handler::ReqInstrument(char* symbol) {
-	strcpy(m_req_contract.InstrumentID, symbol);
+	CThostFtdcQryInstrumentField req_contract = { 0 };
+	strcpy(req_contract.InstrumentID, symbol);
 	int ret = 0;
 	do {
-		ret = m_trader_api->ReqQryInstrument(&m_req_contract, ++m_request_id);
+		ret = m_trader_api->ReqQryInstrument(&req_contract, ++m_request_id);
 		sleep(1);
 	} while (ret != 0);
-	PRINT_INFO("send query contract: %s %s", m_req_contract.InstrumentID, ret == 0 ? "success" : "fail");
+	PRINT_INFO("send query contract: %s %s", req_contract.InstrumentID, ret == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -436,7 +434,6 @@ int Trader_Handler::send_single_order(order_t *order)
 	sprintf(order_field.OrderRef, "%d", m_trader_info.MaxOrderRef);
 	///用户代码
 	strcpy(order_field.UserID, m_trader_config->TUSER_ID);
-
 	///合约代码
 	strcpy(order_field.InstrumentID, order->symbol);
 	///报单价格条件: 限价
@@ -444,7 +441,7 @@ int Trader_Handler::send_single_order(order_t *order)
 		order_field.OrderPriceType = THOST_FTDC_OPT_LimitPrice;
 	else
 		order_field.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //市价单
-															///买卖方向: 
+	///买卖方向
 	order_field.Direction = order->direction == ORDER_BUY ? '0' : '1';
 	///组合开平标志: 开仓  for SHFE
 	if (order->open_close == ORDER_OPEN)
@@ -453,7 +450,6 @@ int Trader_Handler::send_single_order(order_t *order)
 		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_CloseToday;
 	else if (order->open_close == ORDER_CLOSE_YES)
 		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_Close;
-
 	///组合投机套保标志
 	if (order->investor_type == ORDER_SPECULATOR)
 		order_field.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
@@ -473,8 +469,6 @@ int Trader_Handler::send_single_order(order_t *order)
 		order_field.TimeCondition = THOST_FTDC_TC_IOC;
 	else if (order->time_in_force == ORDER_TIF_GTC)
 		order_field.TimeCondition = THOST_FTDC_TC_GTC;
-	///GTD日期
-	//	TThostFtdcDateType	GTDDate;
 	///成交量类型: 任何数量
 	order_field.VolumeCondition = THOST_FTDC_VC_AV;
 	///最小成交量: 1

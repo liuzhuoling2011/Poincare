@@ -196,7 +196,6 @@ int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price,
 		l_single_order_max_vol = SINGLE_ORDER_STOCK_MAX_VAL;
 
 	for (int l_remaining_size = size; l_remaining_size > 0; l_remaining_size -= l_single_order_max_vol, l_order_count++) {
-		l_order_id = 0;
 		l_size = (l_remaining_size > l_single_order_max_vol) ? l_single_order_max_vol : l_remaining_size; // take min of the two
 
 		OPEN_CLOSE l_sig_openclose = sig_openclose;
@@ -257,7 +256,8 @@ int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price,
             PRINT_INFO("%d OrderID: %lld Sent single order, %s %s %s %d@%f", m_strat_id, m_cur_ord_id_arr[i], instr->symbol,
                 BUY_SELL_STR[side], OPEN_CLOSE_STR[sig_openclose], m_cur_ord_size_arr[i], price);
 			LOG_LN("%d OrderID: %lld Sent single order, %s %s %s %d@%f", m_strat_id, m_cur_ord_id_arr[i], instr->symbol,
-				BUY_SELL_STR[side], OPEN_CLOSE_STR[sig_openclose], m_cur_ord_size_arr[i], price); int index = reverse_index(m_cur_ord_id_arr[i]);
+				BUY_SELL_STR[side], OPEN_CLOSE_STR[sig_openclose], m_cur_ord_size_arr[i], price); 
+			int index = reverse_index(m_cur_ord_id_arr[i]);
 			Order *l_order = m_orders->update_order(index, instr, price, m_cur_ord_size_arr[i],
 				side, m_cur_ord_id_arr[i], sig_openclose);
 			if (flag_close_yesterday_pos) {
@@ -284,6 +284,7 @@ int SDPHandler::send_dma_order(Contract * instr, DIRECTION side, int size, doubl
 	g_special_order.price = price;
 	g_special_order.direction = side;
 	g_special_order.sync_cancel = flag_syn_cancel;
+
 
 	m_send_order_func(S_PLACE_ORDER_DMA, sizeof(g_st_data_t), (void *)&g_st_data_t);
 	if(g_special_order.status == 0) {
@@ -490,6 +491,7 @@ int SDPHandler::close_all_position()
 		send_single_order(&instr, instr.exch, instr.ap1, instr.pre_short_position, ORDER_BUY, ORDER_CLOSE, true);
 		send_single_order(&instr, instr.exch, instr.ap1, short_position(&instr) - instr.pre_short_position, ORDER_BUY, ORDER_CLOSE);
 	}
+	return 0;
 }
 
 Contract * SDPHandler::find_contract(char * symbol)

@@ -53,6 +53,12 @@ public:
 	//成交通知
 	virtual void OnRtnTrade(CThostFtdcTradeField *pTrade);
 
+	//报单录入请求
+	int send_single_order(order_t *order);
+
+	//报单撤销请求
+	int cancel_single_order(order_t *order);
+
 private:
 	//投资者结算结果确认
 	void ReqSettlementInfo();
@@ -67,10 +73,6 @@ private:
 	void ReqQryInvestorPosition();
 	//初始化策略
 	void init_strategy();
-	//报单录入请求
-	int send_single_order(order_t *order);
-	//报单撤销请求
-	int cancel_single_order(order_t *order);
 	//策略定时任务
 	int st_idle();
 
@@ -85,7 +87,4 @@ private:
 	int m_request_id = 0;
 
 	MyHash<CThostFtdcInputOrderField> *m_orders;
-
-	CThostFtdcInputOrderField m_cancel;
-	CThostFtdcQryInstrumentField m_req_contract;
 };
