@@ -13,7 +13,7 @@ static st_config_t *g_config = NULL;
 #define KDBLEN 1024
 
 #define SIMULATION 
-#define BREAK_GO_ON 
+//#define BREAK_GO_ON 
 
 static int count = 0;
 
@@ -40,7 +40,7 @@ int my_st_init(int type, int length, void *cfg) {
 #endif
 
 		/* write your logic here */
-		char init_kdb_sql[KDBLEN] = "if[not `quoteData in tables `.;ibAskpx:0f;ibBidpx:0f;res:([]a:enlist 0i;b:enlist 0f;c:enlist 0f;d:enlist 0i);quoteData:();FinalSignal2:();"
+		char init_kdb_sql[KDBLEN] = "int2time:{\"T\"$-9#\"00000000\",string x};if[not `quoteData in tables `.;ibAskpx:0f;ibBidpx:0f;res:([]a:enlist 0i;b:enlist 0f;c:enlist 0f;d:enlist 0i);quoteData:();FinalSignal2:();"
 									"quote:([]Date:();`float$LegOneBid1:();`float$LegOneAsk1:();`float$LegTwoBid1:();`float$LegTwoAsk1:());`quote insert (.z.D+.z.t;3333.0;3330.5;3.05;3.1)]";
 		k(-kdb_handle, init_kdb_sql, (K)0);
 
@@ -125,7 +125,8 @@ int my_on_book(int type, int length, void *book) {
 	//将最新的行情推进kdb同时执行kdb策略代码
 	sprintf(kdb_sql, "ctpAskpx:%lf;ctpBidpx:%lf;", last_ask_price, last_bid_price);
 	k(kdb_handle, kdb_sql, (K)0);
-	sprintf(kdb_sql, "quote:update Date:.z.D+.z.N,LegOneBid1:%s,LegOneAsk1:%s,LegTwoBid1:%s,LegTwoAsk1:%s from quote;system \"l strategy.q\"",
+	sprintf(kdb_sql, "quote:update Date:.z.D+int2time %d,LegOneBid1:%s,LegOneAsk1:%s,LegTwoBid1:%s,LegTwoAsk1:%s from quote;system \"l strategy.q\"",
+        int_time,
 		"ibBidpx",
 		"ibAskpx",
 		"ctpBidpx",
