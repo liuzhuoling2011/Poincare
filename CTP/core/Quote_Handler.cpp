@@ -1,4 +1,3 @@
-#include <cstring>
 #include "core/Quote_Handler.h"
 #include "utils/utils.h"
 #include "utils/log.h"
@@ -20,10 +19,13 @@ Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, TraderConfig *trader_conf
 
 Quote_Handler::~Quote_Handler()
 {
+	m_md_api->Release();
 }
 
 void Quote_Handler::OnFrontConnected()
 {
+	m_md_api->Join();
+
 	CThostFtdcReqUserLoginField req = { 0 };
 	strcpy(req.BrokerID, m_trader_config->QBROKER_ID);
 	strcpy(req.UserID, m_trader_config->QUSER_ID);

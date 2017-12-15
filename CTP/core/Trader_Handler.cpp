@@ -4,8 +4,7 @@
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
-#include "ThostFtdcUserApiStruct.h"
-#include "ThostFtdcMdApi.h"
+//#include "ThostFtdcUserApiStruct.h"
 
 using namespace std;
 
@@ -25,7 +24,6 @@ static stringstream g_ss;
 static int hand_index = 100; //手工下单
 
 extern char g_strategy_path[256];
-extern CThostFtdcMdApi *MdUserApi;
 
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
 static contract_t empty_contract_t = { 0 };
@@ -72,21 +70,29 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 		g_config_t.day_night = NIGHT;
 }
 
-Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config)
+Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, CThostFtdcMdApi* QuoteApi, TraderConfig* trader_config)
 {
 	m_trader_config = trader_config;
+	m_quote_api = QuoteApi;
 	m_trader_api = TraderApi;
 	m_trader_api->RegisterSpi(this);			// 注册事件类
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
 
 	g_trader_handler = this;
+
+	m_trader_api->Init();
+	// 必须在Init函数之后调用
+	m_trader_api->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
+	m_trader_api->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
+	m_trader_api->Join();
 }
 
 Trader_Handler::~Trader_Handler()
 {
 	my_destroy();
 	delete m_orders;
+	m_trader_api->Release();
 }
 
 void Trader_Handler::OnFrontConnected()
@@ -376,7 +382,7 @@ void Trader_Handler::init_strategy()
 	// 在这里我们结束了config的配置，开始初始化策略
 	PRINT_INFO("Starting load strategy!");
 	my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
-	MdUserApi->Init();
+	m_quote_api->Init(); //开始注册行情
 
 	PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
 		g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
@@ -632,11 +638,6 @@ int Trader_Handler::cancel_single_order(order_t * order)
 	return ret;
 }
 
-int Trader_Handler::st_idle()
-{
-	my_on_timer(DEFAULT_TIMER, 0, NULL);
-}
-
 void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrderAction) {
@@ -790,6 +791,12 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		g_ss.str("");
 	}
 }
+
+int Trader_Handler::st_idle()
+{
+	my_on_timer(DEFAULT_TIMER, 0, NULL);
+}
+
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
 {

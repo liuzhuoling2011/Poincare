@@ -11,8 +11,6 @@
 #define LOG_DIR './logs'
 extern FILE* log_handle;
 
-char local_time[1024];
-
 void DumpBacktrace() {
 	pid_t dying_pid = getpid();
 	pid_t child_pid = fork();
@@ -31,22 +29,20 @@ void DumpBacktrace() {
 	}
 }
 
-
-CThostFtdcMdApi *MdUserApi;	// after strategy init finished, call MdUserApi->Init();
-extern Trader_Handler *g_trader_handler;
+Trader_Handler *trader_handler;
 
 void recv_signal(int sig)
 {
 	DumpBacktrace();
 	flush_log();
 	fclose(log_handle);
-	delete g_trader_handler;
+	delete trader_handler;
 	exit(0);
 }
 
 int main(int argc, char **argv)
 {
-	PRINT_INFO("Welcome to CTP demo!");
+	PRINT_INFO("Welcome to Poincare!");
 	//signal(SIGSEGV, recv_signal);
 	//signal(SIGABRT, recv_signal);
 	//signal(SIGINT, recv_signal);
@@ -58,20 +54,11 @@ int main(int argc, char **argv)
 		log_handle = fopen(trader_config.TRADER_LOG, "w");
 	}
 
-	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/trader");
-	Trader_Handler* trader_handler = new Trader_Handler(TraderApi, &trader_config);
-	TraderApi->Init();
-	// 必须在Init函数之后调用
-	TraderApi->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
-	TraderApi->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
+	CThostFtdcMdApi *QuoteApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/marketdata", false);
+	Quote_Handler quote_handler(QuoteApi, &trader_config);
 
-	MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/marketdata", false);
-	Quote_Handler quote_handler(MdUserApi, &trader_config);
-	
-	TraderApi->Join();
-	TraderApi->Release();
-	MdUserApi->Join();
-	MdUserApi->Release();
+	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/trader");
+	trader_handler = new Trader_Handler(TraderApi, QuoteApi, &trader_config);
 
 	free_config(trader_config);
 	flush_log();
