@@ -178,7 +178,6 @@ void Trader_Handler::ReqQryInvestorPositionDetail()
 		ret = m_trader_api->ReqQryInvestorPositionDetail(&req_pos, ++m_request_id);
 		sleep(1);
 	} while (ret != 0);
-	PRINT_INFO("send query contract position %s", ret == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -299,7 +298,6 @@ void Trader_Handler::ReqInstrument(char* symbol) {
 		ret = m_trader_api->ReqQryInstrument(&req_contract, ++m_request_id);
 		sleep(1);
 	} while (ret != 0);
-	PRINT_INFO("send query contract: %s %s", req_contract.InstrumentID, ret == 0 ? "success" : "fail");
 }
 
 void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -340,7 +338,6 @@ void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
 		ret = m_trader_api->ReqQryInstrumentCommissionRate(&ReqCommissionRate, ++m_request_id);
 		sleep(1);
 	} while (ret != 0);
-	PRINT_INFO("send query commission rate %s", ret == 0 ? "success" : "fail");
 }
 
 contract_t& find_contract_by_product(char* product) {
