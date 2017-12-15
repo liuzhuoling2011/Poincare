@@ -6,7 +6,7 @@
 class Quote_Handler : public CThostFtdcMdSpi
 {
   public:
-	Quote_Handler(CThostFtdcMdApi *md_api_, Trader_Handler *trader_api_, TraderConfig *trader_config);
+	Quote_Handler(CThostFtdcMdApi *md_api_, TraderConfig *trader_config);
 	~Quote_Handler();
 
 	//当客户端与交易后台建立起通信连接时（还未登录前），该方法被调用。
@@ -23,7 +23,7 @@ class Quote_Handler : public CThostFtdcMdSpi
 
 	//心跳超时警告。当长时间未收到报文时，该方法被调用。
 	//@param nTimeLapse 距离上次接收报文的时间
-	virtual void OnHeartBeatWarning(int nTimeLapse);
+	virtual void OnHeartBeatWarning(int nTimeLapse){}
 
 	//登录请求响应
 	virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
@@ -73,5 +73,4 @@ class Quote_Handler : public CThostFtdcMdSpi
 	CThostFtdcMdApi *m_md_api;
 	Trader_Handler *m_trader_handler;
 	TraderConfig *m_trader_config;
-    void print(CThostFtdcDepthMarketDataField *pDepthMarketData);
 };

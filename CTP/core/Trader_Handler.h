@@ -47,22 +47,11 @@ public:
 	//当客户端与交易后台通信连接断开时，该方法被调用。当发生这个情况后，API会自动重新连接，客户端可不做处理。
 	virtual void OnFrontDisconnected(int nReason);
 
-	//心跳超时警告。当长时间未收到报文时，该方法被调用。
-	virtual void OnHeartBeatWarning(int nTimeLapse);
-
 	//报单通知
 	virtual void OnRtnOrder(CThostFtdcOrderField *pOrder);
 
 	//成交通知
 	virtual void OnRtnTrade(CThostFtdcTradeField *pTrade);
-
-	//报单录入请求
-	int send_single_order(order_t *order);
-
-	//报单撤销请求
-	int cancel_single_order(order_t *order);
-
-	int st_idle();
 
 private:
 	//投资者结算结果确认
@@ -76,8 +65,14 @@ private:
 	//请求查询投资者持仓
 	void ReqQryInvestorPositionDetail();
 	void ReqQryInvestorPosition();
-	
+	//初始化策略
 	void init_strategy();
+	//报单录入请求
+	int send_single_order(order_t *order);
+	//报单撤销请求
+	int cancel_single_order(order_t *order);
+	//策略定时任务
+	int st_idle();
 
 	CThostFtdcInputOrderField& get_order_info(uint64_t order_id);
 

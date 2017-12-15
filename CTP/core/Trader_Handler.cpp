@@ -1,4 +1,4 @@
-#include <iostream>
+//#include <iostream>
 #include <string.h>
 #include <sstream>
 #include <vector>
@@ -6,7 +6,6 @@
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
-#include "strategy_interface.h"
 #include "ThostFtdcUserApiStruct.h"
 #include "ThostFtdcMdApi.h"
 
@@ -85,8 +84,6 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
 
 	g_trader_handler = this;
-	/*event_fd = eventfd(0, 0);
-	if (event_fd == -1)	PRINT_ERROR("create event_fd error!");*/
 }
 
 Trader_Handler::~Trader_Handler()
@@ -422,9 +419,6 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 	PRINT_INFO("is_last: %d", bIsLast); //todo 过滤重复的
 	if (pInvestorPosition) {
 		PRINT_INFO("%s %d %d %d %f", pInvestorPosition->InstrumentID, pInvestorPosition->Position, pInvestorPosition->TodayPosition, pInvestorPosition->YdPosition, pInvestorPosition->UseMargin);
-		std::cout << "仓位方向" << pInvestorPosition->PosiDirection << std::endl;
-		std::cout << "开仓成本" << pInvestorPosition->OpenCost << std::endl;
-		std::cout << "持仓成本" << pInvestorPosition->PositionCost << std::endl;
 	}
 }
 
@@ -805,14 +799,7 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
 {
-	cout << "--->>> " << "OnFrontDisconnected" << endl;
-	cout << "--->>> Reason = " << nReason << endl;
-}
-
-void Trader_Handler::OnHeartBeatWarning(int nTimeLapse)
-{
-	cout << "--->>> " << "OnHeartBeatWarning" << endl;
-	cout << "--->>> nTimerLapse = " << nTimeLapse << endl;
+	PRINT_WARN("Trader front disconnected, code: %d", nReason);
 }
 
 void Trader_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)

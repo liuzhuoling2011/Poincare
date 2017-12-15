@@ -58,15 +58,15 @@ int main(int argc, char **argv)
 		log_handle = fopen(trader_config.TRADER_LOG, "w");
 	}
 
-	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/tr");
+	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/trader");
 	Trader_Handler* trader_handler = new Trader_Handler(TraderApi, &trader_config);
 	TraderApi->Init();
 	// 必须在Init函数之后调用
 	TraderApi->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
 	TraderApi->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
 
-	MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/md", false);
-	Quote_Handler quote_handler(MdUserApi, trader_handler, &trader_config);
+	MdUserApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/marketdata", false);
+	Quote_Handler quote_handler(MdUserApi, &trader_config);
 	
 	TraderApi->Join();
 	TraderApi->Release();
