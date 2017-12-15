@@ -320,41 +320,6 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 		ReqInstrument(g_iter->first);
 		g_iter++;
 	}else {
-		//查询最大报单数量请求
-		g_iter = g_contract_config_hash.begin();
-		PRINT_INFO("start query max open vol %s", g_iter->first);
-		ReqQueryMaxOrderVolume(g_iter->first);
-		g_iter++;
-	}
-}
-
-void Trader_Handler::ReqQueryMaxOrderVolume(char* symbol)
-{
-	CThostFtdcQueryMaxOrderVolumeField ReqMaxOrdSize = { 0 };
-	strcpy(ReqMaxOrdSize.BrokerID, m_trader_config->TBROKER_ID);
-	strcpy(ReqMaxOrdSize.InvestorID, m_trader_config->TUSER_ID);
-	strcpy(ReqMaxOrdSize.InstrumentID, symbol);
-	int ret = 0;
-	do {
-		ret = m_trader_api->ReqQueryMaxOrderVolume(&ReqMaxOrdSize, ++m_request_id);
-		sleep(1);
-	} while (ret != 0);
-	PRINT_INFO("send query max order size %s", ret == 0 ? "success" : "fail");
-}
-
-void Trader_Handler::OnRspQueryMaxOrderVolume(CThostFtdcQueryMaxOrderVolumeField * pQueryMaxOrderVolume, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
-{
-	if (pQueryMaxOrderVolume == NULL) return;
-	contract_t& contract_config = g_contract_config_hash[pQueryMaxOrderVolume->InstrumentID];
-	PRINT_DEBUG("max open vol: %s %d", pQueryMaxOrderVolume->InstrumentID, pQueryMaxOrderVolume->MaxVolume);
-
-	contract_config.max_accum_open_vol = pQueryMaxOrderVolume->MaxVolume;
-
-	if (g_iter != g_contract_config_hash.end()) {
-		PRINT_INFO("start query max open vol %s", g_iter->first);
-		ReqQueryMaxOrderVolume(g_iter->first);
-		g_iter++;
-	}else {
 		//请求查询合约手续费率
 		g_iter = g_contract_config_hash.begin();
 		PRINT_INFO("start query commission rate %s", g_iter->first);
@@ -416,7 +381,6 @@ void Trader_Handler::init_strategy()
 	// 在这里我们结束了config的配置，开始初始化策略
 	PRINT_INFO("Starting load strategy!");
 	my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
-	MdUserApi->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
 	MdUserApi->Init();
 
 	PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",

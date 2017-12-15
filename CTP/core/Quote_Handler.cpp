@@ -70,6 +70,8 @@ void Quote_Handler::OnRspUserLogin(
 	}
 
 	PRINT_SUCCESS("Login quote front successful!");
+	m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
+
 }
 
 void Quote_Handler::OnRspSubMarketData(

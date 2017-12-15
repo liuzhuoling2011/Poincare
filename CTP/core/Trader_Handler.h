@@ -25,11 +25,6 @@ public:
 		CThostFtdcInstrumentCommissionRateField *pInstrumentCommissionRate,
 		CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
-	//查询最大报单数量响应
-	virtual void OnRspQueryMaxOrderVolume(
-		CThostFtdcQueryMaxOrderVolumeField *pQueryMaxOrderVolume,
-		CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-
 	//请求查询合约响应
 	virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
@@ -76,8 +71,6 @@ private:
 	void ReqTradingAccount();
 	//请求查询合约
 	void ReqInstrument(char* symbol);
-	//查询最大报单数量请求
-	void ReqQueryMaxOrderVolume(char* symbol);
 	//请求查询合约手续费率
 	void ReqQryInstrumentCommissionRate(char* symbol);
 	//请求查询投资者持仓
