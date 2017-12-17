@@ -4,7 +4,6 @@
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
-//#include "ThostFtdcUserApiStruct.h"
 
 using namespace std;
 
@@ -32,6 +31,7 @@ static st_response_t g_resp_t = { 0 };
 static st_data_t g_data_t = { 0 };
 static int g_sig_count = 0;
 static char ERROR_MSG[512];
+const static char STATUS[][64] = { "SUCCEED", "ENTRUSTED", "PARTED", "CANCELED", "REJECTED", "CANCEL_REJECTED", "INTRREJECTED", "UNDEFINED_STATUS" };
 
 typedef MyArray<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
 
@@ -684,15 +684,16 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		ORDER_STATUS pre_status = (ORDER_STATUS)cur_order_field.BusinessUnit[0];
 		ORDER_STATUS cur_status = convert_status(pOrder->OrderStatus, pOrder->OrderSysID);
 		g_resp_t.status = get_final_status(pre_status, cur_status);
-		PRINT_ERROR("pre %d cure %d, final %d", pre_status, cur_status, g_resp_t.status);
-		LOG_LN("pre %d cure %d, final %d", pre_status, cur_status, g_resp_t.status);
+		cur_order_field.BusinessUnit[0] = g_resp_t.status; // update order status
+		PRINT_ERROR("pre status: %s cur status: %s, final status: %s", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status]);
+		LOG_LN("pre status: %s cur status: %s, final status: %s", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status]);
 
 		g_data_t.info = (void*)&g_resp_t;
-		if(g_resp_t.status != SIG_STATUS_SUCCEED && g_resp_t.status != SIG_STATUS_PARTED && g_resp_t.status != SIG_STATUS_INIT && g_resp_t.status != UNDEFINED_STATUS) {
+		if(g_resp_t.status == SIG_STATUS_ENTRUSTED || g_resp_t.status == SIG_STATUS_CANCELED) {
 			my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 		}
 
-		if (g_resp_t.status == SIG_STATUS_CANCELED || g_resp_t.status == SIG_STATUS_REJECTED) {
+		if (g_resp_t.status == SIG_STATUS_CANCELED) {
 			hand_index++;
 			m_orders->erase(cur_order_field.OrderRef);
 		}
@@ -793,7 +794,6 @@ int Trader_Handler::st_idle()
 {
 	my_on_timer(DEFAULT_TIMER, 0, NULL);
 }
-
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
 {

@@ -72,9 +72,9 @@ void cancel_old_order(int tick_time) {
 	list_t *ord_list = sdp_handler->m_orders->get_order_by_side(ORDER_BUY);
 	list_for_each_prev_safe(pos, n, ord_list) {
 		l_ord = list_entry(pos, Order, pd_link);
-		// The Contract Address is the same�� Save time do string compare
 		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
-			PRINT_ERROR("%d Order in OrderList Waiting over 6 Secs; Cancelling...\n", int_time);
+			PRINT_ERROR("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			LOG_LN("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
 			sdp_handler->cancel_single_order(l_ord);
 		}
 	}
@@ -82,9 +82,9 @@ void cancel_old_order(int tick_time) {
 	ord_list = sdp_handler->m_orders->get_order_by_side(ORDER_SELL);
 	list_for_each_prev_safe(pos, n, ord_list) {
 		l_ord = list_entry(pos, Order, pd_link);
-		// The Contract Address is the same�� Save time do string compare
 		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
-			PRINT_ERROR("%d Order in OrderList Waiting over 6 Secs; Cancelling...\n", int_time);
+			PRINT_ERROR("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			LOG_LN("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
 			sdp_handler->cancel_single_order(l_ord);
 		}
 	}
@@ -168,7 +168,7 @@ int my_on_book(int type, int length, void *book) {
 				LOG_LN("short %d", int_time);
 				if(instr->pre_long_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE_YES);
-				if(long_position(instr) > 0)
+				if(long_position(instr) - instr->pre_long_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE);
 				sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_OPEN);
 			}
@@ -176,7 +176,7 @@ int my_on_book(int type, int length, void *book) {
 				LOG_LN("long %d", int_time);
 				if (instr->pre_short_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE_YES);
-				if (short_position(instr) > 0)
+				if (short_position(instr) - instr->pre_short_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE);
 				sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_OPEN);
 			}
@@ -220,7 +220,7 @@ int my_on_response(int type, int length, void *resp) {
 		LOG_LN("[%d]Has Been in OrderList;Waiting Deal...", int_time);
 		Order* l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
 		if(l_ord != NULL)
-			l_ord->insert_time = get_seconds_from_int_time(int_time);
+			l_ord->insert_time = int_time;
 		break;
 	}
 	return 0;

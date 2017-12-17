@@ -81,11 +81,13 @@ ORDER_STATUS convert_status(char status, char* entrust_no)
 
 ORDER_STATUS get_final_status(ORDER_STATUS pre, ORDER_STATUS cur)
 {
-	if (cur == SIG_STATUS_SUCCEED || cur == SIG_STATUS_PARTED || cur == SIG_STATUS_ENTRUSTED
-		|| cur == SIG_STATUS_PARTED)
+	if (cur == SIG_STATUS_SUCCEED || cur == SIG_STATUS_PARTED || cur == SIG_STATUS_ENTRUSTED)
 		return cur;
 	if (cur == SIG_STATUS_CANCELED && pre != SIG_STATUS_ENTRUSTED)
 		return SIG_STATUS_REJECTED;
+	else if (cur == SIG_STATUS_CANCELED)
+		return SIG_STATUS_CANCELED;
+	return UNDEFINED_STATUS;
 }
 
 #define CHAR_EQUAL_ZERO(a, b, c) do{\
