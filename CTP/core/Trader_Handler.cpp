@@ -377,8 +377,8 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 void Trader_Handler::init_strategy()
 {
 	// 在这里我们结束了config的配置，开始初始化策略
-	PRINT_INFO("Starting load strategy!");
-	my_st_init(DEFAULT_CONFIG, 0, &g_config_t);
+	PRINT_INFO("Starting load strategy...");
+	my_st_init(DEFAULT_CONFIG, -1, &g_config_t);
 	m_quote_api->Init(); //开始注册行情
 
 	PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
