@@ -16,9 +16,7 @@ const static char STATUS[][64] = { "SUCCEED", "ENTRUSTED", "PARTED", "CANCELED",
 const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_YES" };
 const static char BUY_SELL_STR[][8] = { "BUY", "SELL" };
 
-#define STRATEGY_DEBUG     -1
-#define MAX_STRATEGY_COUNT 16
-#define MAX_LOG_BUFF_SIZE  1024 * 1024 * 8
+#define MAX_LOG_BUFF_SIZE 1024 * 1024 * 8
 static FILE*      st_log_handle = NULL;
 static char       st_log_buffer[MAX_LOG_BUFF_SIZE + 1];
 static char*      st_start_point = st_log_buffer;
@@ -90,92 +88,26 @@ int process_strategy_resp(int type, int length, void *data) {
 typedef int(*st_data_func_t)(int type, int length, void *data);
 typedef int(*st_none_func_t)();
 
-struct strategy_api_t
-{
-	void          *so_handler;
-	st_data_func_t st_init;
-	st_data_func_t on_book;
-	st_data_func_t on_response;
-	st_data_func_t on_timer;
-	st_none_func_t st_destroy;
-};
+void          *strategy_handler;
+st_data_func_t st_init;
+st_data_func_t on_book;
+st_data_func_t on_response;
+st_data_func_t on_timer;
+st_none_func_t st_destroy;
 
-/* store all loaded strategy api */
-struct strategy_group_t
-{
-	strategy_api_t api[MAX_STRATEGY_COUNT];
-	st_config_t st_config[MAX_STRATEGY_COUNT];
-	int count;
-};
-strategy_group_t g_strategy_group = { 0 };
-
-void prepare_strategy_api(char* so_path[], st_config_t *cfg) {
-	for(int i = 0; i < MAX_STRATEGY_COUNT; i++) {
-		if(so_path[i][0] == '\0') break;
-		g_strategy_group.api[i].so_handler = dlopen(g_strategy_path, RTLD_LAZY);
-		if (g_strategy_group.api[i].so_handler == NULL) {
-			char err_msg[256];
-			snprintf(err_msg, sizeof(err_msg), "Strategy dlopen failed: %s, %s", g_strategy_path, dlerror());
-			PRINT_ERROR("load strategy failed! %s", err_msg);
-		}
-		g_strategy_group.api[i].st_init = (st_data_func_t)dlsym(g_strategy_group.api[i].so_handler, "my_st_init");
-		g_strategy_group.api[i].on_book = (st_data_func_t)dlsym(g_strategy_group.api[i].so_handler, "my_on_book");
-		g_strategy_group.api[i].on_response = (st_data_func_t)dlsym(g_strategy_group.api[i].so_handler, "my_on_response");
-		g_strategy_group.api[i].on_timer = (st_data_func_t)dlsym(g_strategy_group.api[i].so_handler, "my_on_timer");
-		g_strategy_group.api[i].st_destroy = (st_none_func_t)dlsym(g_strategy_group.api[i].so_handler, "my_destroy");
-		
-		g_strategy_group.st_config[i] = *cfg;
-		g_strategy_group.count++;
+void load_strategy() {
+	strategy_handler = dlopen(g_strategy_path, RTLD_LAZY);
+	if (strategy_handler == NULL) {
+		char err_msg[256];
+		snprintf(err_msg, sizeof(err_msg), "Strategy dlopen failed: %s, %s", g_strategy_path, dlerror());
+		PRINT_ERROR("load strategy failed! %s", err_msg);
 	}
+	st_init = (st_data_func_t)dlsym(strategy_handler, "my_st_init");
+	on_book = (st_data_func_t)dlsym(strategy_handler, "my_on_book");
+	on_response = (st_data_func_t)dlsym(strategy_handler, "my_on_response");
+	on_timer = (st_data_func_t)dlsym(strategy_handler, "my_on_timer");
+	st_destroy = (st_none_func_t)dlsym(strategy_handler, "my_destroy");
 }
-
-void destroy_strategy(int cnt)
-{
-	strategy_api_t *api;
-	int max_idx = MIN(cnt, g_strategy_group.count);
-	for (int i = 0; i < max_idx; i++)
-	{
-		api = &g_strategy_group.api[i];
-		api->st_destroy();
-	}
-	for (int i = 0; i < g_strategy_group.count; i++)
-	{
-		api = &g_strategy_group.api[i];
-		dlclose(api->so_handler);
-	}
-}
-
-int group_strategy_init(bool debug_mode = false) {
-	int i, ret;
-	/* fill the on_book handler */
-	for (i = 0; i < g_strategy_group.count - 1; i++) {
-		g_strategy_group.st_config[i].proc_order_hdl = g_strategy_group.api[i + 1].on_book;
-		g_strategy_group.st_config[i].send_info_hdl = g_strategy_group.api[i + 1].on_book;
-	}
-	g_strategy_group.st_config[i].proc_order_hdl = process_strategy_order;
-	g_strategy_group.st_config[i].send_info_hdl = process_strategy_info;
-	/* fill the pass_rsp handler */
-	for (i = 1; i < g_strategy_group.count; i++) {
-		g_strategy_group.st_config[i].pass_rsp_hdl = g_strategy_group.api[i - 1].on_response;
-	}
-	g_strategy_group.st_config[0].pass_rsp_hdl = process_strategy_resp;
-	/* do strategy init operation, last init strategy */
-	for (i = g_strategy_group.count - 1; i >= 0; i--) {
-		strategy_api_t *api = &g_strategy_group.api[i];
-		if (debug_mode) {
-			ret = api->st_init(DEFAULT_CONFIG, STRATEGY_DEBUG, (void *)&g_strategy_group.st_config[i]);
-		} else {
-			ret = api->st_init(DEFAULT_CONFIG, sizeof(st_config_t), (void *)&g_strategy_group.st_config[i]);
-		}
-		if (ret != 0) {
-			destroy_strategy(i);
-			return -1;
-		}
-	}
-	return 0;
-}
-
-
 
 void log_config(st_config_t* config) {
 	LOG_LN("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
@@ -228,11 +160,13 @@ int my_st_init(int type, int length, void *cfg) {
 			return NULL;
 		}
 	}
+	load_strategy();
 	st_config_t* config = (st_config_t*)cfg;
+	config->proc_order_hdl = process_strategy_order;
+	config->send_info_hdl = process_strategy_info;
+	config->pass_rsp_hdl = process_strategy_resp;
 	log_config(config);
-
-	prepare_strategy_api(config);
-	int ret = group_strategy_init(length);
+	int ret = st_init(type, length, cfg);
 	st_flush_log();
 	return ret;
 }
@@ -261,7 +195,7 @@ int my_on_timer(int type, int length, void *info) {
 
 void my_destroy() {
 	LOG_LN("It is finished!");
-	destroy_strategy(g_strategy_group.count);
+	st_destroy();
 	if (st_log_handle != NULL) {
 		fwrite(st_log_buffer, st_log_buffer_len, 1, st_log_handle);
 		fclose(st_log_handle);
@@ -269,4 +203,5 @@ void my_destroy() {
 		st_start_point = st_log_buffer;
 		st_log_buffer_len = 0;
 	}
+	dlclose(strategy_handler);
 }

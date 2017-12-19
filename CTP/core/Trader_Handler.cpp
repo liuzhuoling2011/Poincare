@@ -792,7 +792,7 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 
 int Trader_Handler::st_idle()
 {
-	return my_on_timer(DEFAULT_TIMER, 0, NULL);
+	my_on_timer(DEFAULT_TIMER, 0, NULL);
 }
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
