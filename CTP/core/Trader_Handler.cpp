@@ -750,7 +750,7 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pTrade->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pTrade->Direction - '0';
-		g_resp_t.open_close = convert_open_close_flag(pTrade->Direction);
+		g_resp_t.open_close = convert_open_close_flag(pTrade->OffsetFlag);
 		g_resp_t.exe_price = pTrade->Price;
 		g_resp_t.exe_volume = pTrade->Volume;
 		g_resp_t.status = SIG_STATUS_SUCCEED;
