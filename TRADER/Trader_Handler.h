@@ -1,8 +1,8 @@
 #pragma once
-#include "core/ThostFtdcMdApi.h"
-#include "core/ThostFtdcTraderApi.h"
-#include "core/CTP_define.h"
-#include "core/base_define.h"
+#include "ThostFtdcMdApi.h"
+#include "ThostFtdcTraderApi.h"
+#include "CTP_define.h"
+#include "base_define.h"
 #include "utils/MyArray.h"
 #include "utils/MyHash.h"
 

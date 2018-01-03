@@ -4,7 +4,6 @@
 #include <execinfo.h>
 #include <sys/wait.h>
 #include "utils/log.h"		 
-#include "core/Quote_Handler.h"
 #include "core/Trader_Handler.h"
 #include "utils/utils.h"
 

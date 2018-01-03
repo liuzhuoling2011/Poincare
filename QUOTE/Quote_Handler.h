@@ -1,6 +1,6 @@
 #pragma once
-#include "core/ThostFtdcMdApi.h"
-#include "core/CTP_define.h"
+#include "ThostFtdcMdApi.h"
+#include "CTP_define.h"
 
 class Quote_Handler : public CThostFtdcMdSpi
 {

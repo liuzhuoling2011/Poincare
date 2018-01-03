@@ -7,7 +7,7 @@
 #include "utils/log.h"
 #include "strategy_interface.h"
 #include "quote_format_define.h"
-#include "core/Trader_Handler.h"
+#include "Trader_Handler.h"
 
 char g_strategy_path[256];
 Trader_Handler* g_trader_handler;

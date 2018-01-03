@@ -2,8 +2,7 @@
 #define	_UTILS_H_
 
 #include <string.h>
-#include "core/base_define.h"
-#include "core/Trader_Handler.h"
+#include "base_define.h"
 #include "quote_format_define.h"
 
 #define MAX(a,b)  ((a)>(b)?(a):(b))

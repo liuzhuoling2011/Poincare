@@ -1,4 +1,4 @@
-#include "core/Quote_Handler.h"
+#include "Quote_Handler.h"
 #include "utils/utils.h"
 #include "utils/log.h"
 #include "strategy_interface.h"
@@ -24,8 +24,6 @@ Quote_Handler::~Quote_Handler()
 
 void Quote_Handler::OnFrontConnected()
 {
-	m_md_api->Join();
-
 	CThostFtdcReqUserLoginField req = { 0 };
 	strcpy(req.BrokerID, m_trader_config->QBROKER_ID);
 	strcpy(req.UserID, m_trader_config->QUSER_ID);
@@ -55,7 +53,6 @@ void Quote_Handler::OnRspUserLogin(
 
 	PRINT_SUCCESS("Login quote front successful!");
 	m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
-
 }
 
 void Quote_Handler::OnRspSubMarketData(
@@ -73,7 +70,7 @@ void Quote_Handler::OnRtnDepthMarketData(
 	PRINT_INFO("time: %d symbol: %s ap1: %f av1: %d bp1: %f bv1:%d",
 		g_f_book.int_time, g_f_book.symbol, g_f_book.ap_array[0], g_f_book.av_array[0], g_f_book.bp_array[0], g_f_book.bv_array[0]);
    
-	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data_t);
+	//my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data_t);
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)

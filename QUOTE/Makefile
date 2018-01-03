@@ -1,6 +1,6 @@
 #### PROJECT SETTINGS ####
 # The name of the executable to be created
-BIN_NAME := strategy.so
+BIN_NAME := poincare_quote
 # Compiler used
 CXX ?= g++
 # Extension of source files used in the project
@@ -10,13 +10,13 @@ SRC_PATH = .
 # General compiler flags
 COMPILE_FLAGS = -std=c++11 -w
 # Additional release-specific flags
-RCOMPILE_FLAGS = -O3 -fPIC -DKXVER=3
+RCOMPILE_FLAGS = -O3 -pthread
 # Additional debug-specific flags
-DCOMPILE_FLAGS = -g3 -fPIC -D DEBUG -DKXVER=3
+DCOMPILE_FLAGS = -g3 -pthread -D DEBUG
 # Add additional include paths
-INCLUDES = -I $(SRC_PATH) -I ../include -I ./sdp_handler
+INCLUDES = -I $(SRC_PATH) -I ./ -I ../include -I ../hiredis -I ../hiredis/adapters
 # General linker settings
-LINK_FLAGS = ./sdp_handler/utils/c.o -fPIC -shared 
+LINK_FLAGS = -fPIC -pthread -Wl,-rpath,./ -L. -lthostmduserapi -L../hiredis -lhiredis -ldl
 # Additional release-specific linker settings
 RLINK_FLAGS = 
 # Additional debug-specific linker settings
@@ -89,7 +89,7 @@ clean:
 all: $(BIN_PATH)/$(BIN_NAME)
 	@echo "Create bin file: $(BIN_NAME) -> $<"
 	@$(RM) $(BIN_NAME)
-	@cp $(BIN_PATH)/$(BIN_NAME) ../TRADER/$(BIN_NAME)
+	@cp $(BIN_PATH)/$(BIN_NAME) $(BIN_NAME)
 
 # Link the executable
 $(BIN_PATH)/$(BIN_NAME): $(OBJECTS)
