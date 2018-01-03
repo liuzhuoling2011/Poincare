@@ -33,12 +33,6 @@
     <ClCompile Include="utils\log.cpp">
       <Filter>源文件\utils</Filter>
     </ClCompile>
-    <ClCompile Include="utils\order_hash.cpp">
-      <Filter>源文件\utils</Filter>
-    </ClCompile>
-    <ClCompile Include="utils\redis_handler.cpp">
-      <Filter>源文件\utils</Filter>
-    </ClCompile>
     <ClCompile Include="utils\utils.cpp">
       <Filter>源文件\utils</Filter>
     </ClCompile>
@@ -59,12 +53,6 @@
     <ClInclude Include="utils\MyHash.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\order_hash.h">
-      <Filter>头文件\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\redis_handler.h">
-      <Filter>头文件\utils</Filter>
-    </ClInclude>
     <ClInclude Include="utils\utils.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
@@ -74,6 +62,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\TRADER\config.json">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>

@@ -70,10 +70,9 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 		g_config_t.day_night = NIGHT;
 }
 
-Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, CThostFtdcMdApi* QuoteApi, TraderConfig* trader_config)
+Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config)
 {
 	m_trader_config = trader_config;
-	m_quote_api = QuoteApi;
 	m_trader_api = TraderApi;
 	m_trader_api->RegisterSpi(this);			// 注册事件类
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
@@ -379,9 +378,8 @@ void Trader_Handler::init_strategy()
 	// 在这里我们结束了config的配置，开始初始化策略
 	PRINT_INFO("Starting load strategy...");
 	my_st_init(DEFAULT_CONFIG, -1, &g_config_t);
-	m_quote_api->Init(); //开始注册行情
 
-	PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %d, st_name: %s",
+	PRINT_SUCCESS("trading_date: %d, day_night: %d, param_file_path: %s, output_file_path: %s, vst_id: %lld, st_name: %s",
 		g_config_t.trading_date, g_config_t.day_night, g_config_t.param_file_path, g_config_t.output_file_path, g_config_t.vst_id, g_config_t.st_name);
 
 	for (int i = 0; i < ACCOUNT_MAX; i++) {

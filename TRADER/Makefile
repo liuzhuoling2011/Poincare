@@ -16,7 +16,7 @@ DCOMPILE_FLAGS = -g3 -pthread -D DEBUG
 # Add additional include paths
 INCLUDES = -I $(SRC_PATH) -I ../utils -I ../include -I ../hiredis -I ../hiredis/adapters
 # General linker settings
-LINK_FLAGS = -fPIC -pthread -Wl,-rpath,./ -L. -lthosttraderapi -L./hiredis -lhiredis -ldl
+LINK_FLAGS = -fPIC -pthread -Wl,-rpath,./ -L. -lthosttraderapi -L../hiredis -lhiredis -ldl
 # Additional release-specific linker settings
 RLINK_FLAGS = 
 # Additional debug-specific linker settings

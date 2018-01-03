@@ -10,5 +10,16 @@
   "TPASSWORD": "a.123456",
 
   "INSTRUMENTS": [ "cu1802" ],
-  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": true
+  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": true,
+
+  "STRAT_ID": 564335,
+  "STRAT_NAME": "taoli",
+  "STRAT_PATH": "./strategy.so",
+  "STRAT_EV": "./ev.txt",
+  "STRAT_OUTPUT": "./output",
+
+  "TRADER_LOG": "./logs/trader_[TIME].log",
+  "STRAT_LOG": "./logs/strategy_[NAME]_[TIME].log",
+  "TIME_INTERVAL": 5
+
 }

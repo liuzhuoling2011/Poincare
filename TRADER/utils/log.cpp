@@ -2,7 +2,7 @@
 #include <cstdarg>
 #include <string.h>
 #include "log.h"
-#include "core/base_define.h"
+#include "base_define.h"
 
 #define MAX_LOG_BUFF_SIZE (1024 * 1024 * 8)
 

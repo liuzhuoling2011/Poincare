@@ -13,10 +13,40 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="头文件\utils">
+      <UniqueIdentifier>{28c2a295-9ae8-4f6f-b60a-a6cd8448b80d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\utils">
+      <UniqueIdentifier>{e54c483d-0196-4acd-8231-ea723d4359cd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Trader_Handler.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\list.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\log.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\MyArray.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\MyHash.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\order_hash.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\redis_handler.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\utils.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\json11.hpp">
+      <Filter>头文件\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -28,6 +58,21 @@
     </ClCompile>
     <ClCompile Include="Trader_Handler.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\json11.cpp">
+      <Filter>源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\log.cpp">
+      <Filter>源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\order_hash.cpp">
+      <Filter>源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\redis_handler.cpp">
+      <Filter>源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\utils.cpp">
+      <Filter>源文件\utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

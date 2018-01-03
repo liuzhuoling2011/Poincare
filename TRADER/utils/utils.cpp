@@ -499,11 +499,10 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.TBROKER_ID, l_json["TBROKER_ID"].string_value().c_str(), 8);
 	strlcpy(trader_config.TUSER_ID, l_json["TUSER_ID"].string_value().c_str(), 64);
 	strlcpy(trader_config.TPASSWORD, l_json["TPASSWORD"].string_value().c_str(), 64);
-	for (int i = 0; i < 64; i++) {
-		trader_config.INSTRUMENTS[i] = (char *)malloc(64 * sizeof(char));
-	}
+	
 	int instr_count = 0;
 	for (auto &l_instr : l_json["INSTRUMENTS"].array_items()) {
+		trader_config.INSTRUMENTS[instr_count] = (char *)malloc(64 * sizeof(char));
 		strlcpy(trader_config.INSTRUMENTS[instr_count], l_instr.string_value().c_str(), 64);
 		instr_count++;
 	}
@@ -520,6 +519,7 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.TRADER_LOG, l_json["TRADER_LOG"].string_value().c_str(), 256);
 	strlcpy(trader_config.STRAT_LOG, l_json["STRAT_LOG"].string_value().c_str(), 256);
 	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE"].bool_value();
+	create_dir("./tmp");
 	update_trader_log_name(trader_config);
 	update_strategy_log_name(trader_config);
 }

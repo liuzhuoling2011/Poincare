@@ -9,7 +9,7 @@
 class Trader_Handler : public CThostFtdcTraderSpi
 {
 public:
-	Trader_Handler(CThostFtdcTraderApi* TraderApi, CThostFtdcMdApi* QuoteApi, TraderConfig* trader_config);
+	Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config);
 	virtual ~Trader_Handler();
 
 	//当客户端与交易后台建立起通信连接时（还未登录前），该方法被调用。
@@ -84,7 +84,6 @@ public:
 
 private:
 	CThostFtdcTraderApi* m_trader_api = NULL;
-	CThostFtdcMdApi* m_quote_api = NULL;
 	TraderInfo m_trader_info;
 	MyHash<CThostFtdcInputOrderField> *m_orders;
 	int m_request_id = 0;
