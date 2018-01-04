@@ -499,6 +499,13 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.TBROKER_ID, l_json["TBROKER_ID"].string_value().c_str(), 8);
 	strlcpy(trader_config.TUSER_ID, l_json["TUSER_ID"].string_value().c_str(), 64);
 	strlcpy(trader_config.TPASSWORD, l_json["TPASSWORD"].string_value().c_str(), 64);
+
+	strlcpy(trader_config.REDIS_IP, l_json["REDIS_IP"].string_value().c_str(), 64);
+	trader_config.REDIS_PORT = l_json["REDIS_PORT"].int_value();
+	strlcpy(trader_config.REDIS_CONTRACT, l_json["REDIS_CONTRACT"].string_value().c_str(), 64);
+	strlcpy(trader_config.REDIS_QUOTE, l_json["REDIS_QUOTE"].string_value().c_str(), 64);
+	strlcpy(trader_config.REDIS_MULTI_QUOTE, l_json["REDIS_MULTI_QUOTE"].string_value().c_str(), 64);
+	strlcpy(trader_config.REDIS_QUOTE_CACHE, l_json["REDIS_QUOTE_CACHE"].string_value().c_str(), 64);
 	
 	int instr_count = 0;
 	for (auto &l_instr : l_json["INSTRUMENTS"].array_items()) {
@@ -519,6 +526,8 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.TRADER_LOG, l_json["TRADER_LOG"].string_value().c_str(), 256);
 	strlcpy(trader_config.STRAT_LOG, l_json["STRAT_LOG"].string_value().c_str(), 256);
 	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE"].bool_value();
+	trader_config.QUOTE_TYPE, l_json["QUOTE_TYPE"].int_value();
+
 	create_dir("./tmp");
 	update_trader_log_name(trader_config);
 	update_strategy_log_name(trader_config);

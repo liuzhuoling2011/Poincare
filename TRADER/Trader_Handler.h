@@ -74,6 +74,8 @@ private:
 	void ReqQryInvestorPosition();
 	//初始化策略
 	void init_strategy();
+	//定制合约
+	void push_contract_to_redis();
 	//策略定时任务
 	int st_idle();
 

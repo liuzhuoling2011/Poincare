@@ -19,6 +19,53 @@ RedisHandler::~RedisHandler(){
     redisFree(redis);
 }
 
+RedisSubPub::RedisSubPub(RedisHandler* handler, const char* key) {
+	redis = handler->redis;
+	strcpy(this->key, key);
+}
+
+void RedisSubPub::publish(char * value)
+{
+	reply = (redisReply*)redisCommand(redis, "publish %s %s", key, value);
+#ifdef REDIS_DEBUG
+	if (reply->type == REDIS_REPLY_ERROR) {
+		printf("Error: %s\n", reply->str);
+	}
+	else if (reply->type != REDIS_REPLY_INTEGER) {
+		fprintf(stderr, "Invalid publish reply from Redis\n");
+	}
+#endif
+	freeReplyObject(reply);
+}
+
+void RedisSubPub::publish_binary(char* value, int length)
+{
+	reply = (redisReply*)redisCommand(redis, "publish %s %b", key, value, length);
+#ifdef REDIS_DEBUG
+	if (reply->type == REDIS_REPLY_ERROR) {
+		printf("Error: %s\n", reply->str);
+	}
+	else if (reply->type != REDIS_REPLY_INTEGER) {
+		fprintf(stderr, "Invalid publish reply from Redis\n");
+	}
+#endif
+	freeReplyObject(reply);
+}
+
+char * RedisSubPub::listen()
+{
+	reply = (redisReply*)redisCommand(redis, "subscribe %s", key);
+#ifdef REDIS_DEBUG
+	if (reply->type == REDIS_REPLY_ERROR) {
+		printf("Error: %s\n", reply->str);
+	}
+	else if (reply->type != REDIS_REPLY_INTEGER) {
+		fprintf(stderr, "Invalid subscribe reply from Redis\n");
+	}
+#endif
+	freeReplyObject(reply);
+	return (char*)"123";
+}
 
 RedisList::RedisList(RedisHandler* handler, const char* key){
     redis = handler->redis;
@@ -50,6 +97,20 @@ void RedisList::rpush(char* value){
     }
 #endif
     freeReplyObject(reply);  
+}
+
+void RedisList::rpush_binary(char * value, int length)
+{
+	reply = (redisReply*)redisCommand(redis, "rpush %s %b", key, value, length);
+#ifdef REDIS_DEBUG
+	if (reply->type == REDIS_REPLY_ERROR) {
+		printf("Error: %s\n", reply->str);
+	}
+	else if (reply->type != REDIS_REPLY_INTEGER) {
+		fprintf(stderr, "Invalid RPUSH reply from Redis\n");
+	}
+#endif
+	freeReplyObject(reply);
 }
 
 char* RedisList::blpop(){

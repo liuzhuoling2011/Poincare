@@ -21,11 +21,24 @@ public:
     redisContext* redis;
 };
 
+class RedisSubPub {
+public:
+	RedisSubPub(RedisHandler* handler, const char* key);
+	void publish(char* value);
+	void publish_binary(char* value, int length);
+	char* listen();
+private:
+	char key[64];
+	redisContext* redis;
+	redisReply* reply;
+};
+
 class RedisList{
 public:
     RedisList(RedisHandler* handler, const char* key);
     int size();
     void rpush(char* value);
+	void rpush_binary(char* value, int length);
     char* blpop();
     void freeStr();
 private:

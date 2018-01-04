@@ -9,8 +9,16 @@
   "TUSER_ID": "106407",
   "TPASSWORD": "a.123456",
 
-  "INSTRUMENTS": [ "cu1802" ],
-  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": true,
+  "REDIS_IP": "127.0.0.1",
+  "REDIS_PORT": 6379,
+  "REDIS_CONTRACT": "redis_contract",
+  "REDIS_QUOTE": "redis_quote",
+  "REDIS_MULTI_QUOTE": "redis_multi_quote",
+  "REDIS_QUOTE_CACHE": "redis_quote_cache",
+
+  "INSTRUMENTS": [ "cu1802", "rb1805" ],
+  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": false,
+  "QUOTE_TYPE": 1, // 1 代表1档，2 代表多档，3 代表混合
 
   "STRAT_ID": 564335,
   "STRAT_NAME": "taoli",
@@ -21,5 +29,4 @@
   "TRADER_LOG": "./logs/trader_[TIME].log",
   "STRAT_LOG": "./logs/strategy_[NAME]_[TIME].log",
   "TIME_INTERVAL": 5
-
 }

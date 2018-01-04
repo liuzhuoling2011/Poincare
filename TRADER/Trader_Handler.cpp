@@ -2,6 +2,7 @@
 #include <sstream>
 #include <stdint.h>
 #include "utils/log.h"
+#include "utils/redis_handler.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
 
@@ -45,6 +46,12 @@ static MyHash<contract_t> g_contract_config_hash;
 static MyHash<ContractPosition*> g_contract_pos_hash;
 MyHash<contract_t>::Iterator g_iter;
 
+RedisHandler *g_redis_handler = NULL;
+RedisList *g_redis_contract = NULL;
+RedisSubPub *g_redis_quote = NULL;
+RedisSubPub *g_redis_multi_quote = NULL;
+typedef void(*feed_quote_func)(char *data);
+
 extern Trader_Handler *g_trader_handler;
 
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
@@ -70,6 +77,12 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 		g_config_t.day_night = NIGHT;
 }
 
+void feed_quote_to_strategy(char* f_quote) {
+	Futures_Internal_Book *quote = (Futures_Internal_Book *)f_quote;
+	g_data_t.info = (void*)quote;
+	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data_t);
+}
+
 Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config)
 {
 	m_trader_config = trader_config;
@@ -77,6 +90,11 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_trader_api->RegisterSpi(this);			// 注册事件类
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
+
+	g_redis_handler = new RedisHandler(m_trader_config->REDIS_IP, m_trader_config->REDIS_PORT);
+	g_redis_contract = new RedisList(g_redis_handler, m_trader_config->REDIS_CONTRACT);
+	g_redis_quote = new RedisSubPub(g_redis_handler, m_trader_config->REDIS_QUOTE);
+	g_redis_multi_quote = new RedisSubPub(g_redis_handler, m_trader_config->REDIS_MULTI_QUOTE);
 
 	g_trader_handler = this;
 
@@ -91,6 +109,10 @@ Trader_Handler::~Trader_Handler()
 {
 	my_destroy();
 	delete m_orders;
+	delete g_redis_handler;
+	delete g_redis_contract;
+	delete g_redis_quote;
+	delete g_redis_multi_quote;
 	m_trader_api->Release();
 }
 
@@ -183,9 +205,10 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 {
 	if (pInvestorPositionDetail) {
 		// 对于所有合约，不保存已平仓的，只保存未平仓的
-		ContractPosition* &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
-		if (contract_position == NULL) contract_position = new ContractPosition();
 		if (pInvestorPositionDetail->Volume > 0) {
+			ContractPosition* &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
+			if (contract_position == NULL) contract_position = new ContractPosition();
+
 			if (pInvestorPositionDetail->Direction == TRADER_BUY)
 				contract_position->long_pos.push_back(*pInvestorPositionDetail);
 			else if (pInvestorPositionDetail->Direction == TRADER_SELL)
@@ -373,6 +396,18 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 	}
 }
 
+void Trader_Handler::push_contract_to_redis() {
+	if(g_redis_contract->size() > 0) {
+		g_redis_contract->clear();
+	}
+	std::string contract_str = m_trader_config->INSTRUMENTS[0];
+	for(int i = 1; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+		contract_str += ',';
+		contract_str += m_trader_config->INSTRUMENTS[i];
+	}
+	g_redis_contract->rpush((char*)contract_str.c_str());
+}
+
 void Trader_Handler::init_strategy()
 {
 	// 在这里我们结束了config的配置，开始初始化策略
@@ -400,6 +435,27 @@ void Trader_Handler::init_strategy()
 			l_config_instr.today_pos.long_volume, l_config_instr.today_pos.long_price, l_config_instr.today_pos.short_volume, l_config_instr.today_pos.short_price,
 			l_config_instr.yesterday_pos.long_volume, l_config_instr.yesterday_pos.long_price, l_config_instr.yesterday_pos.short_volume, l_config_instr.yesterday_pos.short_price,
 			l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
+	}
+
+	printf("33333333333333333333333\n");
+
+	push_contract_to_redis();
+
+	printf("22222222222222222222222222\n");
+	switch(m_trader_config->QUOTE_TYPE) {
+		case 1: {
+			g_redis_quote->listen(feed_quote_to_strategy);
+			break;
+		}
+		case 2: {
+			g_redis_multi_quote->listen(feed_quote_to_strategy);
+			break;
+		}
+		case 3: {
+			g_redis_quote->listen(feed_quote_to_strategy);
+			g_redis_multi_quote->listen(feed_quote_to_strategy);
+			break;
+		}
 	}
 }
 

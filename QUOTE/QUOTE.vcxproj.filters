@@ -36,6 +36,9 @@
     <ClCompile Include="utils\utils.cpp">
       <Filter>源文件\utils</Filter>
     </ClCompile>
+    <ClCompile Include="utils\redis_handler.cpp">
+      <Filter>源文件\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Quote_Handler.h">
@@ -57,6 +60,9 @@
       <Filter>头文件\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\json11.hpp">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\redis_handler.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
   </ItemGroup>
