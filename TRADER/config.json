@@ -15,10 +15,11 @@
   "REDIS_QUOTE": "redis_quote",
   "REDIS_MULTI_QUOTE": "redis_multi_quote",
   "REDIS_QUOTE_CACHE": "redis_quote_cache",
+  "REDIS_MULTI_QUOTE_CACHE": "redis_multi_quote_cache",
 
-  "INSTRUMENTS": [ "cu1802", "rb1805" ],
+  "INSTRUMENTS": [ "cu1802" ],
   "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": false,
-  "QUOTE_TYPE": 1, // 1 代表1档，2 代表多档，3 代表混合
+  "QUOTE_TYPE": 2, // 1 代表1档，2 代表多档
 
   "STRAT_ID": 564335,
   "STRAT_NAME": "taoli",

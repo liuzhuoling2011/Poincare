@@ -55,7 +55,7 @@ void RedisSubPub::publish_binary(char* value, int length)
 
 void RedisSubPub::listen(_feed_quote_func_ feed_quote_func)
 {
-	printf("111111111111111111\n");
+	printf("Waiting for quotes...\n");
 	reply = (redisReply*)redisCommand(redis, "subscribe %s", key);
 	freeReplyObject(reply);
 	while (redisGetReply(redis, (void **)&reply) == REDIS_OK)

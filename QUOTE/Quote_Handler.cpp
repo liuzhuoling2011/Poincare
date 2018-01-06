@@ -2,7 +2,6 @@
 #include "utils/utils.h"
 #include "utils/log.h"
 #include "utils/redis_handler.h"
-#include "strategy_interface.h"
 
 static Futures_Internal_Book g_f_book;
 static char ERROR_MSG[4096];
@@ -11,6 +10,29 @@ RedisHandler *g_redis_handler = NULL;
 RedisList *g_redis_contract = NULL;
 RedisSubPub *g_redis_subpub = NULL;
 RedisList *g_redis_quote = NULL;
+RedisList *g_redis_multi_quote = NULL;
+
+bool update_future_quote(void* multi_quote) {
+	Futures_Internal_Book *quote = (Futures_Internal_Book *)multi_quote;
+	printf("int_time: %d, symbol: %s, feed_type: %d, exch: %d, pre_close_px: %f, pre_settle_px: %f, pre_open_interest: %f, open_interest: %f "
+		"open_px: %f, high_px: %f, low_px: %f, avg_px: %f, last_px: %f "
+		"ap1: %f, av1: %d, ap2: %f, av2: %d, ap3: %f, av3: %d, ap4: %f, av4: %d, ap5: %f, av5: %d "
+		"bp1: %f, bv1: %d, bp2: %f, bv2: %d, bp3: %f, bv3: %d, bp4: %f, bv4: %d, bp5: %f, bv5: %d "
+		"total_vol: %lld, total_notional: %f, upper_limit_px: %f, lower_limit_px: %f, close_px: %f, settle_px: %f\n",
+		quote->int_time, quote->symbol, quote->feed_type, quote->exchange, quote->pre_close_px, quote->pre_settle_px, quote->pre_open_interest, quote->open_interest,
+		quote->open_px, quote->high_px, quote->low_px, quote->avg_px, quote->last_px,
+		quote->ap_array[0], quote->av_array[0], quote->ap_array[1], quote->av_array[1], quote->ap_array[2], quote->av_array[2], quote->ap_array[3], quote->av_array[3], quote->ap_array[4], quote->av_array[4],
+		quote->bp_array[0], quote->bv_array[0], quote->bp_array[1], quote->bv_array[1], quote->bp_array[2], quote->bv_array[2], quote->bp_array[3], quote->bv_array[3], quote->bp_array[4], quote->bv_array[4],
+		quote->total_vol, quote->total_notional, quote->upper_limit_px, quote->lower_limit_px, quote->close_px, quote->settle_px);
+
+	for (int i = 1; i < 5; i++) {
+		g_f_book.bp_array[i] = quote->bp_array[i];
+		g_f_book.bv_array[i] = quote->bv_array[i];
+		g_f_book.ap_array[i] = quote->ap_array[i];
+		g_f_book.av_array[i] = quote->av_array[i];
+	}
+	return true;
+}
 
 Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, TraderConfig *trader_config)
 {
@@ -24,13 +46,16 @@ Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, TraderConfig *trader_conf
 	g_redis_contract = new RedisList(g_redis_handler, m_trader_config->REDIS_CONTRACT);
 	g_redis_subpub = new RedisSubPub(g_redis_handler, m_trader_config->REDIS_QUOTE);
 	g_redis_quote = new RedisList(g_redis_handler, m_trader_config->REDIS_QUOTE_CACHE);
+	g_redis_multi_quote = new RedisList(g_redis_handler, m_trader_config->REDIS_MULTI_QUOTE_CACHE);
 }
 
 Quote_Handler::~Quote_Handler()
 {
 	delete g_redis_handler;
 	delete g_redis_contract;
+	delete g_redis_subpub;
 	delete g_redis_quote;
+	delete g_redis_multi_quote;
 	m_md_api->Release();
 }
 
@@ -84,10 +109,6 @@ void Quote_Handler::OnRspUserLogin(
 	m_trader_config->INSTRUMENT_COUNT = instr_count;
 	g_redis_contract->freeStr();
 
-	/*for(int i=0; i<m_trader_config->INSTRUMENT_COUNT; i++) {
-		printf("%s\n", m_trader_config->INSTRUMENTS[i]);
-	}*/
-
 	m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
 }
 
@@ -98,6 +119,8 @@ void Quote_Handler::OnRspSubMarketData(
 	if(pSpecificInstrument) PRINT_SUCCESS("Subscribe %s market data success!", pSpecificInstrument->InstrumentID);
 }
 
+
+
 void Quote_Handler::OnRtnDepthMarketData(
     CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
@@ -106,9 +129,15 @@ void Quote_Handler::OnRtnDepthMarketData(
 	PRINT_INFO("time: %d symbol: %s ap1: %f av1: %d bp1: %f bv1:%d",
 		g_f_book.int_time, g_f_book.symbol, g_f_book.ap_array[0], g_f_book.av_array[0], g_f_book.bp_array[0], g_f_book.bv_array[0]);
    
-	g_redis_quote->rpush_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
-	g_redis_subpub->publish_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
-	//my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data_t);
+	if(m_trader_config->QUOTE_TYPE == 2) {
+		char* multi_quote = g_redis_multi_quote->last_item();
+		if (multi_quote != NULL) {
+			update_future_quote(multi_quote);
+		}
+	}else if(m_trader_config->QUOTE_TYPE == 1) {
+		g_redis_quote->rpush_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
+		g_redis_subpub->publish_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
+	}
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)

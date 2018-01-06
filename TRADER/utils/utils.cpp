@@ -506,10 +506,12 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.REDIS_QUOTE, l_json["REDIS_QUOTE"].string_value().c_str(), 64);
 	strlcpy(trader_config.REDIS_MULTI_QUOTE, l_json["REDIS_MULTI_QUOTE"].string_value().c_str(), 64);
 	strlcpy(trader_config.REDIS_QUOTE_CACHE, l_json["REDIS_QUOTE_CACHE"].string_value().c_str(), 64);
+	for(int i = 0; i < 64; i++) {
+		trader_config.INSTRUMENTS[i] = (char *)malloc(64 * sizeof(char));
+	}
 	
 	int instr_count = 0;
 	for (auto &l_instr : l_json["INSTRUMENTS"].array_items()) {
-		trader_config.INSTRUMENTS[instr_count] = (char *)malloc(64 * sizeof(char));
 		strlcpy(trader_config.INSTRUMENTS[instr_count], l_instr.string_value().c_str(), 64);
 		instr_count++;
 	}
@@ -526,7 +528,7 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.TRADER_LOG, l_json["TRADER_LOG"].string_value().c_str(), 256);
 	strlcpy(trader_config.STRAT_LOG, l_json["STRAT_LOG"].string_value().c_str(), 256);
 	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE"].bool_value();
-	trader_config.QUOTE_TYPE, l_json["QUOTE_TYPE"].int_value();
+	trader_config.QUOTE_TYPE = l_json["QUOTE_TYPE"].int_value();
 
 	create_dir("./tmp");
 	update_trader_log_name(trader_config);
@@ -534,7 +536,7 @@ bool read_json_config(TraderConfig& trader_config) {
 }
 
 void free_config(TraderConfig& trader_config) {
-	for (int i = 0; i < trader_config.INSTRUMENT_COUNT; i++) {
+	for (int i = 0; i < 64; i++) {
 		free(trader_config.INSTRUMENTS[i]);
 	}
 }

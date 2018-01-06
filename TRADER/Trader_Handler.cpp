@@ -49,7 +49,6 @@ MyHash<contract_t>::Iterator g_iter;
 RedisHandler *g_redis_handler = NULL;
 RedisList *g_redis_contract = NULL;
 RedisSubPub *g_redis_quote = NULL;
-RedisSubPub *g_redis_multi_quote = NULL;
 typedef void(*feed_quote_func)(char *data);
 
 extern Trader_Handler *g_trader_handler;
@@ -94,7 +93,6 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	g_redis_handler = new RedisHandler(m_trader_config->REDIS_IP, m_trader_config->REDIS_PORT);
 	g_redis_contract = new RedisList(g_redis_handler, m_trader_config->REDIS_CONTRACT);
 	g_redis_quote = new RedisSubPub(g_redis_handler, m_trader_config->REDIS_QUOTE);
-	g_redis_multi_quote = new RedisSubPub(g_redis_handler, m_trader_config->REDIS_MULTI_QUOTE);
 
 	g_trader_handler = this;
 
@@ -112,7 +110,6 @@ Trader_Handler::~Trader_Handler()
 	delete g_redis_handler;
 	delete g_redis_contract;
 	delete g_redis_quote;
-	delete g_redis_multi_quote;
 	m_trader_api->Release();
 }
 
@@ -406,6 +403,7 @@ void Trader_Handler::push_contract_to_redis() {
 		contract_str += m_trader_config->INSTRUMENTS[i];
 	}
 	g_redis_contract->rpush((char*)contract_str.c_str());
+	g_redis_contract->rpush((char*)contract_str.c_str());
 }
 
 void Trader_Handler::init_strategy()
@@ -437,26 +435,9 @@ void Trader_Handler::init_strategy()
 			l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
 	}
 
-	printf("33333333333333333333333\n");
-
 	push_contract_to_redis();
 
-	printf("22222222222222222222222222\n");
-	switch(m_trader_config->QUOTE_TYPE) {
-		case 1: {
-			g_redis_quote->listen(feed_quote_to_strategy);
-			break;
-		}
-		case 2: {
-			g_redis_multi_quote->listen(feed_quote_to_strategy);
-			break;
-		}
-		case 3: {
-			g_redis_quote->listen(feed_quote_to_strategy);
-			g_redis_multi_quote->listen(feed_quote_to_strategy);
-			break;
-		}
-	}
+	g_redis_quote->listen(feed_quote_to_strategy);
 }
 
 void Trader_Handler::ReqQryInvestorPosition()

@@ -126,6 +126,21 @@ char* RedisList::blpop(){
     return reply->element[1]->str;
 }
 
+char * RedisList::last_item()
+{
+	reply = (redisReply*)redisCommand(redis, "rpoplpush %s %s", key, key);
+#ifdef REDIS_DEBUG
+	if (reply->type == REDIS_REPLY_ERROR) {
+		printf("Error: %s\n", reply->str);
+	}
+	else if (reply->type != REDIS_REPLY_STRING || reply->len == 0) {
+		fprintf(stderr, "Invalid rpoplpush reply from Redis\n");
+		return 0;
+	}
+#endif
+	return reply->str;
+}
+
 void RedisList::freeStr(){
     freeReplyObject(reply);  
 }

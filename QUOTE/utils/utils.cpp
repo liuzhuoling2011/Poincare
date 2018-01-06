@@ -506,6 +506,7 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.REDIS_QUOTE, l_json["REDIS_QUOTE"].string_value().c_str(), 64);
 	strlcpy(trader_config.REDIS_MULTI_QUOTE, l_json["REDIS_MULTI_QUOTE"].string_value().c_str(), 64);
 	strlcpy(trader_config.REDIS_QUOTE_CACHE, l_json["REDIS_QUOTE_CACHE"].string_value().c_str(), 64);
+	strlcpy(trader_config.REDIS_MULTI_QUOTE_CACHE, l_json["REDIS_MULTI_QUOTE_CACHE"].string_value().c_str(), 64);
 
 	trader_config.STRAT_ID = l_json["STRAT_ID"].int_value();
 	strlcpy(trader_config.STRAT_PATH, l_json["STRAT_PATH"].string_value().c_str(), 256);
@@ -517,6 +518,7 @@ bool read_json_config(TraderConfig& trader_config) {
 	strlcpy(trader_config.TRADER_LOG, l_json["TRADER_LOG"].string_value().c_str(), 256);
 	strlcpy(trader_config.STRAT_LOG, l_json["STRAT_LOG"].string_value().c_str(), 256);
 	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE"].bool_value();
+	trader_config.QUOTE_TYPE = l_json["QUOTE_TYPE"].int_value();
 	create_dir("./tmp");
 }
 
