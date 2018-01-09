@@ -193,6 +193,7 @@ int my_on_response(int type, int length, void *resp) {
 
 	st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
 	Contract *instr = sdp_handler->find_contract(rsp->symbol);
+	Order* l_ord = NULL;
 
 	switch (rsp->status) {
 	case SIG_STATUS_PARTED:
@@ -206,10 +207,11 @@ int my_on_response(int type, int length, void *resp) {
 	case SIG_STATUS_REJECTED:
 		PRINT_ERROR("Send order again");
 		LOG_LN("Send order again");
+		l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
 		if(rsp->direction == ORDER_BUY)
-			sdp_handler->send_single_order(instr, instr->exch, last_ask_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
+			sdp_handler->send_single_order(instr, instr->exch, last_ask_price, leaves_qty(l_ord), (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
 		else
-			sdp_handler->send_single_order(instr, instr->exch, last_bid_price, 1, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
+			sdp_handler->send_single_order(instr, instr->exch, last_bid_price, leaves_qty(l_ord), (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
 		break;
 	case SIG_STATUS_INTRREJECTED:
 		break;
@@ -218,7 +220,7 @@ int my_on_response(int type, int length, void *resp) {
 	case SIG_STATUS_ENTRUSTED:
 		PRINT_ERROR("[%d]Has Been in OrderList;Waiting Deal...",int_time);
 		LOG_LN("[%d]Has Been in OrderList;Waiting Deal...", int_time);
-		Order* l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
+		l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
 		if(l_ord != NULL)
 			l_ord->insert_time = int_time;
 		break;
