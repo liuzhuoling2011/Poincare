@@ -260,6 +260,9 @@ int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price,
 			int index = reverse_index(m_cur_ord_id_arr[i]);
 			Order *l_order = m_orders->update_order(index, instr, price, m_cur_ord_size_arr[i],
 				side, m_cur_ord_id_arr[i], sig_openclose);
+			char* all_order_info = m_orders->get_all_active_order_info();
+			PRINT_DEBUG("%s", all_order_info);
+			LOG_LN("%s", all_order_info);
 			if (flag_close_yesterday_pos) {
 				update_yes_pos(instr, side, m_cur_ord_size_arr[i]);
 			}

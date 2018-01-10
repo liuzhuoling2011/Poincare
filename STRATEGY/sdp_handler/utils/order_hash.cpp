@@ -376,6 +376,34 @@ OrderHash::get_search_order_size()
 	return l_size;
 }
 
+const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_YES" };
+const static char BUY_SELL_STR[][8] = { "BUY", "SELL" };
+static std::string g_all_order_info;
+
+char*
+OrderHash::get_all_active_order_info()
+{
+	list_t *pos, *n;
+	Order *l_ord;
+	char temp[1024];
+	g_all_order_info = "Current active orders:\n";
+
+	list_for_each_safe(pos, n, p_buy_list) {
+		l_ord = list_entry(pos, Order, pd_link);
+		sprintf(temp, "---> %d %lld %s %s %d@%f leaves_qty: %d %s\n", l_ord->insert_time, l_ord->signal_id, BUY_SELL_STR[l_ord->side], OPEN_CLOSE_STR[l_ord->openclose],
+			l_ord->volume, l_ord->price, leaves_qty(l_ord), l_ord->pending_cancel == true ? "canceling..." : "");
+		g_all_order_info += temp;
+	}
+
+	list_for_each_safe(pos, n, p_sell_list) {
+		l_ord = list_entry(pos, Order, pd_link);
+		sprintf(temp, "---> %d %lld %s %s %d@%f leaves_qty: %d %s\n", l_ord->insert_time, l_ord->signal_id, BUY_SELL_STR[l_ord->side], OPEN_CLOSE_STR[l_ord->openclose],
+			l_ord->volume, l_ord->price, leaves_qty(l_ord), l_ord->pending_cancel == true ? "canceling..." : "");
+		g_all_order_info += temp;
+	}
+	return (char*)g_all_order_info.c_str();
+}
+
 int
 OrderHash::get_pending_cancel_order_size_by_instr(Contract *a_instr)
 {

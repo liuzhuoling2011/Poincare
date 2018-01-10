@@ -91,6 +91,8 @@ public:
 
 	int get_pending_sell_size(Contract* contr) { return contr->pending_sell_close_size + contr->pending_sell_open_size; }
 
+	char* get_all_active_order_info();
+
 private:
 	int m_use_count;
 	Order *p_order_head;
