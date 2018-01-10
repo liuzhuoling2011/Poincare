@@ -100,7 +100,6 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	// 必须在Init函数之后调用
 	m_trader_api->SubscribePublicTopic(THOST_TERT_QUICK);				// 注册公有流
 	m_trader_api->SubscribePrivateTopic(THOST_TERT_QUICK);				// 注册私有流
-	m_trader_api->Join();
 }
 
 Trader_Handler::~Trader_Handler()
@@ -388,8 +387,7 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
 			g_config_t.contracts[index++] = iter->second;
 		}
-		//在这里我们结束了config的配置，开始初始化策略
-		init_strategy();
+		m_init_flag = true;
 	}
 }
 

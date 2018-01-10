@@ -17,7 +17,6 @@ int int_time = 0;
 
 void flush_log()
 {
-	PRINT_INFO("Start flush log...");
 	if (log_handle != NULL) {
 		fwrite(log_buffer, log_buffer_len, 1, log_handle);
 		fflush(log_handle);

@@ -2,6 +2,13 @@
 #include "utils/log.h"		 
 #include "utils/utils.h"
 
+#ifndef _WIN32
+	#include <unistd.h>
+#else
+	#include <windows.h>
+	#define sleep Sleep
+#endif
+
 #define LOG_DIR './logs'
 extern FILE* log_handle;
 
@@ -20,6 +27,14 @@ int main(int argc, char **argv)
 
 	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/trader");
 	trader_handler = new Trader_Handler(TraderApi, &trader_config);
+
+	while(trader_handler->m_init_flag == false) {
+		PRINT_DEBUG("Main thread is waiting...");
+		sleep(1);
+	}
+
+	trader_handler->init_strategy();
+	TraderApi->Join();
 
 	free_config(trader_config);
 	flush_log();

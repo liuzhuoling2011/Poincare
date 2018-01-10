@@ -68,6 +68,9 @@ public:
 	//报单撤销请求
 	int cancel_single_order(order_t *order);
 
+	//初始化策略
+	void init_strategy();
+
 private:
 	//投资者结算结果确认
 	void ReqSettlementInfo();
@@ -80,8 +83,6 @@ private:
 	//请求查询投资者持仓
 	void ReqQryInvestorPositionDetail();
 	void ReqQryInvestorPosition();
-	//初始化策略
-	void init_strategy();
 	//定制合约
 	void push_contract_to_redis();
 	//策略定时任务
@@ -91,6 +92,7 @@ private:
 
 public:
 	TraderConfig *m_trader_config;
+	bool m_init_flag = false;
 
 private:
 	CThostFtdcTraderApi* m_trader_api = NULL;

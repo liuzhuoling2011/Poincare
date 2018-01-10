@@ -134,10 +134,9 @@ void Quote_Handler::OnRtnDepthMarketData(
 		if (multi_quote != NULL) {
 			update_future_quote(multi_quote);
 		}
-	}else if(m_trader_config->QUOTE_TYPE == 1) {
-		g_redis_quote->rpush_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
-		g_redis_subpub->publish_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
-	}
+	}//else if(m_trader_config->QUOTE_TYPE == 1) { }
+	g_redis_quote->rpush_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
+	g_redis_subpub->publish_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)
