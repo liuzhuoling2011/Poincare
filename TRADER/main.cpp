@@ -1,3 +1,4 @@
+#include <signal.h>
 #include "Trader_Handler.h"
 #include "utils/log.h"		 
 #include "utils/utils.h"
@@ -13,10 +14,22 @@
 extern FILE* log_handle;
 
 Trader_Handler *trader_handler;
+char g_core_dump_msg[8192];
+
+void recv_signal(int sig) {
+	dump_backtrace(g_core_dump_msg);
+	PRINT_ERROR("%s", g_core_dump_msg);
+	LOG_LN("%s", g_core_dump_msg);
+	if (trader_handler != NULL) delete trader_handler;
+	exit(1);
+}
 
 int main(int argc, char **argv)
 {
 	PRINT_INFO("Welcome to Poincare Trader!");
+	signal(SIGSEGV, recv_signal);
+	signal(SIGABRT, recv_signal);
+	signal(SIGINT, recv_signal);
 
 	TraderConfig trader_config = { 0 };
 	read_json_config(trader_config);
@@ -33,8 +46,8 @@ int main(int argc, char **argv)
 		sleep(1);
 	}
 
-	trader_handler->init_strategy();
-	TraderApi->Join();
+	trader_handler->init_strategy(); // Will block waitting redis
+	//TraderApi->Join();
 
 	free_config(trader_config);
 	flush_log();

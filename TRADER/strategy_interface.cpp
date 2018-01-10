@@ -196,6 +196,7 @@ int my_on_timer(int type, int length, void *info) {
 void my_destroy() {
 	LOG_LN("It is finished!");
 	st_destroy();
+	st_flush_log();
 	if (st_log_handle != NULL) {
 		fwrite(st_log_buffer, st_log_buffer_len, 1, st_log_handle);
 		fclose(st_log_handle);

@@ -104,7 +104,10 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 
 Trader_Handler::~Trader_Handler()
 {
-	my_destroy();
+	if (m_init_flag)
+		my_destroy();
+	else
+		flush_log();
 	delete m_orders;
 	delete g_redis_handler;
 	delete g_redis_contract;

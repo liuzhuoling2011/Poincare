@@ -133,4 +133,7 @@ inline void create_dir(const char *path) {
 	if (ACCESS(path, 0) != 0) MKDIR(path);
 }
 
+void popen_coredump_fp(FILE **fp);
+
+void dump_backtrace(char * core_dump_msg);
 #endif

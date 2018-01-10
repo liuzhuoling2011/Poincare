@@ -1,4 +1,5 @@
 ﻿#include <iconv.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <ctime>
@@ -629,4 +630,34 @@ int get_seconds_from_char_time(char * time_str)
 
 int reverse_index(uint64_t ord_id) {
 	return ord_id / 10000000000;
+}
+
+void popen_coredump_fp(FILE ** fp)
+{
+	char buf[8192];
+	pid_t dying_pid = getpid();
+	sprintf(buf, "gdb -p %d -batch -ex bt 2>/dev/null | "
+		"sed '0,/<signal handler/d'", dying_pid);
+	*fp = popen(buf, "r");
+	if (*fp == NULL) {
+		perror("popen coredump file failed");
+		exit(1);
+	}
+}
+
+void dump_backtrace(char * core_dump_msg)
+{
+	int len;
+	FILE *fp = NULL;
+	char rbuf[512], msg_buf[8192] = { 0 };
+	char *wbuf = msg_buf;
+	popen_coredump_fp(&fp);
+	while (fgets(rbuf, sizeof(rbuf) - 1, fp)) {
+		len = strlen(rbuf);
+		strcpy(wbuf, rbuf);
+		wbuf += len;
+	}
+	pclose(fp);
+	core_dump_msg[0] = '\n';
+	strlcpy(core_dump_msg + 1, msg_buf, strlen(msg_buf));
 }
