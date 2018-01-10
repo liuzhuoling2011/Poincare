@@ -54,6 +54,14 @@ public:
 	//错误应答
 	virtual void OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
+	//报单录入错误回报
+	virtual void OnErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder,
+		CThostFtdcRspInfoField *pRspInfo);
+
+	//报单操作错误回报
+	virtual void OnErrRtnOrderAction(CThostFtdcOrderActionField *pOrderAction,
+		CThostFtdcRspInfoField *pRspInfo);
+
 	//报单录入请求
 	int send_single_order(order_t *order);
 

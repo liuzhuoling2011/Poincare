@@ -611,7 +611,7 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 		PRINT_SUCCESS("%s", g_ss.str().c_str());
 		g_ss.str("");
 	}
-	
+	flush_log();
 }
 
 int Trader_Handler::cancel_single_order(order_t * order)
@@ -697,6 +697,7 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 	}
+	flush_log();
 }
 
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
@@ -772,6 +773,7 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		PRINT_SUCCESS("%s", g_ss.str().c_str());
 		g_ss.str("");
 	}
+	flush_log();
 }
 
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
@@ -823,6 +825,7 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		PRINT_SUCCESS("%s", g_ss.str().c_str());
 		g_ss.str("");
 	}
+	flush_log();
 }
 
 int Trader_Handler::st_idle()
@@ -842,6 +845,27 @@ void Trader_Handler::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID
 		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
 	}
+	flush_log();
+}
+
+void Trader_Handler::OnErrRtnOrderInsert(CThostFtdcInputOrderField * pInputOrder, CThostFtdcRspInfoField * pRspInfo)
+{
+	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+	}
+	flush_log();
+}
+
+void Trader_Handler::OnErrRtnOrderAction(CThostFtdcOrderActionField * pOrderAction, CThostFtdcRspInfoField * pRspInfo)
+{
+	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
+		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
+		PRINT_ERROR("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+		LOG_LN("ErrorID = %d, ErrorMsg = %s", pRspInfo->ErrorID, ERROR_MSG);
+	}
+	flush_log();
 }
 
 CThostFtdcInputOrderField & Trader_Handler::get_order_info(uint64_t order_id)
