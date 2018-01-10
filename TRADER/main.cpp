@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	PRINT_INFO("Welcome to Poincare Trader!");
 	signal(SIGSEGV, recv_signal);
 	signal(SIGABRT, recv_signal);
-	signal(SIGINT, recv_signal);
+	//signal(SIGINT, recv_signal);
 
 	TraderConfig trader_config = { 0 };
 	read_json_config(trader_config);
