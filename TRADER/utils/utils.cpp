@@ -51,6 +51,20 @@ int convert_open_close_flag(char openclose)
 	return UNDEFINED_OPEN_CLOSE;
 }
 
+int convert_order_open_close_flag(char openclose)
+{
+	switch (openclose) {
+		case THOST_FTDC_OF_Open:
+			return ORDER_OPEN;
+		case THOST_FTDC_OF_CloseToday:
+			return ORDER_CLOSE;
+		case THOST_FTDC_OF_Close:
+			return ORDER_CLOSE_YES;
+		default: break;
+	}
+	return UNDEFINED_OPEN_CLOSE;
+}
+
 ORDER_STATUS convert_status(char status, char* entrust_no)
 {
 	switch(status) {

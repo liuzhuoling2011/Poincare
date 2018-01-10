@@ -707,11 +707,15 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		if (index == 0) {	//手工下单
 			index = hand_index;
 			cur_order_field.BusinessUnit[0] = SIG_STATUS_INIT;
+			cur_order_field.CombOffsetFlag[0] = 'u'; // open close undefine
 		}
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pOrder->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pOrder->Direction - '0';
-		g_resp_t.open_close = convert_open_close_flag(pOrder->CombOffsetFlag[0]);
+		if(cur_order_field.CombOffsetFlag[0] == 'u')
+			g_resp_t.open_close = convert_open_close_flag(pOrder->CombOffsetFlag[0]);
+		else
+			g_resp_t.open_close = convert_order_open_close_flag(cur_order_field.CombOffsetFlag[0]);
 		g_resp_t.exe_price = pOrder->LimitPrice;
 		g_resp_t.exe_volume = pOrder->VolumeTotalOriginal;
 		
@@ -780,12 +784,18 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pTrade->OrderRef];
 
 		int index = cur_order_field.RequestID;
-		if (index == 0) //手工下单
+		if (index == 0) {	//手工下单
 			index = hand_index++;
+			cur_order_field.CombOffsetFlag[0] = 'u'; // open close undefine
+		}
+
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pTrade->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pTrade->Direction - '0';
-		g_resp_t.open_close = convert_open_close_flag(pTrade->OffsetFlag);
+		if (cur_order_field.CombOffsetFlag[0] == 'u')
+			g_resp_t.open_close = convert_open_close_flag(pTrade->OffsetFlag);
+		else
+			g_resp_t.open_close = convert_order_open_close_flag(cur_order_field.CombOffsetFlag[0]);
 		g_resp_t.exe_price = pTrade->Price;
 		g_resp_t.exe_volume = pTrade->Volume;
 		g_resp_t.status = SIG_STATUS_SUCCEED;

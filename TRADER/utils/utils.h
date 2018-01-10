@@ -121,6 +121,8 @@ char get_exch_by_name(const char *name);
 
 int convert_open_close_flag(char openclose);
 
+int convert_order_open_close_flag(char openclose);
+
 ORDER_STATUS convert_status(char status, char* entrust_no);
 
 ORDER_STATUS get_final_status(ORDER_STATUS pre, ORDER_STATUS cur);
