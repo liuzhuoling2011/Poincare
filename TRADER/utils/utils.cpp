@@ -542,6 +542,7 @@ bool read_json_config(TraderConfig& trader_config) {
 	trader_config.TIME_INTERVAL = l_json["TIME_INTERVAL"].int_value();
 	strlcpy(trader_config.TRADER_LOG, l_json["TRADER_LOG"].string_value().c_str(), 256);
 	strlcpy(trader_config.STRAT_LOG, l_json["STRAT_LOG"].string_value().c_str(), 256);
+	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION"].bool_value();
 	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE"].bool_value();
 	trader_config.QUOTE_TYPE = l_json["QUOTE_TYPE"].int_value();
 

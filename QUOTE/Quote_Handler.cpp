@@ -25,7 +25,7 @@ bool update_future_quote(void* multi_quote) {
 		quote->bp_array[0], quote->bv_array[0], quote->bp_array[1], quote->bv_array[1], quote->bp_array[2], quote->bv_array[2], quote->bp_array[3], quote->bv_array[3], quote->bp_array[4], quote->bv_array[4],
 		quote->total_vol, quote->total_notional, quote->upper_limit_px, quote->lower_limit_px, quote->close_px, quote->settle_px);
 
-	for (int i = 1; i < 5; i++) {
+	for (int i = 0; i < 5; i++) {
 		g_f_book.bp_array[i] = quote->bp_array[i];
 		g_f_book.bv_array[i] = quote->bv_array[i];
 		g_f_book.ap_array[i] = quote->ap_array[i];

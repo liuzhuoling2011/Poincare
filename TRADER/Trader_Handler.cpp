@@ -179,8 +179,8 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 	if (pTradingAccount == NULL) return;
 	PRINT_DEBUG("%s %f %f %f %f %f %f %f", pTradingAccount->AccountID, pTradingAccount->Interest, pTradingAccount->Deposit, pTradingAccount->Withdraw, pTradingAccount->CurrMargin, pTradingAccount->CloseProfit, pTradingAccount->PositionProfit, pTradingAccount->Available);
 	strlcpy(g_config_t.accounts[0].account, pTradingAccount->AccountID, ACCOUNT_LEN);
-	g_config_t.accounts[0].cash_asset = pTradingAccount->Available; //to change
-	g_config_t.accounts[0].cash_available = pTradingAccount->Available;
+	g_config_t.accounts[0].cash_asset = 1000000;// pTradingAccount->Available; //to change
+	g_config_t.accounts[0].cash_available = 1000000;// pTradingAccount->Available;
 	g_config_t.accounts[0].currency = CNY;
 	g_config_t.accounts[0].exch_rate = 1.0;
 
@@ -213,7 +213,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			else if (pInvestorPositionDetail->Direction == TRADER_SELL)
 				contract_position->short_pos.push_back(*pInvestorPositionDetail);
 
-			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE == false) {
+			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION == false) {
 				bool find_instId = false;
 				for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 					if (my_strcmp(m_trader_config->INSTRUMENTS[i], pInvestorPositionDetail->InstrumentID) == 0) {	//合约已存在，已订阅过行情
@@ -291,6 +291,10 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 				contract_config.yesterday_pos.short_volume = yes_short_size;
 			}
 		}
+
+		if(m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION == true)
+			g_contract_config_hash.clear();
+			
 		for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 			char* l_symbol = m_trader_config->INSTRUMENTS[i];
 			if (!g_contract_config_hash.exist(l_symbol)) {
@@ -403,6 +407,9 @@ void Trader_Handler::push_contract_to_redis() {
 		contract_str += ',';
 		contract_str += m_trader_config->INSTRUMENTS[i];
 	}
+	PRINT_INFO("Contract to redis: %s", contract_str.c_str());
+	g_redis_contract->rpush((char*)contract_str.c_str());
+	g_redis_contract->rpush((char*)contract_str.c_str());
 	g_redis_contract->rpush((char*)contract_str.c_str());
 	g_redis_contract->rpush((char*)contract_str.c_str());
 }

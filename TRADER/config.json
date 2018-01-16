@@ -17,14 +17,15 @@
   "REDIS_QUOTE_CACHE": "redis_quote_cache",
   "REDIS_MULTI_QUOTE_CACHE": "redis_multi_quote_cache",
 
-  "INSTRUMENTS": [ "cu1802" ],
-  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": false,
+  "INSTRUMENTS": [ "zn1803" ],
+  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION": true,
+  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": true,
   "QUOTE_TYPE": 2, // 1 代表1档，2 代表多档
 
-  "STRAT_ID": 564335,
-  "STRAT_NAME": "taoli",
-  "STRAT_PATH": "./strategy.so",
-  "STRAT_EV": "./ev.txt",
+  "STRAT_ID": 1014,
+  "STRAT_NAME": "LUO01_01_20171218_007",
+  "STRAT_PATH": "./LUO01_01_20171218_007.so",
+  "STRAT_EV": "./ev_output_20180112_203367_day.csv",
   "STRAT_OUTPUT": "./output",
 
   "TRADER_LOG": "./logs/trader_[TIME].log",
