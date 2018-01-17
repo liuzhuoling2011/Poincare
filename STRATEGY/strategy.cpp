@@ -3,8 +3,14 @@
 #include "utils/log.h"
 #include "utils/utils.h"
 #include <quote_format_define.h>
+#include <stdio.h>
+#include <math.h>
+
+static int debugg = 1;
+static int zhuidan = 1;
 
 static SDPHandler *sdp_handler = NULL;
+
 static st_config_t *g_config = NULL;
 
 #include "utils/k.h"
@@ -12,22 +18,39 @@ static st_config_t *g_config = NULL;
 
 #define KDBLEN 1024
 
-#define SIMULATION 
+//#define SIMULATION 
 //#define BREAK_GO_ON 
+//
+
+#define MAX_DEAL_NUM 20
+#define PORT 5006
+
+
+static int CountTodayDeal = 0;
+
+
 
 static int count = 0;
 
 static int tick_time = 0;
-static int int_time = 0;
-static double last_ask_price;
+static int int_time = 0; 
+static double last_ask_price; 
 static double last_bid_price;
 static char local_time[64];
 
 
-static int kdb_handle = khpu("localhost", 5000, "");
+static int kdb_handle = khpu("localhost",PORT, "");
 static char kdb_sql[KDBLEN];
 static int RoundCount = 0;
 static int cuSignalcount = 0;
+
+
+
+//debug:
+
+static int flag1 = 1; static int flag2 = 0;
+
+FILE* pFile = NULL;
 
 
 
@@ -46,6 +69,13 @@ int my_st_init(int type, int length, void *cfg) {
 
 		LOG_LN("Strategy Init!");
 		g_config = (st_config_t *)cfg;
+		pFile = fopen(g_config->param_file_path,"r");
+		int port,ip;
+		fscanf(pFile,"%d",&port);
+		fscanf(pFile,"%d",&ip);
+		printf("PORT:%d,%d\n",port,ip);
+		fclose(pFile);
+		
 		char* account = g_config->accounts[0].account;
 		printf("Your accont cash is: %f\n", sdp_handler->get_account_cash(account));
 	}
@@ -72,9 +102,9 @@ void cancel_old_order(int tick_time) {
 	list_t *ord_list = sdp_handler->m_orders->get_order_by_side(ORDER_BUY);
 	list_for_each_prev_safe(pos, n, ord_list) {
 		l_ord = list_entry(pos, Order, pd_link);
-		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
-			PRINT_ERROR("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
-			LOG_LN("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 1) {
+			PRINT_ERROR("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			LOG_LN("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
 			sdp_handler->cancel_single_order(l_ord);
 		}
 	}
@@ -82,12 +112,19 @@ void cancel_old_order(int tick_time) {
 	ord_list = sdp_handler->m_orders->get_order_by_side(ORDER_SELL);
 	list_for_each_prev_safe(pos, n, ord_list) {
 		l_ord = list_entry(pos, Order, pd_link);
-		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
-			PRINT_ERROR("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
-			LOG_LN("Order in OrderList Waiting over 6 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 1) {
+			PRINT_ERROR("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			LOG_LN("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
 			sdp_handler->cancel_single_order(l_ord);
 		}
 	}
+}
+
+double Round(double price)
+{
+    double res = round(price*10)/10.0;
+    printf("before:%lf, after:%lf\n",price,res);
+    return res;
 }
 
 int my_on_book(int type, int length, void *book) {
@@ -107,21 +144,22 @@ int my_on_book(int type, int length, void *book) {
 
 	//当行情时间和本地时间相差5分钟，认为是无效行情，注意这里的时间已做过0点处理。
 	int l_local_time = get_seconds_from_char_time(local_time);
-	PRINT_INFO("tick_time:%d,local_time:%d", tick_time, l_local_time);
-	if (abs(l_local_time - tick_time) > 5 * 60) {
-		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, local_time, abs(l_local_time - tick_time));
-		return -1;
-	}
+	//PRINT_INFO("tick_time:%d,local_time:%d", tick_time, l_local_time);
+//	if (abs(l_local_time - tick_time) > 5 * 60) {
+//		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, local_time, abs(l_local_time - tick_time));
+//		return -1;
+//	}
 #endif
 
 	//过滤一些极端时间段
-	if (not_working_time(int_time)) return -1;
-	if (int_time < 40000000) int_time += 240000000;
-	if (is_working_time(int_time) == false)	return -1;
+//	if (not_working_time(int_time)) return -1;
+//	if (int_time < 40000000) int_time += 240000000;
+//	if (is_working_time(int_time) == false)	return -1;
 
-	last_ask_price = f_book->ap_array[0];
-	last_bid_price = f_book->bp_array[0];
+	last_ask_price = Round(f_book->ap_array[0]);
+	last_bid_price = Round(f_book->bp_array[0]);
 
+    printf("IH askprice:%lf, bidprice:%lf\n",last_ask_price,last_bid_price);
 	//将最新的行情推进kdb同时执行kdb策略代码
 	sprintf(kdb_sql, "ctpAskpx:%lf;ctpBidpx:%lf;", last_ask_price, last_bid_price);
 	k(kdb_handle, kdb_sql, (K)0);
@@ -132,6 +170,7 @@ int my_on_book(int type, int length, void *book) {
 		"ctpBidpx",
 		"ctpAskpx"
 	);
+    LOG_LN("kdb_sql:%s\n",kdb_sql);
 	k(-kdb_handle, kdb_sql, (K)0);
 
 	//为防止kdb中行情表格过大，每600个tick清理一次kdb表格。只保留2000行。
@@ -151,49 +190,107 @@ int my_on_book(int type, int length, void *book) {
 	for (int i = 0; i < col1_length->n; i++) {
 		//这是从kdb获取的四个东西。
 		int length = kI(col1_length)[i]; //长度，用于猝发是否产生信号
-		double bid1 = kF(col2_bid1)[i];  //bid price
-		double ask1 = kF(col3_ask1)[i];   //ask price
+		double bid1 = Round(kF(col2_bid1)[i]);  //bid price
+		double ask1 = Round( kF(col3_ask1)[i]);   //ask price
 		int signal = kI(col4_signal)[i];  //short or long
 		LOG_LN("KDB: %d %f %f %d", kI(col1_length)[i], kF(col2_bid1)[i],kF(col3_ask1)[i],kI(col4_signal)[i]);
+
+        //bid1 = last_bid_price ; 
+        //ask1  = last_ask_price ; 
+	printf("bid1:%f,ask1:%f\n",bid1,ask1);
+
+        int today_long_pos = long_position(instr) - instr->pre_long_position;
+        if (today_long_pos<0) today_long_pos=0;
+        int today_short_pos = short_position(instr) - instr->pre_short_position  ;
+        if (today_short_pos<0) today_short_pos=0;
+        LOG_LN("POSITION long:%d,short:%d,all:%d",today_long_pos,today_short_pos,today_long_pos + today_short_pos);
+	if (debugg ==0){
+		printf("LIVE\n");
 		if (RoundCount == 0) {
 			LOG_LN("enter if, length %d, RoundCount %d", length, RoundCount);
 			cuSignalcount = length;
 			RoundCount++;
 		}
-		else if (length > cuSignalcount) {
+		else if (length > cuSignalcount /*|| flag1*/) {
 			LOG_LN("enter elseif, length %d", length);
 			cuSignalcount = length;
 			//产生Short信号
-			if (signal == -1) {
+			if (signal == -1 /*count%30==0 && flag2 == 0*/) {
+				/*flag2 = 1;*/
 				LOG_LN("short %d", int_time);
 				if(instr->pre_long_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE_YES);
-				if(long_position(instr) - instr->pre_long_position > 0)
+				else if(long_position(instr) - instr->pre_long_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE);
 				sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_OPEN);
 			}
-			else if (signal == 1) {
+			else if (signal == 1 /*count%30==0 && flag2== 1*/) {
+				//flag2 = 0;
 				LOG_LN("long %d", int_time);
 				if (instr->pre_short_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE_YES);
-				if (short_position(instr) - instr->pre_short_position > 0)
+				else if (short_position(instr) - instr->pre_short_position > 0)
 					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE);
 				sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_OPEN);
 			}
 		}
 	}
+	else if (debugg ==1){
+		printf("DEBUG\n");
+		if (RoundCount == 0) {
+			LOG_LN("enter if, length %d, RoundCount %d", length, RoundCount);
+			cuSignalcount = length;
+			RoundCount++;
+		}
+		else if (length > cuSignalcount || flag1) {
+			bid1 = last_bid_price ; 
+			ask1  = last_ask_price ; 
+			if(zhuidan){
+			bid1 = last_bid_price+100 ; 
+			ask1  = last_ask_price-100; 
+			}
+			LOG_LN("enter elseif, length %d", length);
+			cuSignalcount = length;
+			//产生Short信号
+			if (/*signal == -1*/ count%30==0 && flag2 == 0) {
+				flag2 = 1;
+				LOG_LN("short %d", int_time);
+				if(instr->pre_long_position > 0)
+					sdp_handler->send_single_order(instr, instr->exch, bid1, 5, ORDER_SELL, ORDER_CLOSE_YES);
+				else if(long_position(instr) - instr->pre_long_position > 0)
+					sdp_handler->send_single_order(instr, instr->exch, bid1, 5, ORDER_SELL, ORDER_CLOSE);
+				sdp_handler->send_single_order(instr, instr->exch, bid1, 5, ORDER_SELL, ORDER_OPEN);
+			}
+			else if (/*signal == 1*/ count%30==0 && flag2== 1) {
+				flag2 = 0;
+				LOG_LN("long %d", int_time);
+				if (instr->pre_short_position > 0)
+					sdp_handler->send_single_order(instr, instr->exch, ask1, 5, ORDER_BUY, ORDER_CLOSE_YES);
+				else if (short_position(instr) - instr->pre_short_position > 0)
+					sdp_handler->send_single_order(instr, instr->exch, ask1, 5, ORDER_BUY, ORDER_CLOSE);
+				sdp_handler->send_single_order(instr, instr->exch, ask1, 5, ORDER_BUY, ORDER_OPEN);
+			}
+		}
+	}
+        
+	}
 	//释放 内存，从kdb获得的res 信号表。
 	r0(table);
 	return 0;
+
 }
+
+
 
 int my_on_response(int type, int length, void *resp) {
 	if (sdp_handler == NULL) return -1;
+	st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
+        Order* l_ord = NULL;
+       	l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
+	int leaves_temp = leaves_qty(l_ord);
 	sdp_handler->on_response(type, length, resp);
 
-	st_response_t* rsp = (st_response_t*)((st_data_t*)resp)->info;
 	Contract *instr = sdp_handler->find_contract(rsp->symbol);
-	Order* l_ord = NULL;
 
 	switch (rsp->status) {
 	case SIG_STATUS_PARTED:
@@ -201,16 +298,17 @@ int my_on_response(int type, int length, void *resp) {
 	case SIG_STATUS_SUCCEED:
 		break;
 	case SIG_STATUS_CANCEL_REJECTED:
+	case SIG_STATUS_REJECTED:
+		break;
 	case SIG_STATUS_CANCELED:
 		PRINT_WARN("[%d]Cancel Succeed!", int_time);
 		LOG_LN("[%d]Cancel Succeed!", int_time);
-	case SIG_STATUS_REJECTED:
 		PRINT_ERROR("Send order again");
 		LOG_LN("Send order again");
 		if(rsp->direction == ORDER_BUY)
-			sdp_handler->send_single_order(instr, instr->exch, last_ask_price, rsp->exe_volume, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
+			sdp_handler->send_single_order(instr, instr->exch, last_ask_price,leaves_temp, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
 		else
-			sdp_handler->send_single_order(instr, instr->exch, last_bid_price, rsp->exe_volume, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
+			sdp_handler->send_single_order(instr, instr->exch, last_bid_price,leaves_temp, (DIRECTION)rsp->direction, (OPEN_CLOSE)rsp->open_close);
 		break;
 	case SIG_STATUS_INTRREJECTED:
 		break;
@@ -219,7 +317,7 @@ int my_on_response(int type, int length, void *resp) {
 	case SIG_STATUS_ENTRUSTED:
 		PRINT_ERROR("[%d]Has Been in OrderList;Waiting Deal...",int_time);
 		LOG_LN("[%d]Has Been in OrderList;Waiting Deal...", int_time);
-		Order* l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
+		l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
 		if(l_ord != NULL)
 			l_ord->insert_time = int_time;
 		break;

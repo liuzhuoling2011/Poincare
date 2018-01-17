@@ -482,7 +482,8 @@ int Trader_Handler::send_single_order(order_t *order)
 	///投资者代码
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
-	sprintf(order_field.OrderRef, "%d%d%d", m_trader_info.FrontID, m_trader_info.SessionID, m_trader_info.MaxOrderRef);
+	int real_ref =m_trader_info.SessionID<0 ? -1*m_trader_info.SessionID:m_trader_info.SessionID;
+	sprintf(order_field.OrderRef, "%d%d%d", m_trader_info.FrontID, real_ref , m_trader_info.MaxOrderRef);
 	///用户代码
 	strcpy(order_field.UserID, m_trader_config->TUSER_ID);
 	///合约代码
@@ -717,8 +718,7 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if (pOrder) {
-		sprintf(order_ref_real, "%d%d%s", m_trader_info.FrontID, m_trader_info.SessionID, pOrder->OrderRef);
-		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[order_ref_real];
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pOrder->OrderRef];
 		
 		int index = cur_order_field.RequestID;
 		if (index == 0) {	//手工下单
@@ -798,8 +798,7 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
-		sprintf(order_ref_real, "%d%d%s", m_trader_info.FrontID, m_trader_info.SessionID, pTrade->OrderRef);
-		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[order_ref_real];
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pTrade->OrderRef];
 
 		int index = cur_order_field.RequestID;
 		if (index == 0) {	//手工下单
