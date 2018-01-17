@@ -20,11 +20,11 @@
   "INSTRUMENTS": [ "zn1803" ],
   "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION": true,
   "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": true,
-  "QUOTE_TYPE": 2, // 1 代表1档，2 代表多档
+  "QUOTE_TYPE": 1, // 1 代表1档，2 代表多档
 
   "STRAT_ID": 1014,
   "STRAT_NAME": "LUO01_01_20171218_007",
-  "STRAT_PATH": "./LUO01_01_20171218_007.so",
+  "STRAT_PATH": "./strategy.so",
   "STRAT_EV": "./ev_output_20180112_203367_day.csv",
   "STRAT_OUTPUT": "./output",
 

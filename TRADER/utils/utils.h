@@ -1,11 +1,11 @@
 #ifndef	_UTILS_H_
 #define	_UTILS_H_
 
-#include <string.h>
+#include <stdio.h>
+#include "ThostFtdcUserApiStruct.h"
+#include "quote_format_define.h"
 #include "CTP_define.h"
 #include "base_define.h"
-#include "quote_format_define.h"
-#include <ThostFtdcUserApiStruct.h>
 
 #define MAX(a,b)  ((a)>(b)?(a):(b))
 #define MIN(a,b)  ((a)>(b)?(b):(a))

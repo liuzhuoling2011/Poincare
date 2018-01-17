@@ -2,15 +2,16 @@
 #include "utils/utils.h"
 #include "utils/log.h"
 #include "utils/redis_handler.h"
+#include "quote_format_define.h"
+#include "strategy_interface.h"
 
 static Futures_Internal_Book g_f_book;
 static char ERROR_MSG[4096];
 
-RedisHandler *g_redis_handler = NULL;
-RedisList *g_redis_contract = NULL;
-RedisSubPub *g_redis_subpub = NULL;
-RedisList *g_redis_quote = NULL;
+extern RedisHandler *g_redis_handler;
 RedisList *g_redis_multi_quote = NULL;
+
+static st_data_t g_data;
 
 bool update_future_quote(void* multi_quote) {
 	Futures_Internal_Book *quote = (Futures_Internal_Book *)multi_quote;
@@ -42,19 +43,11 @@ Quote_Handler::Quote_Handler(CThostFtdcMdApi *md_api_, TraderConfig *trader_conf
 	m_md_api->RegisterSpi(this);
 	m_md_api->RegisterFront(m_trader_config->QUOTE_FRONT);
 	
-	g_redis_handler = new RedisHandler(m_trader_config->REDIS_IP, m_trader_config->REDIS_PORT);
-	g_redis_contract = new RedisList(g_redis_handler, m_trader_config->REDIS_CONTRACT);
-	g_redis_subpub = new RedisSubPub(g_redis_handler, m_trader_config->REDIS_QUOTE);
-	g_redis_quote = new RedisList(g_redis_handler, m_trader_config->REDIS_QUOTE_CACHE);
-	g_redis_multi_quote = new RedisList(g_redis_handler, m_trader_config->REDIS_MULTI_QUOTE_CACHE);
+	g_data.info = &g_f_book;
 }
 
 Quote_Handler::~Quote_Handler()
 {
-	delete g_redis_handler;
-	delete g_redis_contract;
-	delete g_redis_subpub;
-	delete g_redis_quote;
 	delete g_redis_multi_quote;
 	m_md_api->Release();
 }
@@ -89,27 +82,11 @@ void Quote_Handler::OnRspUserLogin(
 	}
 
 	PRINT_SUCCESS("Login quote front successful!");
-	
-	printf("Wait for contract info from redis...\n");
-	char* contract = g_redis_contract->blpop();
-	int begin = 0, instr_count = 0;
-	for (int i = 0; i < strlen(contract); i++) {
-		if(contract[i] == ',') {
-			m_trader_config->INSTRUMENTS[instr_count] = (char *)malloc(64 * sizeof(char));
-			strlcpy(m_trader_config->INSTRUMENTS[instr_count], contract + begin, i - begin + 1);
-			instr_count++;
-			begin = i + 1;
-		}
-	}
-
-	m_trader_config->INSTRUMENTS[instr_count] = (char *)malloc(64 * sizeof(char));
-	strlcpy(m_trader_config->INSTRUMENTS[instr_count], contract + begin, 64);
-	instr_count++;
-
-	m_trader_config->INSTRUMENT_COUNT = instr_count;
-	g_redis_contract->freeStr();
 
 	m_md_api->SubscribeMarketData(m_trader_config->INSTRUMENTS, m_trader_config->INSTRUMENT_COUNT);
+	if (m_trader_config->QUOTE_TYPE == 2) {
+		g_redis_multi_quote = new RedisList(g_redis_handler, m_trader_config->REDIS_MULTI_QUOTE_CACHE);
+	}
 }
 
 void Quote_Handler::OnRspSubMarketData(
@@ -134,9 +111,10 @@ void Quote_Handler::OnRtnDepthMarketData(
 		if (multi_quote != NULL) {
 			update_future_quote(multi_quote);
 		}
-	}//else if(m_trader_config->QUOTE_TYPE == 1) { }
-	g_redis_quote->rpush_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
-	g_redis_subpub->publish_binary((char*)&g_f_book, sizeof(Futures_Internal_Book));
+		g_redis_multi_quote->freeStr();
+	}
+
+	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data);
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)

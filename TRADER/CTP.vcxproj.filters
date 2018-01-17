@@ -48,6 +48,9 @@
     <ClInclude Include="utils\json11.hpp">
       <Filter>头文件\utils</Filter>
     </ClInclude>
+    <ClInclude Include="Quote_Handler.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -73,6 +76,9 @@
     </ClCompile>
     <ClCompile Include="utils\utils.cpp">
       <Filter>源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Quote_Handler.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

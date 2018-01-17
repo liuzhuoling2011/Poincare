@@ -7,6 +7,7 @@
 #include "order_hash.h"
 #include "utils.h"
 #include "log.h"
+#include "string.h"
 
 #define HASH_ORDER_SIZE	  (4096)
 #define MAX_ORDER_SIZE	  (4096)

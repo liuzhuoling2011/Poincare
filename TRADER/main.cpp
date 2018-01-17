@@ -1,5 +1,6 @@
 #include <signal.h>
 #include "Trader_Handler.h"
+#include "Quote_Handler.h"
 #include "utils/log.h"		 
 #include "utils/utils.h"
 
@@ -14,6 +15,7 @@
 extern FILE* log_handle;
 
 Trader_Handler *trader_handler;
+Quote_Handler  *quote_handler;
 char g_core_dump_msg[8192];
 
 void recv_signal(int sig) {
@@ -38,16 +40,14 @@ int main(int argc, char **argv)
 		log_handle = fopen(trader_config.TRADER_LOG, "w");
 	}
 
+	CThostFtdcMdApi *QuoteApi = CThostFtdcMdApi::CreateFtdcMdApi("tmp/marketdata", false);
+	quote_handler = new Quote_Handler(QuoteApi, &trader_config);
+
 	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/trader");
 	trader_handler = new Trader_Handler(TraderApi, &trader_config);
 
-	while(trader_handler->m_init_flag == false) {
-		PRINT_DEBUG("Main thread is waiting...");
-		sleep(1);
-	}
-
-	trader_handler->init_strategy(); // Will block waitting redis
-	//TraderApi->Join();
+	TraderApi->Join();
+	QuoteApi->Join();
 
 	free_config(trader_config);
 	flush_log();

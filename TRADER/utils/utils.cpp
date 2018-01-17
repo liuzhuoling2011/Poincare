@@ -1,10 +1,10 @@
 ﻿#include <iconv.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <ctime>
 #include <fstream>
 #include <sstream>
+#include <string.h>
 #include "utils.h"
 #include "log.h"
 #include "json11.hpp"

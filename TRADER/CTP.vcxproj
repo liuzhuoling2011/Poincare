@@ -114,6 +114,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Quote_Handler.h" />
     <ClInclude Include="Trader_Handler.h" />
     <ClInclude Include="utils\json11.hpp" />
     <ClInclude Include="utils\list.h" />
@@ -126,6 +127,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Quote_Handler.cpp" />
     <ClCompile Include="strategy_interface.cpp" />
     <ClCompile Include="Trader_Handler.cpp" />
     <ClCompile Include="utils\json11.cpp" />

@@ -42,6 +42,7 @@ public:
 	void rpush(char* value);
 	void rpush_binary(char* value, int length);
 	char* blpop();
+	char* last_item();
 	void clear();
 	void freeStr();
 private:

@@ -5,6 +5,7 @@
 #include "utils/redis_handler.h"
 #include "strategy_interface.h"
 #include "Trader_Handler.h"
+#include "Quote_Handler.h"
 
 using namespace std;
 
@@ -48,10 +49,10 @@ MyHash<contract_t>::Iterator g_iter;
 
 RedisHandler *g_redis_handler = NULL;
 RedisList *g_redis_contract = NULL;
-RedisSubPub *g_redis_quote = NULL;
 typedef void(*feed_quote_func)(char *data);
 
 extern Trader_Handler *g_trader_handler;
+extern Quote_Handler *quote_handler;
 
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
 	// 保存会话参数
@@ -90,10 +91,11 @@ Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* tra
 	m_trader_api->RegisterFront(m_trader_config->TRADER_FRONT);		// connect
 	m_orders = new MyHash<CThostFtdcInputOrderField>(2000);
 
-	g_redis_handler = new RedisHandler(m_trader_config->REDIS_IP, m_trader_config->REDIS_PORT);
-	g_redis_contract = new RedisList(g_redis_handler, m_trader_config->REDIS_CONTRACT);
-	g_redis_quote = new RedisSubPub(g_redis_handler, m_trader_config->REDIS_QUOTE);
-
+	if(m_trader_config->QUOTE_TYPE == 2) {
+		g_redis_handler = new RedisHandler(m_trader_config->REDIS_IP, m_trader_config->REDIS_PORT);
+		g_redis_contract = new RedisList(g_redis_handler, m_trader_config->REDIS_CONTRACT);
+	}
+	
 	g_trader_handler = this;
 
 	m_trader_api->Init();
@@ -109,9 +111,10 @@ Trader_Handler::~Trader_Handler()
 	else
 		flush_log();
 	delete m_orders;
-	delete g_redis_handler;
-	delete g_redis_contract;
-	delete g_redis_quote;
+	if (m_trader_config->QUOTE_TYPE == 2) {
+		delete g_redis_handler;
+		delete g_redis_contract;
+	}
 	m_trader_api->Release();
 }
 
@@ -395,6 +398,7 @@ void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommis
 			g_config_t.contracts[index++] = iter->second;
 		}
 		m_init_flag = true;
+		init_strategy();
 	}
 }
 
@@ -408,9 +412,6 @@ void Trader_Handler::push_contract_to_redis() {
 		contract_str += m_trader_config->INSTRUMENTS[i];
 	}
 	PRINT_INFO("Contract to redis: %s", contract_str.c_str());
-	g_redis_contract->rpush((char*)contract_str.c_str());
-	g_redis_contract->rpush((char*)contract_str.c_str());
-	g_redis_contract->rpush((char*)contract_str.c_str());
 	g_redis_contract->rpush((char*)contract_str.c_str());
 }
 
@@ -443,9 +444,11 @@ void Trader_Handler::init_strategy()
 			l_config_instr.fee.fee_by_lot, l_config_instr.fee.exchange_fee, l_config_instr.fee.yes_exchange_fee, l_config_instr.fee.broker_fee, l_config_instr.fee.stamp_tax, l_config_instr.fee.acc_transfer_fee, l_config_instr.tick_size, l_config_instr.multiple);
 	}
 
-	push_contract_to_redis();
+	if(m_trader_config->QUOTE_TYPE == 2) {
+		push_contract_to_redis();
+	}
 
-	g_redis_quote->listen(feed_quote_to_strategy);
+	quote_handler->Init();
 }
 
 void Trader_Handler::ReqQryInvestorPosition()

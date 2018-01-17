@@ -66,6 +66,7 @@ class Quote_Handler : public CThostFtdcMdSpi
 	virtual void
 	OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
+	void Init() { m_md_api->Init(); }
 	
   private:
 	int requestId = 0;
