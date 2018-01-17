@@ -31,7 +31,9 @@ static contract_t empty_contract_t = { 0 };
 static st_config_t g_config_t = { 0 };
 static st_response_t g_resp_t = { 0 };
 static st_data_t g_data_t = { 0 };
-static int g_sig_count = 0;
+
+static char order_ref_real[13];
+static int  g_sig_count = 0;
 static char ERROR_MSG[512];
 const static char STATUS[][64] = { "SUCCEED", "ENTRUSTED", "PARTED", "CANCELED", "REJECTED", "CANCEL_REJECTED", "INTRREJECTED", "UNDEFINED_STATUS" };
 
@@ -480,7 +482,7 @@ int Trader_Handler::send_single_order(order_t *order)
 	///投资者代码
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
-	sprintf(order_field.OrderRef, "%d", m_trader_info.MaxOrderRef);
+	sprintf(order_field.OrderRef, "%d%d%d", m_trader_info.FrontID, m_trader_info.SessionID, m_trader_info.MaxOrderRef);
 	///用户代码
 	strcpy(order_field.UserID, m_trader_config->TUSER_ID);
 	///合约代码
@@ -570,7 +572,8 @@ int Trader_Handler::send_single_order(order_t *order)
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrder) {
-		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pInputOrder->OrderRef];
+		sprintf(order_ref_real, "%d%d%s", m_trader_info.FrontID, m_trader_info.SessionID, pInputOrder->OrderRef);
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[order_ref_real];
 		
 		int index = cur_order_field.RequestID;
 		if (index == 0) {	//手工下单
@@ -714,7 +717,8 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if (pOrder) {
-		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pOrder->OrderRef];
+		sprintf(order_ref_real, "%d%d%s", m_trader_info.FrontID, m_trader_info.SessionID, pOrder->OrderRef);
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[order_ref_real];
 		
 		int index = cur_order_field.RequestID;
 		if (index == 0) {	//手工下单
@@ -794,7 +798,8 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
-		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pTrade->OrderRef];
+		sprintf(order_ref_real, "%d%d%s", m_trader_info.FrontID, m_trader_info.SessionID, pTrade->OrderRef);
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[order_ref_real];
 
 		int index = cur_order_field.RequestID;
 		if (index == 0) {	//手工下单
@@ -851,7 +856,7 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 
 int Trader_Handler::st_idle()
 {
-	my_on_timer(DEFAULT_TIMER, 0, NULL);
+	return my_on_timer(DEFAULT_TIMER, 0, NULL);
 }
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
