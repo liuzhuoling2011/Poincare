@@ -32,7 +32,6 @@ static st_config_t g_config_t = { 0 };
 static st_response_t g_resp_t = { 0 };
 static st_data_t g_data_t = { 0 };
 
-static char order_ref_real[13];
 static int  g_sig_count = 0;
 static char ERROR_MSG[512];
 const static char STATUS[][64] = { "SUCCEED", "ENTRUSTED", "PARTED", "CANCELED", "REJECTED", "CANCEL_REJECTED", "INTRREJECTED", "UNDEFINED_STATUS" };
@@ -60,6 +59,8 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	// 保存会话参数
 	info.FrontID = pRspUserLogin->FrontID;
 	info.SessionID = pRspUserLogin->SessionID;
+	PRINT_INFO("FrontID: %d SessionID: %d", info.FrontID, info.SessionID);
+
 	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
 	info.MaxOrderRef = iNextOrderRef++;
 	strlcpy(info.TradingDay, pRspUserLogin->TradingDay, TRADING_DAY_LEN);
@@ -482,8 +483,7 @@ int Trader_Handler::send_single_order(order_t *order)
 	///投资者代码
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
-	int real_ref =m_trader_info.SessionID<0 ? -1*m_trader_info.SessionID:m_trader_info.SessionID;
-	sprintf(order_field.OrderRef, "%d%d%d", m_trader_info.FrontID, real_ref , m_trader_info.MaxOrderRef);
+	sprintf(order_field.OrderRef, "%d", m_trader_info.MaxOrderRef);
 	///用户代码
 	strcpy(order_field.UserID, m_trader_config->TUSER_ID);
 	///合约代码
@@ -573,8 +573,13 @@ int Trader_Handler::send_single_order(order_t *order)
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrder) {
-		sprintf(order_ref_real, "%d%d%s", m_trader_info.FrontID, m_trader_info.SessionID, pInputOrder->OrderRef);
-		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[order_ref_real];
+		if (!m_orders->exist(pInputOrder->OrderRef)) {
+			PRINT_ERROR("Can't find the order");
+			LOG_LN("Can't find the order");
+			return;
+		}
+
+		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pInputOrder->OrderRef];
 		
 		int index = cur_order_field.RequestID;
 		if (index == 0) {	//手工下单
@@ -688,6 +693,8 @@ int Trader_Handler::cancel_single_order(order_t * order)
 void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrderAction) {
+		if (!is_my_order(pInputOrderAction->FrontID, pInputOrderAction->SessionID)) return;
+
 		g_ss << "--->>> OnRspOrderAction" << endl;
 		g_ss << "经纪公司代码 " << pInputOrderAction->BrokerID << endl;
 		g_ss << "投资者代码 " << pInputOrderAction->InvestorID << endl;
@@ -718,6 +725,8 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if (pOrder) {
+		if (!is_my_order(pOrder->FrontID, pOrder->SessionID)) return;
+
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pOrder->OrderRef];
 		
 		int index = cur_order_field.RequestID;
@@ -798,6 +807,12 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
+		if (!m_orders->exist(pTrade->OrderRef)) {
+			PRINT_ERROR("Can't find the order");
+			LOG_LN("Can't find the order");
+			return;
+		}
+
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pTrade->OrderRef];
 
 		int index = cur_order_field.RequestID;
@@ -856,6 +871,11 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 int Trader_Handler::st_idle()
 {
 	return my_on_timer(DEFAULT_TIMER, 0, NULL);
+}
+
+bool Trader_Handler::is_my_order(int front_id, int session_id)
+{
+	return (front_id == m_trader_info.FrontID && session_id == m_trader_info.SessionID);
 }
 
 void Trader_Handler::OnFrontDisconnected(int nReason)

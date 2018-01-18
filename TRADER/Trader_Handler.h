@@ -88,6 +88,8 @@ private:
 	//策略定时任务
 	int st_idle();
 
+	bool is_my_order(int front_id, int session_id);
+
 	CThostFtdcInputOrderField& get_order_info(uint64_t order_id);
 
 public:
