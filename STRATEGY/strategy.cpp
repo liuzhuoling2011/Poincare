@@ -39,7 +39,7 @@ static double last_bid_price;
 static char local_time[64];
 
 
-static int kdb_handle = khpu("localhost",PORT, "");
+static int kdb_handle = khpu("192.168.1.22",PORT, "");
 static char kdb_sql[KDBLEN];
 static int RoundCount = 0;
 static int cuSignalcount = 0;

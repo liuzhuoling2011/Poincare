@@ -231,6 +231,23 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 	if (pInvestorPositionDetail) {
 		// 对于所有合约，不保存已平仓的，只保存未平仓的
 		if (pInvestorPositionDetail->Volume > 0) {
+			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION == true) {
+				bool l_is_find = false;
+				for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
+					char* l_symbol = m_trader_config->INSTRUMENTS[i];
+					if(strcmp(l_symbol, pInvestorPositionDetail->InstrumentID) == 0) {
+						l_is_find = true;
+						break;
+					}
+				}
+				if (l_is_find == false) {
+					if(!bIsLast) 
+						return;
+					else 
+						goto Calculate;
+				}
+				if (l_is_find == false && bIsLast) return;
+			}
 			ContractPosition* &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
 			if (contract_position == NULL) contract_position = new ContractPosition();
 
@@ -254,6 +271,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 		}
 	}
 
+Calculate:
 	if (bIsLast) {
 		for (auto iter = g_contract_pos_hash.begin(); iter != g_contract_pos_hash.end(); iter++) {
 			contract_t& contract_config = g_contract_config_hash[iter->first];
@@ -317,14 +335,11 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 				contract_config.yesterday_pos.short_volume = yes_short_size;
 			}
 		}
-
-		if(m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION == true)
-			g_contract_config_hash.clear();
 			
 		for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 			char* l_symbol = m_trader_config->INSTRUMENTS[i];
 			if (!g_contract_config_hash.exist(l_symbol)) {
-				g_contract_config_hash.insert(l_symbol, empty_contract_t);
+				g_contract_config_hash.insert(l_symbol, empty_contract_t); 
 			}
 		}
 
