@@ -52,4 +52,6 @@ struct TraderInfo
 {
     int FrontID;	//前置编号	int SessionID;	//会话编号
 	int MaxOrderRef;	//报单引用
-	char TradingDay[TRADING_DAY_LEN]; //当前交易日	char LoginTime[TRADING_DAY_LEN]; //当前登陆时间};
+	char TradingDay[TRADING_DAY_LEN]; //当前交易日	char LoginTime[TRADING_DAY_LEN]; //当前登陆时间
+	long long START_TIME_STAMP;
+	int SELF_CODE;};

@@ -1,6 +1,7 @@
 #include <string.h>
 #include <sstream>
 #include <stdint.h>
+#include <time.h>
 #include "utils/log.h"
 #include "utils/redis_handler.h"
 #include "strategy_interface.h"
@@ -55,11 +56,16 @@ typedef void(*feed_quote_func)(char *data);
 extern Trader_Handler *g_trader_handler;
 extern Quote_Handler *quote_handler;
 
+time_t rawtime;
+tm timeinfo = { 0 };
+
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
 	// 保存会话参数
-	info.FrontID = pRspUserLogin->FrontID;
-	info.SessionID = pRspUserLogin->SessionID;
-	PRINT_INFO("FrontID: %d SessionID: %d", info.FrontID, info.SessionID);
+	info.FrontID = pRspUserLogin->FrontID < 0 ? -1 * pRspUserLogin->FrontID : pRspUserLogin->FrontID;
+	info.SessionID = pRspUserLogin->SessionID < 0 ? -1 * pRspUserLogin->SessionID : pRspUserLogin->SessionID;
+	info.SELF_CODE = (info.SessionID + info.FrontID) % 99;
+	PRINT_INFO("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
+	LOG_LN("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
 
 	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
 	info.MaxOrderRef = iNextOrderRef++;
@@ -74,10 +80,24 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 		} else
 			break;
 	}
-	if (hour > 8 && hour < 19)
+
+	time(&rawtime);
+	tm * tmp_time = localtime(&rawtime);
+
+	timeinfo = *tmp_time;
+	timeinfo.tm_min = 0;
+	timeinfo.tm_sec = 0;
+
+	if (hour > 8 && hour < 19) {
 		g_config_t.day_night = DAY;
-	else
+		timeinfo.tm_hour = 9;
+	}
+	else {
 		g_config_t.day_night = NIGHT;
+		timeinfo.tm_hour = 21;
+	}
+	info.START_TIME_STAMP = mktime(&timeinfo);
+	PRINT_INFO("Current time stamp: %lld", info.START_TIME_STAMP);
 }
 
 void feed_quote_to_strategy(char* f_quote) {
@@ -483,7 +503,10 @@ int Trader_Handler::send_single_order(order_t *order)
 	///投资者代码
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
-	sprintf(order_field.OrderRef, "%d", m_trader_info.MaxOrderRef);
+	time(&rawtime);
+	int real_order_ref = (rawtime - m_trader_info.START_TIME_STAMP) * 100 + m_trader_info.SELF_CODE;
+	sprintf(order_field.OrderRef, "%d", real_order_ref);
+
 	///用户代码
 	strcpy(order_field.UserID, m_trader_config->TUSER_ID);
 	///合约代码
@@ -875,7 +898,9 @@ int Trader_Handler::st_idle()
 
 bool Trader_Handler::is_my_order(int front_id, int session_id)
 {
-	return (front_id == m_trader_info.FrontID && session_id == m_trader_info.SessionID);
+	int front_tmp = front_id < 0 ? -1 * front_id : front_id;
+	int session_tmp = session_id < 0 ? -1 * session_id : session_id;
+	return (front_tmp == m_trader_info.FrontID && session_tmp == m_trader_info.SessionID);
 }
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
