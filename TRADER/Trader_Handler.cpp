@@ -246,7 +246,6 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					else 
 						goto Calculate;
 				}
-				if (l_is_find == false && bIsLast) return;
 			}
 			ContractPosition* &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
 			if (contract_position == NULL) contract_position = new ContractPosition();
@@ -519,7 +518,7 @@ int Trader_Handler::send_single_order(order_t *order)
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
 	time(&rawtime);
-	int real_order_ref = (rawtime - m_trader_info.START_TIME_STAMP) * 100 + m_trader_info.SELF_CODE;
+	int real_order_ref = (rawtime - m_trader_info.START_TIME_STAMP) * 100 + m_trader_info.SELF_CODE + g_sig_count;
 	sprintf(order_field.OrderRef, "%d", real_order_ref);
 
 	///用户代码
