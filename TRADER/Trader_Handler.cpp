@@ -1,7 +1,6 @@
 #include <string.h>
-#include <sstream>
 #include <stdint.h>
-#include <time.h>
+#include <sys/time.h>
 #include "utils/log.h"
 #include "utils/redis_handler.h"
 #include "strategy_interface.h"
@@ -22,7 +21,6 @@ using namespace std;
 #define ACC_TRANSFER_FEE 0.00002
 #define SERIAL_NO_MULTI 10000000000
 
-static stringstream g_ss;					
 static int hand_index = 100; //手工下单
 
 extern char g_strategy_path[256];
@@ -35,6 +33,7 @@ static st_data_t g_data_t = { 0 };
 
 static int  g_sig_count = 0;
 static char ERROR_MSG[512];
+static char BUFFER_MSG[2048];
 const static char STATUS[][64] = { "SUCCEED", "ENTRUSTED", "PARTED", "CANCELED", "REJECTED", "CANCEL_REJECTED", "INTRREJECTED", "UNDEFINED_STATUS" };
 
 typedef MyArray<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
@@ -58,6 +57,7 @@ extern Quote_Handler *quote_handler;
 
 time_t rawtime;
 tm timeinfo = { 0 };
+timeval current_time = { 0 };
 
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
 	// 保存会话参数
@@ -65,7 +65,7 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	info.SessionID = pRspUserLogin->SessionID;
 	int temp_front = pRspUserLogin->FrontID < 0 ? -1 * pRspUserLogin->FrontID : pRspUserLogin->FrontID;
 	int SessionID = pRspUserLogin->SessionID < 0 ? -1 * pRspUserLogin->SessionID : pRspUserLogin->SessionID;
-	info.SELF_CODE = (info.SessionID + info.FrontID) % 99;
+	info.SELF_CODE = (temp_front + SessionID) % 99;
 	PRINT_INFO("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
 	LOG_LN("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
 
@@ -100,12 +100,6 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	}
 	info.START_TIME_STAMP = mktime(&timeinfo);
 	PRINT_INFO("Current time stamp: %lld", info.START_TIME_STAMP);
-}
-
-void feed_quote_to_strategy(char* f_quote) {
-	Futures_Internal_Book *quote = (Futures_Internal_Book *)f_quote;
-	g_data_t.info = (void*)quote;
-	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data_t);
 }
 
 Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config)
@@ -519,8 +513,8 @@ int Trader_Handler::send_single_order(order_t *order)
 	///投资者代码
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
-	time(&rawtime);
-	int real_order_ref = (rawtime - m_trader_info.START_TIME_STAMP) * 100 + m_trader_info.SELF_CODE + g_sig_count;
+	gettimeofday(&current_time, NULL);
+	int real_order_ref = ((current_time.tv_sec - m_trader_info.START_TIME_STAMP) * 1000+ current_time.tv_sec / 1000) * 100 + m_trader_info.SELF_CODE + g_sig_count;
 	sprintf(order_field.OrderRef, "%d", real_order_ref);
 
 	///用户代码
@@ -533,7 +527,7 @@ int Trader_Handler::send_single_order(order_t *order)
 	else
 		order_field.OrderPriceType = THOST_FTDC_OPT_AnyPrice; //市价单
 	///买卖方向
-	order_field.Direction = order->direction == ORDER_BUY ? '0' : '1';
+	order_field.Direction = order->direction == ORDER_BUY ? THOST_FTDC_DEN_Buy : THOST_FTDC_DEN_Sell;
 	///组合开平标志: 开仓  for SHFE
 	if (order->open_close == ORDER_OPEN)
 		order_field.CombOffsetFlag[0] = THOST_FTDC_OF_Open;
@@ -572,36 +566,26 @@ int Trader_Handler::send_single_order(order_t *order)
 	order_field.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
 	///自动挂起标志: 否
 	order_field.IsAutoSuspend = 0;
-	///业务单元	用于保存订单状态
+	///业务单元, 用于保存订单状态
 	order_field.BusinessUnit[0] = UNDEFINED_STATUS;
 	///请求编号, 记录订单序号
 	order_field.RequestID = reverse_index(order->order_id);
 	///用户强评标志: 否
 	order_field.UserForceClose = 0;
 
-	m_orders->insert_current_node(order_field.OrderRef);
+	m_orders->insert_current_node(order_field.OrderRef); 
 
-	g_ss << "<<<>>> OrderInsert" << endl;
-	g_ss << "经纪公司代码 " << order_field.BrokerID << endl;
-	g_ss << "投资者代码 " << order_field.InvestorID << endl;
-	g_ss << "合约代码 " << order_field.InstrumentID << endl;
-	g_ss << "报单引用 " << order_field.OrderRef << endl;
-	g_ss << "用户代码 " << order_field.UserID << endl;
-	g_ss << "报单价格条件 " << order_field.OrderPriceType << endl;
-	g_ss << "买卖方向 " << order_field.Direction << endl;
-	g_ss << "组合开平标志 " << order_field.CombOffsetFlag << endl;
-	g_ss << "组合投机套保标志 " << order_field.CombHedgeFlag << endl;
-	g_ss << "价格 " << order_field.LimitPrice << endl;
-	g_ss << "数量 " << order_field.VolumeTotalOriginal << endl;
-	g_ss << "有效期类型 " << order_field.TimeCondition << endl;
-	g_ss << "成交量类型 " << order_field.VolumeCondition << endl;
-	g_ss << "最小成交量 " << order_field.MinVolume << endl;
-	g_ss << "触发条件 " << order_field.ContingentCondition << endl;
-	g_ss << "请求编号 " << order_field.RequestID << endl;
-	g_ss << "交易所代码 " << order_field.ExchangeID << endl;
-	LOG_LN("%s", g_ss.str().c_str());
-	PRINT_SUCCESS("%s", g_ss.str().c_str());
-	g_ss.str("");
+	sprintf(BUFFER_MSG, "<<<>>> OrderInsert\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+		"报单价格条件 %c\n买卖方向 %c\n组合开平标志 %s\n组合投机套保标志 %s\n"
+		"价格 %f\n数量 %d\n有效期类型 %c\n成交量类型 %c\n"
+		"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s\n",
+		order_field.BrokerID, order_field.InvestorID, order_field.InstrumentID, order_field.OrderRef, order_field.UserID,
+		order_field.OrderPriceType, order_field.Direction, order_field.CombOffsetFlag, order_field.CombHedgeFlag,
+		order_field.LimitPrice, order_field.VolumeTotalOriginal, order_field.TimeCondition, order_field.VolumeCondition, 
+		order_field.MinVolume, order_field.ContingentCondition, order_field.RequestID, order_field.ExchangeID
+	);
+	LOG_LN("%s", BUFFER_MSG);
+	PRINT_SUCCESS("%s", BUFFER_MSG);
 
 	m_trader_info.MaxOrderRef++;
 	int ret = m_trader_api->ReqOrderInsert(&order_field, ++m_request_id);
@@ -647,28 +631,17 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 		hand_index++;
 		m_orders->erase(cur_order_field.OrderRef);
 
-		g_ss << "--->>> OnRspOrderInsert" << endl;
-		g_ss << "经纪公司代码 " << pInputOrder->BrokerID << endl;
-		g_ss << "投资者代码 " << pInputOrder->InvestorID << endl;
-		g_ss << "合约代码 " << pInputOrder->InstrumentID << endl;
-		g_ss << "报单引用 " << pInputOrder->OrderRef << endl;
-		g_ss << "用户代码 " << pInputOrder->UserID << endl;
-		g_ss << "报单价格条件 " << pInputOrder->OrderPriceType << endl;
-		g_ss << "买卖方向 " << pInputOrder->Direction << endl;
-		g_ss << "组合开平标志 " << pInputOrder->CombOffsetFlag << endl;
-		g_ss << "组合投机套保标志 " << pInputOrder->CombHedgeFlag << endl;
-		g_ss << "价格 " << pInputOrder->LimitPrice << endl;
-		g_ss << "数量 " << pInputOrder->VolumeTotalOriginal << endl;
-		g_ss << "有效期类型 " << pInputOrder->TimeCondition << endl;
-		g_ss << "成交量类型 " << pInputOrder->VolumeCondition << endl;
-		g_ss << "最小成交量 " << pInputOrder->MinVolume << endl;
-		g_ss << "触发条件 " << pInputOrder->ContingentCondition << endl;
-		g_ss << "请求编号 " << pInputOrder->RequestID << endl;
-		g_ss << "交易所代码 " << pInputOrder->ExchangeID << endl;
-
-		LOG_LN("%s", g_ss.str().c_str());
-		PRINT_SUCCESS("%s", g_ss.str().c_str());
-		g_ss.str("");
+		sprintf(BUFFER_MSG, "--->>> OnRspOrderInsert\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+			"报单价格条件 %c\n买卖方向 %c\n组合开平标志 %s\n组合投机套保标志 %s\n"
+			"价格 %f\n数量 %d\n有效期类型 %c\n成交量类型 %c\n"
+			"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s\n",
+			pInputOrder->BrokerID, pInputOrder->InvestorID, pInputOrder->InstrumentID, pInputOrder->OrderRef, pInputOrder->UserID,
+			pInputOrder->OrderPriceType, pInputOrder->Direction, pInputOrder->CombOffsetFlag, pInputOrder->CombHedgeFlag,
+			pInputOrder->LimitPrice, pInputOrder->VolumeTotalOriginal, pInputOrder->TimeCondition, pInputOrder->VolumeCondition,
+			pInputOrder->MinVolume, pInputOrder->ContingentCondition, pInputOrder->RequestID, pInputOrder->ExchangeID
+		);
+		LOG_LN("%s", BUFFER_MSG);
+		PRINT_SUCCESS("%s", BUFFER_MSG);
 	}
 	flush_log();
 }
@@ -705,24 +678,14 @@ int Trader_Handler::cancel_single_order(order_t * order)
 	///合约代码
 	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
 
-	g_ss << "<<<>>> OrderAction" << endl;
-	g_ss << "经纪公司代码 " << g_order_action_t.BrokerID << endl;
-	g_ss << "投资者代码 " << g_order_action_t.InvestorID << endl;
-	g_ss << "合约代码 " << g_order_action_t.InstrumentID << endl;
-	g_ss << "报单编号 " << g_order_action_t.OrderSysID << endl;
-	g_ss << "报单引用 " << g_order_action_t.OrderRef << endl;
-	g_ss << "用户代码 " << g_order_action_t.UserID << endl;
-	g_ss << "价格 " << g_order_action_t.LimitPrice << endl;
-	g_ss << "数量变化 " << g_order_action_t.VolumeChange << endl;
-	g_ss << "操作标志 " << g_order_action_t.ActionFlag << endl;
-	g_ss << "交易所代码 " << g_order_action_t.ExchangeID << endl;
-	g_ss << "请求编号 " << g_order_action_t.RequestID << endl;
-	g_ss << "前置编号 " << g_order_action_t.FrontID << endl;
-	g_ss << "会话编号 " << g_order_action_t.SessionID << endl;
+	sprintf(BUFFER_MSG, "<<<>>> OrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
+		"请求编号 %d\n前置编号 %d\n会话编号 %d\n",
+		g_order_action_t.BrokerID, g_order_action_t.InvestorID, g_order_action_t.InstrumentID, g_order_action_t.OrderRef,
+		g_order_action_t.RequestID, g_order_action_t.FrontID, g_order_action_t.SessionID
+	);
 
-	LOG_LN("%s", g_ss.str().c_str());
-	PRINT_SUCCESS("%s", g_ss.str().c_str());
-	g_ss.str("");
+	LOG_LN("%s", BUFFER_MSG);
+	PRINT_SUCCESS("%s", BUFFER_MSG);
 
 	int ret = m_trader_api->ReqOrderAction(&g_order_action_t, ++m_request_id);
 	PRINT_DEBUG("Cancel order %s", ret == 0 ? ", success" : ", fail");
@@ -734,24 +697,16 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 	if(pInputOrderAction) {
 		if (!is_my_order(pInputOrderAction->FrontID, pInputOrderAction->SessionID)) return;
 
-		g_ss << "--->>> OnRspOrderAction" << endl;
-		g_ss << "经纪公司代码 " << pInputOrderAction->BrokerID << endl;
-		g_ss << "投资者代码 " << pInputOrderAction->InvestorID << endl;
-		g_ss << "合约代码 " << pInputOrderAction->InstrumentID << endl;
-		g_ss << "报单编号 " << pInputOrderAction->OrderSysID << endl;
-		g_ss << "报单引用 " << pInputOrderAction->OrderRef << endl;
-		g_ss << "用户代码 " << pInputOrderAction->UserID << endl;
-		g_ss << "价格 " << pInputOrderAction->LimitPrice << endl;
-		g_ss << "数量变化 " << pInputOrderAction->VolumeChange << endl;
-		g_ss << "操作标志 " << pInputOrderAction->ActionFlag << endl;
-		g_ss << "交易所代码 " << pInputOrderAction->ExchangeID << endl;
-		g_ss << "请求编号 " << pInputOrderAction->RequestID << endl;
-		g_ss << "前置编号 " << pInputOrderAction->FrontID << endl;
-		g_ss << "会话编号 " << pInputOrderAction->SessionID << endl;
+		sprintf(BUFFER_MSG, "--->>> OnRspOrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
+			"价格 %f\n数量变化 %d\n操作标志 %c\n交易所代码 %s\n"
+			"请求编号 %d\n前置编号 %d\n会话编号 %d\n",
+			g_order_action_t.BrokerID, g_order_action_t.InvestorID, g_order_action_t.InstrumentID, g_order_action_t.OrderRef,
+			pInputOrderAction->LimitPrice, pInputOrderAction->VolumeChange, pInputOrderAction->ActionFlag, pInputOrderAction->ExchangeID,
+			g_order_action_t.RequestID, g_order_action_t.FrontID, g_order_action_t.SessionID
+		);
 
-		LOG_LN("%s", g_ss.str().c_str());
-		PRINT_SUCCESS("%s", g_ss.str().c_str());
-		g_ss.str("");
+		LOG_LN("%s", BUFFER_MSG);
+		PRINT_SUCCESS("%s", BUFFER_MSG);
 	}
 	if (pRspInfo != NULL && pRspInfo->ErrorID != 0) {
 		code_convert(pRspInfo->ErrorMsg, strlen(pRspInfo->ErrorMsg), ERROR_MSG, 4096);
@@ -801,44 +756,24 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 			m_orders->erase(cur_order_field.OrderRef);
 		}
 
-		g_ss << "--->>> OnRtnOrder " << pOrder->InsertTime << endl;
-		g_ss << "经纪公司代码 "	<< pOrder->BrokerID << endl;
-		g_ss << "投资者代码 "		<< pOrder->InvestorID << endl;
-		g_ss << "合约代码 "		<< pOrder->InstrumentID << endl;
-		g_ss << "报单引用 "		<< pOrder->OrderRef << endl;
-		g_ss << "用户代码 "		<< pOrder->UserID << endl;
-		g_ss << "报单价格条件 "	<< pOrder->OrderPriceType << endl;
-		g_ss << "买卖方向 "		<< pOrder->Direction << endl;
-		g_ss << "组合开平标志 "	<< pOrder->CombOffsetFlag << endl;
-		g_ss << "组合投机套保标志 " << pOrder->CombHedgeFlag << endl;
-		g_ss << "价格 "			<< pOrder->LimitPrice << endl;
-		g_ss << "数量 "			<< pOrder->VolumeTotalOriginal << endl;
-		g_ss << "有效期类型 "		<< pOrder->TimeCondition << endl;
-		g_ss << "成交量类型 "		<< pOrder->VolumeCondition << endl;
-		g_ss << "最小成交量 "		<< pOrder->MinVolume << endl;
-		g_ss << "触发条件 "		<< pOrder->ContingentCondition << endl;
-		g_ss << "请求编号 "		<< pOrder->RequestID << endl;
-		g_ss << "本地报单编号 "	<< pOrder->OrderLocalID << endl;
-		g_ss << "交易所代码 "		<< pOrder->ExchangeID << endl;
-		g_ss << "合约在交易所的代码 "	<< pOrder->ExchangeInstID << endl;
-		g_ss << "报单提交状态 "	<< pOrder->OrderSubmitStatus << endl;
-		g_ss << "报单提示序号 "	<< pOrder->NotifySequence << endl;
-		g_ss << "交易日 "		<< pOrder->TradingDay << endl;
-		g_ss << "报单编号 "		<< pOrder->OrderSysID << endl;
-		g_ss << "报单状态 "		<< pOrder->OrderStatus << endl;
-		g_ss << "今成交数量 "		<< pOrder->VolumeTraded << endl;
-		g_ss << "剩余数量 "		<< pOrder->VolumeTotal << endl;
-		g_ss << "报单日期 "		<< pOrder->InsertDate << endl;
-		g_ss << "报单时间 "		<< pOrder->InsertTime << endl;
-		g_ss << "最后修改时间 "	<< pOrder->UpdateTime << endl;
-		g_ss << "撤销时间 "		<< pOrder->CancelTime << endl;
-		g_ss << "序号 "			<< pOrder->SequenceNo << endl;
-		g_ss << "前置编号 "		<< pOrder->FrontID << endl;
-		g_ss << "会话编号 "		<< pOrder->SessionID << endl;
+		sprintf(BUFFER_MSG, "--->>> OnRtnOrder\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+			"报单价格条件 %c\n买卖方向 %c\n组合开平标志 %s\n组合投机套保标志 %s\n"
+			"价格 %f\n数量 %d\n有效期类型 %c\n成交量类型 %c\n"
+			"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s\n"
+			"本地报单编号 %s\n报单提交状态 %c\n报单编号 %s\n报单状态 %c\n"
+			"今成交数量 %d\n剩余数量 %d\n报单日期 %s\n报单时间 %s\n"
+			"最后修改时间 %s\n撤销时间 %s\n前置编号 %d\n会话编号 %d\n",
+			pOrder->BrokerID, pOrder->InvestorID, pOrder->InstrumentID, pOrder->OrderRef, pOrder->UserID,
+			pOrder->OrderPriceType, pOrder->Direction, pOrder->CombOffsetFlag, pOrder->CombHedgeFlag,
+			pOrder->LimitPrice, pOrder->VolumeTotalOriginal, pOrder->TimeCondition, pOrder->VolumeCondition,
+			pOrder->MinVolume, pOrder->ContingentCondition, pOrder->RequestID, pOrder->ExchangeID,
+			pOrder->OrderLocalID, pOrder->OrderSubmitStatus, pOrder->OrderSysID, pOrder->OrderStatus, 
+			pOrder->VolumeTraded, pOrder->VolumeTotal, pOrder->InsertDate, pOrder->InsertTime,
+			pOrder->UpdateTime, pOrder->CancelTime, pOrder->FrontID, pOrder->SessionID
+		);
 
-		LOG_LN("%s", g_ss.str().c_str());
-		PRINT_SUCCESS("%s", g_ss.str().c_str());
-		g_ss.str("");
+		LOG_LN("%s", BUFFER_MSG);
+		PRINT_SUCCESS("%s", BUFFER_MSG);
 	}
 	flush_log();
 }
@@ -877,32 +812,16 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		if (g_resp_t.status == SIG_STATUS_SUCCEED)
 			m_orders->erase(cur_order_field.OrderRef);
 
-		g_ss << "--->>> OnRtnTrade " << pTrade->TradeTime << endl;
-		g_ss << "经纪公司代码 "	<< pTrade->BrokerID << endl;
-		g_ss << "投资者代码 "		<< pTrade->InvestorID << endl;
-		g_ss << "合约代码 "		<< pTrade->InstrumentID << endl;
-		g_ss << "报单引用 "		<< pTrade->OrderRef << endl;
-		g_ss << "用户代码 "		<< pTrade->UserID << endl;
-		g_ss << "交易所代码 "		<< pTrade->ExchangeID << endl;
-		g_ss << "成交编号 "		<< pTrade->TradeID << endl;
-		g_ss << "买卖方向 "		<< pTrade->Direction << endl;
-		g_ss << "报单编号 "		<< pTrade->OrderSysID << endl;
-		g_ss << "会员代码 "		<< pTrade->ParticipantID << endl;
-		g_ss << "客户代码 "		<< pTrade->ClientID << endl;
-		g_ss << "合约在交易所的代码 " << pTrade->ExchangeInstID << endl;
-		g_ss << "开平标志 "		<< pTrade->OffsetFlag << endl;
-		g_ss << "投机套保标志 "	<< pTrade->HedgeFlag << endl;
-		g_ss << "价格 "			<< pTrade->Price << endl;
-		g_ss << "数量 "			<< pTrade->Volume << endl;
-		g_ss << "成交时期 "		<< pTrade->TradeDate << endl;
-		g_ss << "成交时间 "		<< pTrade->TradeTime << endl;
-		g_ss << "本地报单编号 "	<< pTrade->OrderLocalID << endl;
-		g_ss << "序号 "			<< pTrade->SequenceNo << endl;
-		g_ss << "交易日 "		<< pTrade->TradingDay << endl;
+		sprintf(BUFFER_MSG, "--->>> OnRtnOrder\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+			"买卖方向 %c\n开平标志 %c\n机套保标志 %c\n价格 %f\n数量 %d\n"
+			"成交编号 %s\n交易所代码 %s\n本地报单编号 %s\n报单编号 %s\n成交日期 %s\n成交时间 %s\n",
+			pTrade->BrokerID, pTrade->InvestorID, pTrade->InstrumentID, pTrade->OrderRef, pTrade->UserID,
+			pTrade->Direction, pTrade->OffsetFlag, pTrade->HedgeFlag, pTrade->Price, pTrade->Volume, 
+			pTrade->TradeID, pTrade->ExchangeID, pTrade->OrderLocalID, pTrade->OrderSysID, pTrade->TradeDate, pTrade->TradeTime
+		);
 
-		LOG_LN("%s", g_ss.str().c_str());
-		PRINT_SUCCESS("%s", g_ss.str().c_str());
-		g_ss.str("");
+		LOG_LN("%s", BUFFER_MSG);
+		PRINT_SUCCESS("%s", BUFFER_MSG);
 	}
 	flush_log();
 }
