@@ -597,8 +597,8 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 {
 	if(pInputOrder) {
 		if (!m_orders->exist(pInputOrder->OrderRef)) {
-			PRINT_ERROR("Can't find the order");
-			LOG_LN("Can't find the order");
+			PRINT_ERROR("Can't find the order, OrderRef: %s", pInputOrder->OrderRef);
+			LOG_LN("Can't find the order, OrderRef: %s", pInputOrder->OrderRef);
 			return;
 		}
 
@@ -648,13 +648,13 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 
 int Trader_Handler::cancel_single_order(order_t * order)
 {
+	++g_sig_count;
+
 	CThostFtdcInputOrderField& order_record = get_order_info(order->org_ord_id);
 	///经纪公司代码
 	strcpy(g_order_action_t.BrokerID, order_record.BrokerID);
 	///投资者代码
 	strcpy(g_order_action_t.InvestorID, order_record.InvestorID);
-	///报单操作引用
-	//	TThostFtdcOrderActionRefType	OrderActionRef;
 	///报单引用
 	strcpy(g_order_action_t.OrderRef, order_record.OrderRef);
 	///请求编号
@@ -663,20 +663,15 @@ int Trader_Handler::cancel_single_order(order_t * order)
 	g_order_action_t.FrontID = m_trader_info.FrontID;
 	///会话编号
 	g_order_action_t.SessionID = m_trader_info.SessionID;
+	///操作标志
+	g_order_action_t.ActionFlag = THOST_FTDC_AF_Delete;
+	///合约代码
+	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
+
 	///交易所代码
 	//	TThostFtdcExchangeIDType	ExchangeID;
 	///报单编号
 	//	TThostFtdcOrderSysIDType	OrderSysID;
-	///操作标志
-	g_order_action_t.ActionFlag = THOST_FTDC_AF_Delete;
-	///价格
-	//	TThostFtdcPriceType	LimitPrice;
-	///数量变化
-	//	TThostFtdcVolumeType	VolumeChange;
-	///用户代码
-	//	TThostFtdcUserIDType	UserID;
-	///合约代码
-	strcpy(g_order_action_t.InstrumentID, order_record.InstrumentID);
 
 	sprintf(BUFFER_MSG, "<<<>>> OrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
 		"请求编号 %d\n前置编号 %d\n会话编号 %d\n",
@@ -782,8 +777,8 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
 		if (!m_orders->exist(pTrade->OrderRef)) {
-			PRINT_ERROR("Can't find the order");
-			LOG_LN("Can't find the order");
+			PRINT_ERROR("Can't find the order, OrderRef: %s", pTrade->OrderRef);
+			LOG_LN("Can't find the order, OrderRef: %s", pTrade->OrderRef);
 			return;
 		}
 
