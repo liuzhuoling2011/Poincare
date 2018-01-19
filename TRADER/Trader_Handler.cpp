@@ -514,8 +514,8 @@ int Trader_Handler::send_single_order(order_t *order)
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
 	gettimeofday(&current_time, NULL);
-	int real_order_ref = ((current_time.tv_sec - m_trader_info.START_TIME_STAMP) * 1000+ current_time.tv_sec / 1000) * 100 + m_trader_info.SELF_CODE + g_sig_count;
-	sprintf(order_field.OrderRef, "%d", real_order_ref);
+	long long real_order_ref = ((current_time.tv_sec - m_trader_info.START_TIME_STAMP) * 1000+ current_time.tv_sec / 1000) * 100 + m_trader_info.SELF_CODE + g_sig_count;
+	sprintf(order_field.OrderRef, "%lld", real_order_ref);
 
 	///用户代码
 	strcpy(order_field.UserID, m_trader_config->TUSER_ID);
