@@ -61,8 +61,10 @@ tm timeinfo = { 0 };
 
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
 	// 保存会话参数
-	info.FrontID = pRspUserLogin->FrontID < 0 ? -1 * pRspUserLogin->FrontID : pRspUserLogin->FrontID;
-	info.SessionID = pRspUserLogin->SessionID < 0 ? -1 * pRspUserLogin->SessionID : pRspUserLogin->SessionID;
+	info.FrontID = pRspUserLogin->FrontID;
+	info.SessionID = pRspUserLogin->SessionID;
+	int temp_front = pRspUserLogin->FrontID < 0 ? -1 * pRspUserLogin->FrontID : pRspUserLogin->FrontID;
+	int SessionID = pRspUserLogin->SessionID < 0 ? -1 * pRspUserLogin->SessionID : pRspUserLogin->SessionID;
 	info.SELF_CODE = (info.SessionID + info.FrontID) % 99;
 	PRINT_INFO("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
 	LOG_LN("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
@@ -912,9 +914,7 @@ int Trader_Handler::st_idle()
 
 bool Trader_Handler::is_my_order(int front_id, int session_id)
 {
-	int front_tmp = front_id < 0 ? -1 * front_id : front_id;
-	int session_tmp = session_id < 0 ? -1 * session_id : session_id;
-	return (front_tmp == m_trader_info.FrontID && session_tmp == m_trader_info.SessionID);
+	return (front_id == m_trader_info.FrontID && session_id == m_trader_info.SessionID);
 }
 
 void Trader_Handler::OnFrontDisconnected(int nReason)
