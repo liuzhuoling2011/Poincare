@@ -799,7 +799,11 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 			g_resp_t.open_close = convert_order_open_close_flag(cur_order_field.CombOffsetFlag[0]);
 		g_resp_t.exe_price = pTrade->Price;
 		g_resp_t.exe_volume = pTrade->Volume;
-		g_resp_t.status = SIG_STATUS_SUCCEED;
+		if (cur_order_field.VolumeTotalOriginal - pTrade->Volume > 0)
+			g_resp_t.status = SIG_STATUS_PARTED;
+		else
+			g_resp_t.status = SIG_STATUS_SUCCEED;
+		cur_order_field.VolumeTotalOriginal -= pTrade->Volume;
 
 		g_data_t.info = (void*)&g_resp_t;
 		my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
