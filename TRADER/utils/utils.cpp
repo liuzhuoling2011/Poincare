@@ -98,10 +98,11 @@ ORDER_STATUS get_final_status(ORDER_STATUS pre, ORDER_STATUS cur)
 {
 	if (cur == SIG_STATUS_SUCCEED || cur == SIG_STATUS_PARTED || cur == SIG_STATUS_ENTRUSTED)
 		return cur;
-	if (cur == SIG_STATUS_CANCELED && pre != SIG_STATUS_ENTRUSTED)
-		return SIG_STATUS_REJECTED;
-	else if (cur == SIG_STATUS_CANCELED)
+	if (cur == SIG_STATUS_CANCELED) {
+		if (pre != SIG_STATUS_ENTRUSTED && pre != SIG_STATUS_PARTED)
+			return SIG_STATUS_REJECTED;
 		return SIG_STATUS_CANCELED;
+	}
 	return UNDEFINED_STATUS;
 }
 
