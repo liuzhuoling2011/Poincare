@@ -11,15 +11,19 @@
 #define HASH_ORDER_SIZE	  (4096)
 #define MAX_ORDER_SIZE	  (4096)
 
+
+//挂单成交手数的剩余量。
 int
 leaves_qty(Order *ord)
 {
+    //如果 申报的量大于已经成交的量，返回差值。
 	if (ord->volume > ord->cum_qty)
 		return ord->volume - ord->cum_qty;
 	else
 		return 0;
 }
 
+//返回参数相反的方向。BUY 就返回 SELL
 DIRECTION switch_side(DIRECTION side)
 {
 	if (side == ORDER_BUY)
@@ -28,41 +32,46 @@ DIRECTION switch_side(DIRECTION side)
 		return ORDER_BUY;
 }
 
+//是否是活跃的，下面这么几种状态是活跃的。
 bool
 is_active(Order *a_order)
 {
-	if (a_order->status == SIG_STATUS_ENTRUSTED
-		|| a_order->status == SIG_STATUS_PARTED
-		|| a_order->status == SIG_STATUS_CANCEL_REJECTED)
+	if (a_order->status == SIG_STATUS_ENTRUSTED //挂单成功
+		|| a_order->status == SIG_STATUS_PARTED //部分成交
+		|| a_order->status == SIG_STATUS_CANCEL_REJECTED) //撤单被拒
 		return true;
 	else
 		return false;
 }
 
+//是否可以被撤单，也就是active的，且之前没有被撤单。
 bool
 is_cancelable(Order *a_order)
 {
+    //pending_cancel 当你下完一次cancel之后的状态
 	return is_active(a_order) && !a_order->pending_cancel;
 }
 
+//从Order List 移除的一些状态， 
 bool
 is_finished(Order *a_order)
 {
-	if (a_order->status == SIG_STATUS_SUCCEED
-		|| a_order->status == SIG_STATUS_CANCELED
-		|| a_order->status == SIG_STATUS_REJECTED
-		|| a_order->status == SIG_STATUS_INTRREJECTED)
+	if (a_order->status == SIG_STATUS_SUCCEED //成交
+		|| a_order->status == SIG_STATUS_CANCELED //撤单成功
+		|| a_order->status == SIG_STATUS_REJECTED //挂单失败
+		|| a_order->status == SIG_STATUS_INTRREJECTED) //。。。
 		return true;
 	else
 		return false;
 }
 
+//双向链表list_t的长度
 int
 get_list_size(list_t *a_list)
 {
 	list_t *pos, *n;
 	int l_size = 0;
-
+     //pos 第一个， n next 下一个， n 变成pos
 	list_for_each_safe(pos, n, a_list){
 		l_size++;
 	}
@@ -116,7 +125,7 @@ OrderHash::clear(){
 	for (int i = 0; i < HASH_ORDER_SIZE; i++){
 		INIT_LIST_HEAD(&p_bucket[i].head);
 	}
-
+    //INIT_LIST_HEAD 初始化双向链表，是linux内核中宏定义的方法。
 	INIT_LIST_HEAD(p_buy_list);
 	INIT_LIST_HEAD(p_sell_list);
 	INIT_LIST_HEAD(p_free_list);
@@ -139,10 +148,13 @@ OrderHash::get_hash_value(int index){
 	return index % HASH_ORDER_SIZE;
 }
 
+
+//从 已经初始化的free中 取来用。内存池
 Order*
 OrderHash::get_first_free_order()
 {
 	if (p_free_list->next != p_free_list){
+    //取某一个。通过结构体中放入连接。地址来找到结构体的起始地址。
 		Order* l_ord = list_entry(p_free_list->next, Order, fr_link);
 		list_del(&l_ord->fr_link);
 		INIT_LIST_HEAD(&l_ord->fr_link);
@@ -219,6 +231,8 @@ bool OrderHash::erase(Order *ord)
 	return true;
 }
 
+
+//完善Order的参数
 void OrderHash::set_order_default(Order *ord)
 {
 	ord->signal_id = 0;
@@ -238,6 +252,7 @@ void OrderHash::set_order_default(Order *ord)
 	memset(ord->symbol, 0, SYMBOL_LEN);
 }
 
+// 将成交的，撤单的等移除。
 void OrderHash::update_order_list(Order* ord)
 {
 	switch (ord->status){
@@ -300,7 +315,7 @@ OrderHash::query_order(uint64_t ord_id)
 	return query_order(index, ord_id);
 }
 
-//return the count of order in the list
+//返回给定方向的挂单的数量。
 int
 OrderHash::get_buy_sell_list_size(DIRECTION a_side)
 {
@@ -320,6 +335,10 @@ OrderHash::get_buy_sell_list_size(DIRECTION a_side)
 	return l_size;
 }
 
+
+
+
+// 返回 买 或者 卖 列表的头节点。
 list_t *
 OrderHash::get_order_by_side(DIRECTION a_side)
 {
@@ -330,6 +349,8 @@ OrderHash::get_order_by_side(DIRECTION a_side)
 	return NULL;
 }
 
+
+//返回给定方向的订单还挂着多少手
 int 
 OrderHash::active_order_size(DIRECTION a_side)
 {
@@ -345,6 +366,8 @@ OrderHash::active_order_size(DIRECTION a_side)
 	return l_active_size;
 }
 
+
+// 返回活跃的买和卖 list
 void
 OrderHash::get_active_order_list(list_t **a_buy_list, list_t **a_sell_list)
 {
@@ -352,6 +375,7 @@ OrderHash::get_active_order_list(list_t **a_buy_list, list_t **a_sell_list)
 	*a_sell_list = p_sell_list;
 }
 
+//取得内存池中还有多少free块。
 int
 OrderHash::get_free_order_size()
 {
@@ -380,6 +404,8 @@ const static char OPEN_CLOSE_STR[][16] = { "OPEN", "CLOSE", "CLOSE_TOD", "CLOSE_
 const static char BUY_SELL_STR[][8] = { "BUY", "SELL" };
 static std::string g_all_order_info;
 
+
+// 打印出所有活跃订单的基本信息
 char*
 OrderHash::get_all_active_order_info()
 {
@@ -404,6 +430,8 @@ OrderHash::get_all_active_order_info()
 	return (char*)g_all_order_info.c_str();
 }
 
+
+//取得某一个合约等待撤单的数量。
 int
 OrderHash::get_pending_cancel_order_size_by_instr(Contract *a_instr)
 {
@@ -425,6 +453,7 @@ OrderHash::get_pending_cancel_order_size_by_instr(Contract *a_instr)
 	return l_size;
 }
 
+// 返回给定symbol的所有的挂单。返回结构在a_list
 void 
 OrderHash::search_order_by_instr(const char* a_symbol, list_t *a_list)
 {
@@ -445,6 +474,8 @@ OrderHash::search_order_by_instr(const char* a_symbol, list_t *a_list)
 	}
 }
 
+
+//返回所有的这一方向，这一个symbol的所有的order.返回是a_list
 void
 OrderHash::search_order_by_side_instr(DIRECTION a_side, const char* a_symbol, list_t *a_list)
 {
@@ -468,6 +499,7 @@ OrderHash::search_order_by_side_instr(DIRECTION a_side, const char* a_symbol, li
 	}
 }
 
+//根据Order的买卖方向，增加 Order中挂单的手数
 void
 OrderHash::add_pending_size(Order *ord, int quantity)
 {
@@ -485,6 +517,7 @@ OrderHash::add_pending_size(Order *ord, int quantity)
 	}
 }
 
+//根据Order的买卖方向，减少 Order中挂单的手数
 void
 OrderHash::minus_pending_size(Order *ord, int quantity)
 {
@@ -501,7 +534,7 @@ OrderHash::minus_pending_size(Order *ord, int quantity)
 			ord->contr->pending_sell_close_size -= quantity;
 	}
 }
-
+//发出买指令等待被买的数量（包括开平）或者 发出卖指令等待被卖的数量（包括开平），
 int OrderHash::open_order_size(Contract * a_contr, DIRECTION a_side)
 {
 	if (a_side == ORDER_BUY) {

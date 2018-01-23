@@ -24,11 +24,13 @@ SDPHandler::SDPHandler(int type, int length, void * cfg)
 
 	m_orders = new OrderHash();
 	m_contracts = new MyHash<Contract>(1024);
-
 	m_config = (st_config_t*)cfg;
+    //从shannon 传过来的cfg中解析出这几个函数。
 	m_send_resp_func = m_config->pass_rsp_hdl;
+    //发单撤单函数
 	m_send_order_func = m_config->proc_order_hdl;
 	m_send_info_func = m_config->send_info_hdl;
+    //日志函数 
 	send_log = m_config->send_info_hdl;
 
 	m_strat_id = m_config->vst_id;
@@ -36,6 +38,7 @@ SDPHandler::SDPHandler(int type, int length, void * cfg)
 
 	for (int i = 0; i < ACCOUNT_MAX; i++) {
 		if (m_config->accounts[i].account[0] == '\0') break;
+        //填写account信息到 account_t,l_account 
 		account_t& l_account = m_accounts.get_next_free_node();
 		strlcpy(l_account.account, m_config->accounts[i].account, ACCOUNT_LEN);
 		l_account.cash_available = m_config->accounts[i].cash_available;
@@ -52,6 +55,7 @@ SDPHandler::SDPHandler(int type, int length, void * cfg)
 
 	for (int i = 0; i < SYMBOL_MAX; i++) {
 		if (m_config->contracts[i].symbol[0] == '\0') break;
+        //完善合约信息 到 Contract&  l_instr 
 		Contract& l_instr = m_contracts->get_next_free_node();
 		contract_t& l_config_instr = m_config->contracts[i];
 		strlcpy(l_instr.symbol, l_config_instr.symbol, SYMBOL_LEN);
@@ -105,6 +109,8 @@ SDPHandler::~SDPHandler()
 	delete_mem(m_contracts);
 }
 
+
+// 在策略的my on book中会调用这个函数，简单处理下行情
 int SDPHandler::on_book(int type, int length, void * book)
 {
 	int ret = 0;
@@ -127,6 +133,7 @@ int SDPHandler::on_book(int type, int length, void * book)
 
 int SDPHandler::on_response(int type, int length, void * resp)
 {
+    //从 shannon 接口 读来的 回报
 	st_response_t* l_resp = (st_response_t*)((st_data_t*)resp)->info;
 	
 	PRINT_INFO("Order Resp: %lld %s %s %s %f %d %s %d %s", l_resp->order_id, l_resp->symbol,
@@ -135,9 +142,10 @@ int SDPHandler::on_response(int type, int length, void * resp)
 	LOG_LN("Order Resp: %lld %s %s %s %f %d %s %d %s", l_resp->order_id, l_resp->symbol,
 		BUY_SELL_STR[l_resp->direction], OPEN_CLOSE_STR[l_resp->open_close], l_resp->exe_price, l_resp->exe_volume,
 		STATUS[l_resp->status], l_resp->error_no, l_resp->error_info);
-
+    //处理回报函数，包括订单仓位管理的逻辑
 	process_order_resp(l_resp);
 
+    //找到回报中提到的合约打印出来。
 	Contract *instr = find_contract(l_resp->symbol);
 	PRINT_INFO("Contract: %s pre_long_pos: %d pre_short_pos: %d pre_long_remain: %d pre_short_remain: %d long_pos: %d short_pos: %d long_open: %d long_close: %d short_open: %d short_close: %d\n"
 		"pending_buy_open_size: %d pending_sell_open_size: %d pending_buy_close_size: %d pending_sell_close_size: %d\n"
@@ -154,6 +162,7 @@ int SDPHandler::on_response(int type, int length, void * resp)
 	return 0;
 }
 
+//取得某一个合约某一个方向的仓位。
 int get_pos_by_side(Contract *a_instr, DIRECTION side)
 {
 	if (side == ORDER_BUY)
@@ -164,6 +173,7 @@ int get_pos_by_side(Contract *a_instr, DIRECTION side)
 	return 0;
 }
 
+//封装shannon传过来的发单函数
 int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price, int size, DIRECTION side, OPEN_CLOSE sig_openclose, bool flag_close_yesterday_pos, bool flag_syn_cancel, INVESTOR_TYPE investor_type, ORDER_TYPE order_type, TIME_IN_FORCE time_in_force)
 {
 	if (size <= 0) {
@@ -333,7 +343,7 @@ int SDPHandler::send_vwap_order(Contract * instr, int ttl_odrsize, DIRECTION sid
 	}
 	return g_special_order.status;
 }
-
+//封装shannon传过来的撤单函数
 int SDPHandler::cancel_single_order(Order * a_order)
 {
 	if (!is_cancelable(a_order)) {
@@ -383,7 +393,7 @@ int SDPHandler::cancel_single_order(Order * a_order)
 		return -1;
 	}
 }
-
+//调用cancel_single_order. 撤掉某一合约某一个方向的单。
 int SDPHandler::cancel_orders_by_side(Contract * instr, DIRECTION side, OPEN_CLOSE flag)
 {
 	struct list_head *pos, *n;
@@ -399,7 +409,7 @@ int SDPHandler::cancel_orders_by_side(Contract * instr, DIRECTION side, OPEN_CLO
 
 	return 0;
 }
-
+//按照给定的价格，撤掉某一个合约的某一个方向的单
 int SDPHandler::cancel_orders_with_dif_px(Contract * instr, DIRECTION side, double price)
 {
 	list_head *cancel_list = m_orders->get_order_by_side(side);
@@ -422,7 +432,7 @@ int SDPHandler::cancel_orders_with_dif_px(Contract * instr, DIRECTION side, doub
 
 	return l_size;
 }
-
+//撤掉某一个方向 的 某一个合约的所有的单
 int SDPHandler::cancel_orders_by_side(Contract * instr, DIRECTION side)
 {
 	struct list_head *pos, *n;
@@ -439,7 +449,7 @@ int SDPHandler::cancel_orders_by_side(Contract * instr, DIRECTION side)
 
 	return 0;
 }
-
+//撤掉所有的订单
 int SDPHandler::cancel_all_orders()
 {
 	list_t *pos, *n;
@@ -459,7 +469,7 @@ int SDPHandler::cancel_all_orders()
 
 	return 0;
 }
-
+//撤掉某一个合约所有的单
 int SDPHandler::cancel_all_orders(Contract * instr)
 {
 	list_t *pos, *n;
@@ -484,6 +494,7 @@ int SDPHandler::cancel_all_orders(Contract * instr)
 	return 0;
 }
 
+//平掉所有的仓位
 int SDPHandler::close_all_position()
 {
 	cancel_all_orders();
@@ -497,6 +508,7 @@ int SDPHandler::close_all_position()
 	return 0;
 }
 
+//根据symbol找到某一合约结构
 Contract * SDPHandler::find_contract(char * symbol)
 {
 	return &m_contracts->at(symbol);
@@ -587,7 +599,7 @@ void SDPHandler::update_yes_pos(Contract * instr, DIRECTION side, int size)
 		instr->pre_long_qty_remain -= size;
 	}
 }
-
+//回报处理核心逻辑
 bool SDPHandler::process_order_resp(st_response_t * ord_resp)
 {
 	// In live trading, there's an extra callback with vol=0, ignore it.
@@ -692,7 +704,7 @@ bool SDPHandler::process_order_resp(st_response_t * ord_resp)
 	m_orders->update_order_list(l_order);
 	return true;
 }
-
+//更新资金
 void SDPHandler::update_account_cash(Order* a_order)
 {
 	if (a_order == NULL) {
@@ -771,7 +783,7 @@ void SDPHandler::update_account_cash(Order* a_order)
 		break;
 	}
 }
-
+//更新挂单状态
 void SDPHandler::update_pending_status(Order * a_order)
 {
 	/*Update pending order size*/
@@ -821,7 +833,7 @@ void SDPHandler::update_pending_status(Order * a_order)
 		}
 	}
 }
-
+//将行情转化为Internalbook
 bool SDPHandler::update_contracts(Stock_Internal_Book * a_book)
 {
 	Contract& instr = m_contracts->at(a_book->ticker);
@@ -836,6 +848,7 @@ bool SDPHandler::update_contracts(Stock_Internal_Book * a_book)
 	return true;
 }
 
+//将行情转化为Internalbook
 bool SDPHandler::update_contracts(Futures_Internal_Book * a_book)
 {
 	Contract& instr = m_contracts->at(a_book->symbol);
@@ -850,6 +863,7 @@ bool SDPHandler::update_contracts(Futures_Internal_Book * a_book)
 	return true;
 }
 
+//将行情转化为bar
 bool SDPHandler::update_contracts(Internal_Bar * a_bar)
 {
 	Contract& instr = m_contracts->at(a_bar->symbol);
