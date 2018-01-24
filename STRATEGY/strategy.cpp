@@ -6,8 +6,12 @@
 #include <stdio.h>
 #include <math.h>
 
-static int debugg = 1;
-static int zhuidan = 1;
+static int debugg;
+static int zhuidan;
+static int PORT;
+static float ev_param;
+static int myvol = 1;
+
 
 static SDPHandler *sdp_handler = NULL;
 
@@ -18,20 +22,12 @@ static st_config_t *g_config = NULL;
 
 #define KDBLEN 1024
 
-//#define SIMULATION 
-//#define BREAK_GO_ON 
-//
 
 #define MAX_DEAL_NUM 20
-#define PORT 5006
-
+//#define PORT 5006
 
 static int CountTodayDeal = 0;
-
-
-
 static int count = 0;
-
 static int tick_time = 0;
 static int int_time = 0; 
 static double last_ask_price; 
@@ -39,43 +35,100 @@ static double last_bid_price;
 static char local_time[64];
 
 
-static int kdb_handle = khpu("192.168.1.22",PORT, "");
 static char kdb_sql[KDBLEN];
-static int RoundCount = 0;
-static int cuSignalcount = 0;
+
+static int RoundCount1 = 0;
+static int RoundCount2 = 0;
+static int RoundCount3 = 0;
+static int RoundCount4 = 0;
 
 
+
+
+
+
+
+
+
+static int cuSignalcount1 = 0;
+static int cuSignalcount2 = 0;
+static int cuSignalcount3 = 0;
+static int cuSignalcount4 = 0;
+
+
+
+static int kdb_handle ;
 
 //debug:
-
-static int flag1 = 1; static int flag2 = 0;
+static int flag1 = 1; 
+static int flag2 = 0;
 
 FILE* pFile = NULL;
 
 
+static int port_list[] = {5006,5007,5008,5009};
+static int kdb_handler_list[] = {0,0,0,0};
+static int port_num = 4;
+
+void read_ev(st_config_t* cfg){
+	g_config = (st_config_t *)cfg;
+	pFile = fopen(g_config->param_file_path,"r");
+	fscanf(pFile,"%d",&PORT);
+	fscanf(pFile,"%d",&debugg);
+	fscanf(pFile,"%d",&zhuidan);
+	fscanf(pFile,"%f",&ev_param);
+	fscanf(pFile,"%d",&myvol);
+	printf("PORT:%d,debugg:%d,zhuidan:%d,ev_param:%f,myvol:%d\n",PORT,debugg,zhuidan,ev_param,myvol);
+	fclose(pFile);
+}
+
+
+
+void process_kdb_all(){
+    for(int i=0;i<port_num;i++)
+        k(kdb_handler_list[i], kdb_sql, (K)0);
+}
+
 
 int my_st_init(int type, int length, void *cfg) {
 	if (sdp_handler == NULL) {
-		sdp_handler = new SDPHandler(type, length, cfg);
+		g_config = (st_config_t *)cfg;
+		read_ev(g_config);
+		kdb_handle = khpu("localhost",PORT, "");
+        int ii = 0;
+        for(ii = 0;ii<port_num;ii++)
+		    kdb_handler_list[ii] = khpu("localhost",port_list[ii], "");
 
+		sdp_handler = new SDPHandler(type, length, cfg);
 #ifdef BREAK_GO_ON
 		k(-kdb_handle, "ibAskpx:0f;ibBidpx:0f;system \"l tbls\"; system \"cd ..\"", (K)0);
 #endif
-
 		/* write your logic here */
-		char init_kdb_sql[KDBLEN] = "int2time:{\"T\"$-9#\"00000000\",string x};if[not `quoteData in tables `.;ibAskpx:0f;ibBidpx:0f;res:([]a:enlist 0i;b:enlist 0f;c:enlist 0f;d:enlist 0i);quoteData:();FinalSignal2:();"
+		char init_kdb_sql[KDBLEN];
+
+		char init_kdb_sql_tmp[KDBLEN] = "int2time:{\"T\"$-9#\"00000000\",string x};evparam:%f;if[not `quoteData in tables `.;ibAskpx:0f;ibBidpx:0f;res:([]a:enlist 0i;b:enlist 0f;c:enlist 0f;d:enlist 0i);quoteData:();FinalSignal2:();"
 									"quote:([]Date:();`float$LegOneBid1:();`float$LegOneAsk1:();`float$LegTwoBid1:();`float$LegTwoAsk1:());`quote insert (.z.D+.z.t;3333.0;3330.5;3.05;3.1)]";
-		k(-kdb_handle, init_kdb_sql, (K)0);
+
+        ev_param=0.25;
+		sprintf(init_kdb_sql, init_kdb_sql_tmp,ev_param);
+		k(-kdb_handler_list[0], init_kdb_sql, (K)0);
+
+
+        ev_param=0.5;
+		sprintf(init_kdb_sql, init_kdb_sql_tmp,ev_param);
+		k(-kdb_handler_list[1], init_kdb_sql, (K)0);
+
+
+        ev_param=0.75;
+		sprintf(init_kdb_sql, init_kdb_sql_tmp,ev_param);
+		k(-kdb_handler_list[2], init_kdb_sql, (K)0);
+
+        ev_param=1.0;
+		sprintf(init_kdb_sql, init_kdb_sql_tmp,ev_param);
+		k(-kdb_handler_list[3], init_kdb_sql, (K)0);
 
 		LOG_LN("Strategy Init!");
-		g_config = (st_config_t *)cfg;
-		pFile = fopen(g_config->param_file_path,"r");
-		int port,ip;
-		fscanf(pFile,"%d",&port);
-		fscanf(pFile,"%d",&ip);
-		printf("PORT:%d,%d\n",port,ip);
-		fclose(pFile);
-		
+	
 		char* account = g_config->accounts[0].account;
 		printf("Your accont cash is: %f\n", sdp_handler->get_account_cash(account));
 	}
@@ -127,6 +180,119 @@ double Round(double price)
     return res;
 }
 
+
+
+
+
+void run_strategy(Futures_Internal_Book*f_book, int* RoundCount, int* cuSignalcount, int myvol){
+    //从kdb获取信号。信号包括四个东西
+    LOG_LN("into run_strategy\n");
+    printf("into run strategy\n");
+
+    K table = k(kdb_handle, "select from res ", (K)0);
+    K values = kK(table->k)[1];
+    K col1_length = kK(values)[0];
+    K col2_bid1 = kK(values)[1];
+    K col3_ask1 = kK(values)[2];
+    K col4_signal = kK(values)[3];
+                                                                                                                                                      
+    Contract *instr = sdp_handler->find_contract(f_book->symbol);
+                                                                                                                                                      
+    for (int i = 0; i < col1_length->n; i++) {
+        //这是从kdb获取的四个东西。
+        int length = kI(col1_length)[i]; //长度，用于猝发是否产生信号
+        double bid1 = Round(kF(col2_bid1)[i]);  //bid price
+        double ask1 = Round( kF(col3_ask1)[i]);   //ask price
+        int signal = kI(col4_signal)[i];  //short or long
+        LOG_LN("KDB: %d %f %f %d", kI(col1_length)[i], kF(col2_bid1)[i],kF(col3_ask1)[i],kI(col4_signal)[i]);
+                                                                                                                                                      
+        //bid1 = last_bid_price ; 
+        //ask1  = last_ask_price ; 
+        printf("bid1:%f,ask1:%f\n",bid1,ask1);
+                                                                                                                                                      
+        int today_long_pos = long_position(instr) - instr->pre_long_position;
+        if (today_long_pos<0) today_long_pos=0;
+        int today_short_pos = short_position(instr) - instr->pre_short_position  ;
+        if (today_short_pos<0) today_short_pos=0;
+        LOG_LN("POSITION long:%d,short:%d,all:%d",today_long_pos,today_short_pos,today_long_pos + today_short_pos);
+        LOG_LN("POSITION Yesterday:long:%d,short:%d\n",instr->pre_long_position,instr->pre_short_position);
+    if (debugg ==0){
+        printf("LIVE\n");
+        printf("RoundCount:%d\n",*RoundCount);
+        if (*RoundCount == 0) {
+            LOG_LN("enter if, length %d, RoundCount %d", length, RoundCount);
+            *cuSignalcount = length;
+            (*RoundCount)++;
+        }
+        else if (length > *cuSignalcount /*|| flag1*/) {
+            LOG_LN("enter elseif, length %d", length);
+            *cuSignalcount = length;
+            //产生Short信号
+            if (signal == -1 ) {
+                LOG_LN("short %d", int_time);
+                if(instr->pre_long_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE_YES);
+                else if(long_position(instr) - instr->pre_long_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE);
+                sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_OPEN);
+            }
+            else if (signal == 1 ) {
+                LOG_LN("long %d", int_time);
+                if (instr->pre_short_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE_YES);
+                else if (short_position(instr) - instr->pre_short_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE);
+                sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_OPEN);
+            }
+        }
+    }
+    else if (debugg ==1){
+        printf("DEBUG\n");
+        if (*RoundCount == 0) {
+            LOG_LN("enter if, length %d, RoundCount %d", length, RoundCount);
+            *cuSignalcount = length;
+            (*RoundCount)++;
+        }
+        else if (length > *cuSignalcount || flag1) {
+            bid1 = last_bid_price ; 
+            ask1  = last_ask_price ; 
+            if(zhuidan){
+                bid1 = last_bid_price+100 ; 
+                ask1  = last_ask_price-100; 
+            }
+            LOG_LN("enter elseif, length %d", length);
+            *cuSignalcount = length;
+            //产生Short信号
+            if (/*signal == -1*/ count%30==0 && flag2 == 0) {
+                flag2 = 1;
+                LOG_LN("short %d", int_time);
+                if(instr->pre_long_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE_YES);
+                else if(long_position(instr) - instr->pre_long_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE);
+                sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_OPEN);
+            }
+            else if (/*signal == 1*/ count%30==0 && flag2== 1) {
+                flag2 = 0;
+                LOG_LN("long %d", int_time);
+                if (instr->pre_short_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE_YES);
+                else if (short_position(instr) - instr->pre_short_position > 0)
+                    sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE);
+                sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_OPEN);
+            }
+        }
+    }
+    }
+    //释放 内存，从kdb获得的res 信号表。
+    r0(table);
+}
+
+
+
+
+
+
 int my_on_book(int type, int length, void *book) {
 	if (sdp_handler == NULL) return -1;
 	sdp_handler->on_book(type, length, book);
@@ -145,137 +311,70 @@ int my_on_book(int type, int length, void *book) {
 	//当行情时间和本地时间相差5分钟，认为是无效行情，注意这里的时间已做过0点处理。
 	int l_local_time = get_seconds_from_char_time(local_time);
 	//PRINT_INFO("tick_time:%d,local_time:%d", tick_time, l_local_time);
-//	if (abs(l_local_time - tick_time) > 5 * 60) {
-//		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, local_time, abs(l_local_time - tick_time));
-//		return -1;
-//	}
+#if 1
+	if (abs(l_local_time - tick_time) > 5 * 60) {
+		PRINT_ERROR("No Use Quote,QUOTE TIME: %d ,LOCAL TIME:%s, delta:%d", int_time, local_time, abs(l_local_time - tick_time));
+		return -1;
+	}
 #endif
 
-	//过滤一些极端时间段
-//	if (not_working_time(int_time)) return -1;
-//	if (int_time < 40000000) int_time += 240000000;
-//	if (is_working_time(int_time) == false)	return -1;
+#endif
 
+#if 1
+	//过滤一些极端时间段
+	if (not_working_time(int_time)) return -1;
+	if (int_time < 40000000) int_time += 240000000;
+	if (is_working_time(int_time) == false)	return -1;
+#endif
 	last_ask_price = Round(f_book->ap_array[0]);
 	last_bid_price = Round(f_book->bp_array[0]);
-
-    printf("IH askprice:%lf, bidprice:%lf\n",last_ask_price,last_bid_price);
+    //printf("IH askprice:%lf, bidprice:%lf\n",last_ask_price,last_bid_price);
 	//将最新的行情推进kdb同时执行kdb策略代码
-	sprintf(kdb_sql, "ctpAskpx:%lf;ctpBidpx:%lf;", last_ask_price, last_bid_price);
-	k(kdb_handle, kdb_sql, (K)0);
-	sprintf(kdb_sql, "quote:update Date:.z.D+int2time %d,LegOneBid1:%s,LegOneAsk1:%s,LegTwoBid1:%s,LegTwoAsk1:%s from quote;system \"l strategy.q\"",
+    //
+    //
+    //sprintf(kdb_sql, "ctpAskpx:%lf;ctpBidpx:%lf;", last_ask_price, last_bid_price);
+    //k(kdb_handle, kdb_sql, (K)0);
+    //process_kdb_all();
+    sprintf(kdb_sql, "ctpAskpx:%lf;ctpBidpx:%lf;quote:update Date:.z.D+int2time %d,LegOneBid1:%s,LegOneAsk1:%s,LegTwoBid1:%s,LegTwoAsk1:%s from quote;system \"l strategy.q\"",
+        last_ask_price,
+        last_bid_price,
         int_time,
-		"ibBidpx",
-		"ibAskpx",
-		"ctpBidpx",
-		"ctpAskpx"
-	);
+        "ibBidpx",
+        "ibAskpx",
+        "ctpBidpx",
+        "ctpAskpx"
+    );
+    process_kdb_all();
     LOG_LN("kdb_sql:%s\n",kdb_sql);
-	k(-kdb_handle, kdb_sql, (K)0);
+    //k(-kdb_handle, kdb_sql, (K)0);
+    //为防止kdb中行情表格过大，每600个tick清理一次kdb表格。只保留2000行。
+    if (++count % 600 == 0){
+    //    k(-kdb_handle, "quoteData: select [-2000] from quoteData;", (K)0);
+          strcpy(kdb_sql,"quoteData: select [-2000] from quoteData;");
+          process_kdb_all();
+    }
+     
+    
+    //for(int i = 0; i<port_num;i++){
+    //    LOG_LN("Program %d run...",i);
+    //    kdb_handle = kdb_handler_list[i];
+    //    run_strategy(f_book,RoundCount, cuSignalcount1);
+    //}
 
-	//为防止kdb中行情表格过大，每600个tick清理一次kdb表格。只保留2000行。
-	if (++count % 600 == 0)
-		k(-kdb_handle, "quoteData: select [-2000] from quoteData;", (K)0);
+    LOG_LN("Program %d run...",0);
+    kdb_handle = kdb_handler_list[0];
+    run_strategy(f_book,&RoundCount1, &cuSignalcount1, 1);
+    LOG_LN("Program %d run...",1);
+    kdb_handle = kdb_handler_list[1];
+    run_strategy(f_book,&RoundCount2, &cuSignalcount2, 1);
+    LOG_LN("Program %d run...",2);
+    kdb_handle = kdb_handler_list[2];
+    run_strategy(f_book,&RoundCount3, &cuSignalcount3, 1);
+    LOG_LN("Program %d run...",3);
+    kdb_handle = kdb_handler_list[3];
+    run_strategy(f_book,&RoundCount4, &cuSignalcount4, 1);
 
-	//从kdb获取信号。信号包括四个东西
-	K table = k(kdb_handle, "select from res ", (K)0);
-	K values = kK(table->k)[1];
-	K col1_length = kK(values)[0];
-	K col2_bid1 = kK(values)[1];
-	K col3_ask1 = kK(values)[2];
-	K col4_signal = kK(values)[3];
 
-	Contract *instr = sdp_handler->find_contract(f_book->symbol);
-
-	for (int i = 0; i < col1_length->n; i++) {
-		//这是从kdb获取的四个东西。
-		int length = kI(col1_length)[i]; //长度，用于猝发是否产生信号
-		double bid1 = Round(kF(col2_bid1)[i]);  //bid price
-		double ask1 = Round( kF(col3_ask1)[i]);   //ask price
-		int signal = kI(col4_signal)[i];  //short or long
-		LOG_LN("KDB: %d %f %f %d", kI(col1_length)[i], kF(col2_bid1)[i],kF(col3_ask1)[i],kI(col4_signal)[i]);
-
-        //bid1 = last_bid_price ; 
-        //ask1  = last_ask_price ; 
-	printf("bid1:%f,ask1:%f\n",bid1,ask1);
-
-        int today_long_pos = long_position(instr) - instr->pre_long_position;
-        if (today_long_pos<0) today_long_pos=0;
-        int today_short_pos = short_position(instr) - instr->pre_short_position  ;
-        if (today_short_pos<0) today_short_pos=0;
-        LOG_LN("POSITION long:%d,short:%d,all:%d",today_long_pos,today_short_pos,today_long_pos + today_short_pos);
-	if (debugg ==0){
-		printf("LIVE\n");
-		if (RoundCount == 0) {
-			LOG_LN("enter if, length %d, RoundCount %d", length, RoundCount);
-			cuSignalcount = length;
-			RoundCount++;
-		}
-		else if (length > cuSignalcount /*|| flag1*/) {
-			LOG_LN("enter elseif, length %d", length);
-			cuSignalcount = length;
-			//产生Short信号
-			if (signal == -1 /*count%30==0 && flag2 == 0*/) {
-				/*flag2 = 1;*/
-				LOG_LN("short %d", int_time);
-				if(instr->pre_long_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE_YES);
-				else if(long_position(instr) - instr->pre_long_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_CLOSE);
-				sdp_handler->send_single_order(instr, instr->exch, bid1, 1, ORDER_SELL, ORDER_OPEN);
-			}
-			else if (signal == 1 /*count%30==0 && flag2== 1*/) {
-				//flag2 = 0;
-				LOG_LN("long %d", int_time);
-				if (instr->pre_short_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE_YES);
-				else if (short_position(instr) - instr->pre_short_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_CLOSE);
-				sdp_handler->send_single_order(instr, instr->exch, ask1, 1, ORDER_BUY, ORDER_OPEN);
-			}
-		}
-	}
-	else if (debugg ==1){
-		printf("DEBUG\n");
-		if (RoundCount == 0) {
-			LOG_LN("enter if, length %d, RoundCount %d", length, RoundCount);
-			cuSignalcount = length;
-			RoundCount++;
-		}
-		else if (length > cuSignalcount || flag1) {
-			bid1 = last_bid_price ; 
-			ask1  = last_ask_price ; 
-			if(zhuidan){
-			bid1 = last_bid_price+100 ; 
-			ask1  = last_ask_price-100; 
-			}
-			LOG_LN("enter elseif, length %d", length);
-			cuSignalcount = length;
-			//产生Short信号
-			if (/*signal == -1*/ count%30==0 && flag2 == 0) {
-				flag2 = 1;
-				LOG_LN("short %d", int_time);
-				if(instr->pre_long_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, bid1, 5, ORDER_SELL, ORDER_CLOSE_YES);
-				else if(long_position(instr) - instr->pre_long_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, bid1, 5, ORDER_SELL, ORDER_CLOSE);
-				sdp_handler->send_single_order(instr, instr->exch, bid1, 5, ORDER_SELL, ORDER_OPEN);
-			}
-			else if (/*signal == 1*/ count%30==0 && flag2== 1) {
-				flag2 = 0;
-				LOG_LN("long %d", int_time);
-				if (instr->pre_short_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, ask1, 5, ORDER_BUY, ORDER_CLOSE_YES);
-				else if (short_position(instr) - instr->pre_short_position > 0)
-					sdp_handler->send_single_order(instr, instr->exch, ask1, 5, ORDER_BUY, ORDER_CLOSE);
-				sdp_handler->send_single_order(instr, instr->exch, ask1, 5, ORDER_BUY, ORDER_OPEN);
-			}
-		}
-	}
-        
-	}
-	//释放 内存，从kdb获得的res 信号表。
-	r0(table);
 	return 0;
 
 }
@@ -289,9 +388,7 @@ int my_on_response(int type, int length, void *resp) {
        	l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
 	int leaves_temp = leaves_qty(l_ord);
 	sdp_handler->on_response(type, length, resp);
-
 	Contract *instr = sdp_handler->find_contract(rsp->symbol);
-
 	switch (rsp->status) {
 	case SIG_STATUS_PARTED:
 		break;
@@ -328,7 +425,6 @@ int my_on_response(int type, int length, void *resp) {
 int my_on_timer(int type, int length, void *info) {
 	if (sdp_handler != NULL) {
 		sdp_handler->on_timer(type, length, info);
-
 		/* write your logic here */
 		printf("on timer!\n");
 		return 0;
