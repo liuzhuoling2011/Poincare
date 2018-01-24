@@ -26,16 +26,40 @@ static int hand_index = 100; //手工下单
 extern char g_strategy_path[256];
 
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
+
+
+
 static contract_t empty_contract_t = { 0 };
+
+//shannon 接口用于初始化的结构，盘前查好，更新初始化信息，如资金仓位，
+//还有发单函数等。
 static st_config_t g_config_t = { 0 };
+
+//shannon 结构用于将回报传给策略的结构。本代码将ctp回报包装成这个结构打包给strategy
 static st_response_t g_resp_t = { 0 };
+
+//shannon 接口用于传递数据的结构
 static st_data_t g_data_t = { 0 };
 
 static int  g_sig_count = 0;
 static char ERROR_MSG[512];
 static char BUFFER_MSG[2048];
-const static char STATUS[][64] = { "SUCCEED", "ENTRUSTED", "PARTED", "CANCELED", "REJECTED", "CANCEL_REJECTED", "INTRREJECTED", "UNDEFINED_STATUS" };
 
+//订单状态
+const static char STATUS[][64] = { 
+    "SUCCEED",  //成交
+    "ENTRUSTED", //挂单成功
+    "PARTED",  //部分成交
+    "CANCELED",  //已撤单
+    "REJECTED",  //被拒
+    "CANCEL_REJECTED", //撤单被拒
+    "INTRREJECTED",  //
+    "UNDEFINED_STATUS" //
+    };
+
+
+
+//CTP返回的仓位信息的Array
 typedef MyArray<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
 
 struct ContractPosition
@@ -44,8 +68,13 @@ struct ContractPosition
 	ContractPositionArray short_pos;
 };
 
+
+//key: 合约代码字符串：value: contract_t 结构。
 static MyHash<contract_t> g_contract_config_hash;
+
+//key: 合约代码字符串：value:   ContractPosition结构。
 static MyHash<ContractPosition*> g_contract_pos_hash;
+
 MyHash<contract_t>::Iterator g_iter;
 
 RedisHandler *g_redis_handler = NULL;
@@ -59,6 +88,10 @@ time_t rawtime;
 tm timeinfo = { 0 };
 timeval current_time = { 0 };
 
+
+//TraderInfo 结构用于保存 登陆ctp后的信息如FrontId,sessionID等。这些在后面发单，或者
+//查询其他都会用到。
+//此外：完善了 g_config_t 的 交易日 和 日夜盘。
 void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserLogin) {
 	// 保存会话参数
 	info.FrontID = pRspUserLogin->FrontID;
@@ -66,15 +99,16 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	int temp_front = pRspUserLogin->FrontID < 0 ? -1 * pRspUserLogin->FrontID : pRspUserLogin->FrontID;
 	int SessionID = pRspUserLogin->SessionID < 0 ? -1 * pRspUserLogin->SessionID : pRspUserLogin->SessionID;
 	info.SELF_CODE = (temp_front + SessionID) % 99;
+
 	PRINT_INFO("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
 	LOG_LN("FrontID: %d SessionID: %d SpecialCode: %d", info.FrontID, info.SessionID, info.SELF_CODE);
-
 	int iNextOrderRef = atoi(pRspUserLogin->MaxOrderRef);
 	info.MaxOrderRef = iNextOrderRef++;
+
 	strlcpy(info.TradingDay, pRspUserLogin->TradingDay, TRADING_DAY_LEN);
 	strlcpy(info.LoginTime, pRspUserLogin->LoginTime, TRADING_DAY_LEN);
-
 	g_config_t.trading_date = atoi(info.TradingDay);
+
 	int hour = 0;
 	for (int i = 0; i < 6; i++) {
 		if (info.LoginTime[i] != ':') {
@@ -82,15 +116,13 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 		} else
 			break;
 	}
-
 	time(&rawtime);
 	tm * tmp_time = localtime(&rawtime);
-
 	timeinfo = *tmp_time;
 	timeinfo.tm_min = 0;
 	timeinfo.tm_sec = 0;
-
 	if (hour > 8 && hour < 19) {
+        //填写日夜盘
 		g_config_t.day_night = DAY;
 		timeinfo.tm_hour = 9;
 	}
@@ -98,10 +130,13 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 		g_config_t.day_night = NIGHT;
 		timeinfo.tm_hour = 21;
 	}
+    //开盘时间
 	info.START_TIME_STAMP = mktime(&timeinfo);
 	PRINT_INFO("Current time stamp: %lld", info.START_TIME_STAMP);
 }
 
+
+// m_trader_config  是 读取 config.json中的信息。
 Trader_Handler::Trader_Handler(CThostFtdcTraderApi* TraderApi, TraderConfig* trader_config)
 {
 	m_trader_config = trader_config;
@@ -137,6 +172,8 @@ Trader_Handler::~Trader_Handler()
 	m_trader_api->Release();
 }
 
+// 完善了 g_config_t 的 策略id,ev路径，策略名字，输出路径。（都是从config读取）
+// 然后登陆用户
 void Trader_Handler::OnFrontConnected()
 {
 	memset(&g_config_t, 0, sizeof(st_config_t));
@@ -153,6 +190,9 @@ void Trader_Handler::OnFrontConnected()
 	m_trader_api->ReqUserLogin(&req, ++m_request_id);
 }
 
+
+
+//一旦登陆成功后，就调用update_trader_info  将登陆的信息存放TraderInfo m_trader_info
 void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -169,6 +209,8 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	}
 }
 
+
+//从 json中取得基本信息 查询 投资者结算
 void Trader_Handler::ReqSettlementInfo()
 {
 	CThostFtdcSettlementInfoConfirmField req = { 0 };
@@ -179,6 +221,8 @@ void Trader_Handler::ReqSettlementInfo()
 		PRINT_ERROR("Send settlement request fail!");
 }
 
+
+//查询资金，账户
 void Trader_Handler::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	PRINT_SUCCESS("Comform settlement!");
@@ -186,6 +230,8 @@ void Trader_Handler::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmF
 	ReqTradingAccount();
 }
 
+
+//查询资金账户
 void Trader_Handler::ReqTradingAccount()
 {
 	CThostFtdcQryTradingAccountField requ = { 0 };
@@ -196,6 +242,7 @@ void Trader_Handler::ReqTradingAccount()
 	PRINT_INFO("send query account: %s %s", requ.InvestorID, iResult == 0 ? "success" : "fail");
 }
 
+// 将资金账户的币中，费率 ，放进g_config_t  ，目前由于资金管理还暂时没有用，所以先随便写死
 void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pTradingAccount == NULL) return;
@@ -209,7 +256,7 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 	//请求查询投资者持仓
 	ReqQryInvestorPositionDetail();
 }
-
+//从 m_trader_config 取得配置，发送仓位请求
 void Trader_Handler::ReqQryInvestorPositionDetail()
 {
 	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
@@ -226,6 +273,9 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 {
 	if (pInvestorPositionDetail) {
 		// 对于所有合约，不保存已平仓的，只保存未平仓的
+        // 如果 config.json 中 的ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION ＝ ture
+        // 那么会 只查找 订阅行情的仓位。
+        // false 就会 增加订阅行情。把账户有仓位的行情都订阅。
 		if (pInvestorPositionDetail->Volume > 0) {
 			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION == true) {
 				bool l_is_find = false;
@@ -237,20 +287,27 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					}
 				}
 				if (l_is_find == false) {
+                    //如果是最后一个查询的仓位，那么调入calculate,进行仓位查询。
 					if(!bIsLast) 
 						return;
 					else 
 						goto Calculate;
 				}
 			}
+            //初始化  g_contract_pos_hash  用于后面的仓位管理
 			ContractPosition* &contract_position = g_contract_pos_hash[pInvestorPositionDetail->InstrumentID];
 			if (contract_position == NULL) contract_position = new ContractPosition();
 
+            // 如果这条回报的方向是buy,就 更新g_contract_pos_hash 中对应的long_pos 
+            // 如果这条回报的方向是sell,就 更新g_contract_pos_hash 中对应的short_pos
 			if (pInvestorPositionDetail->Direction == TRADER_BUY)
 				contract_position->long_pos.push_back(*pInvestorPositionDetail);
 			else if (pInvestorPositionDetail->Direction == TRADER_SELL)
 				contract_position->short_pos.push_back(*pInvestorPositionDetail);
 
+            //前面的代码已经维持了  g_contract_pos_hash 的结构，并且把每个合约的long short都装入其中了。
+
+            // false 就会 增加订阅行情。把账户有仓位的行情都订阅。
 			if (m_trader_config->ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION == false) {
 				bool find_instId = false;
 				for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
@@ -260,6 +317,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 					}
 				}
 				if (find_instId == false) {
+                    //增加订阅的行情。
 					strlcpy(m_trader_config->INSTRUMENTS[m_trader_config->INSTRUMENT_COUNT++], pInvestorPositionDetail->InstrumentID, SYMBOL_LEN);
 				}
 			}
@@ -268,20 +326,30 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 
 Calculate:
 	if (bIsLast) {
+            //前面的代码已经维持了  g_contract_pos_hash 的结构，
+            //并且把每个合约的long short都装入其中了。
+            //目的：遍历g_contract_pos_hash 来完善  g_contract_config_hash.
+            //所以  g_contract_config_hash 才是最终的。 
 		for (auto iter = g_contract_pos_hash.begin(); iter != g_contract_pos_hash.end(); iter++) {
+
+            //初始化，这个 g_contract_config_hash
 			contract_t& contract_config = g_contract_config_hash[iter->first];
 
+            //取得iter 这个合约的 long 和 short pos
 			ContractPositionArray &contracts_long = iter->second->long_pos;
 			ContractPositionArray &contracts_short = iter->second->short_pos;
 
 			int long_size = 0, short_size = 0, yes_long_size = 0, yes_short_size = 0;
 			double long_price = 0, short_price = 0, yes_long_price = 0, yes_short_price = 0;
 
+            // 更新昨仓，今仓
 			for (int i = 0; i < iter->second->long_pos.size(); i++) {
+                //如果是昨仓
 				if (atoi(contracts_long[i].OpenDate) != g_config_t.trading_date) {
 					yes_long_price += contracts_long[i].OpenPrice * contracts_long[i].Volume;
 					yes_long_size += contracts_long[i].Volume;
 				}
+                //如果是今仓
 				long_price += contracts_long[i].OpenPrice * contracts_long[i].Volume;
 				long_size += contracts_long[i].Volume;
 			}
@@ -290,6 +358,7 @@ Calculate:
 				contract_config.today_pos.long_volume = 0;
 			}
 			else {
+                //今天仓位的均价和仓位。
 				contract_config.today_pos.long_price = long_price / long_size;
 				contract_config.today_pos.long_volume = long_size;
 			}
@@ -299,10 +368,12 @@ Calculate:
 				contract_config.yesterday_pos.long_volume = 0;
 			}
 			else {
+                //昨天仓位的均价和仓位。
 				contract_config.yesterday_pos.long_price = yes_long_price / yes_long_size;
 				contract_config.yesterday_pos.long_volume = yes_long_size;
 			}
 
+            //short 同理。
 			for (int i = 0; i < contracts_short.size(); i++) {
 				if (atoi(contracts_short[i].OpenDate) != g_config_t.trading_date) {
 					yes_short_price += contracts_short[i].OpenPrice * contracts_short[i].Volume;
@@ -311,7 +382,7 @@ Calculate:
 				short_price += contracts_short[i].OpenPrice * contracts_short[i].Volume;
 				short_size += contracts_short[i].Volume;
 			}
-
+            //short 同理。
 			if (short_size == 0) {
 				contract_config.today_pos.short_price = 0;
 				contract_config.today_pos.short_volume = 0;
@@ -330,7 +401,7 @@ Calculate:
 				contract_config.yesterday_pos.short_volume = yes_short_size;
 			}
 		}
-			
+		//如果订阅的合约，在仓位查询中没有返回回报，那么就插入空的	 empty_contract_t
 		for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
 			char* l_symbol = m_trader_config->INSTRUMENTS[i];
 			if (!g_contract_config_hash.exist(l_symbol)) {
@@ -340,10 +411,12 @@ Calculate:
 
 		//请求查询合约
 		PRINT_INFO("Current we have these contracts:");
+        //取出此时有仓位的所有合约。（之前已经过滤了不订阅的合约）
 		for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++)
 			printf("%s ", iter->first);
 		printf("\n");
-
+        //获取合约名后发送订查询合约请求。
+        //先查询 第一个合约
 		g_iter = g_contract_config_hash.begin();
 		PRINT_INFO("start query %s", g_iter->first);
 		ReqInstrument(g_iter->first);
@@ -361,6 +434,8 @@ void Trader_Handler::ReqInstrument(char* symbol) {
 	} while (ret != 0);
 }
 
+//受到合约查询返回后，更新 g_contract_config_hash 的对应的合约的信息。
+//如 exch max_accum_open_vol 等。
 void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInstrument == NULL) return;
@@ -375,6 +450,7 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 	contract_config.multiple = pInstrument->VolumeMultiple; // to correct
 	strlcpy(contract_config.account, g_config_t.accounts[0].account, ACCOUNT_LEN);
 
+    //链式调用，每次在回报里查询下一个合约
 	if(g_iter != g_contract_config_hash.end()) {
 		PRINT_INFO("start query %s", g_iter->first);
 		ReqInstrument(g_iter->first);
@@ -387,7 +463,7 @@ void Trader_Handler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
 		g_iter++;
 	}
 }
-
+//查询费率。
 void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
 {
 	CThostFtdcQryInstrumentCommissionRateField ReqCommissionRate = { 0 };
@@ -401,6 +477,7 @@ void Trader_Handler::ReqQryInstrumentCommissionRate(char * symbol)
 	} while (ret != 0);
 }
 
+//输入品种，返回这个品种的合约
 contract_t& find_contract_by_product(char* product) {
 	for(auto iter = g_contract_config_hash.begin(); iter!= g_contract_config_hash.end(); iter++) {
 		if (strstr(iter->first, product) != NULL)
@@ -408,6 +485,7 @@ contract_t& find_contract_by_product(char* product) {
 	}
 }
 
+//查询费率回报
 void Trader_Handler::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField * pInstrumentCommissionRate, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pInstrumentCommissionRate == NULL) return;
@@ -448,6 +526,10 @@ void Trader_Handler::push_contract_to_redis() {
 	g_redis_contract->rpush((char*)contract_str.c_str());
 }
 
+
+//1.初始化策略。调用 shannon 接口 的 my_st_init ，传入已经填好的g_config_t
+//2.启动行情。
+//所有的以上的ctp的查询都是为了这一个，为了把相关信息填入g_config_t。初始化 策略。
 void Trader_Handler::init_strategy()
 {
 	// 在这里我们结束了config的配置，开始初始化策略
@@ -480,10 +562,12 @@ void Trader_Handler::init_strategy()
 	if(m_trader_config->QUOTE_TYPE == 2) {
 		push_contract_to_redis();
 	}
-
+    //启动行情。
 	quote_handler->Init();
 }
 
+
+//没有用到
 void Trader_Handler::ReqQryInvestorPosition()
 {
 	CThostFtdcQryInvestorPositionField req_pos = { 0 };
@@ -493,7 +577,7 @@ void Trader_Handler::ReqQryInvestorPosition()
 	int iResult = m_trader_api->ReqQryInvestorPosition(&req_pos, ++m_request_id);
 	PRINT_INFO("send query contract position %s", iResult == 0 ? "success" : "fail");
 }
-
+//没有用到。
 void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	PRINT_INFO("is_last: %d", bIsLast); //todo 过滤重复的
@@ -502,10 +586,13 @@ void Trader_Handler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 	}
 }
 
+
+//ctp发单函数
 int Trader_Handler::send_single_order(order_t *order)
 {
 	order->order_id = ++g_sig_count * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
-	
+
+    //初始化一个order 节点。用于管理订单。	
 	CThostFtdcInputOrderField& order_field = m_orders->get_next_free_node();
 
 	///经纪公司代码
@@ -514,6 +601,8 @@ int Trader_Handler::send_single_order(order_t *order)
 	strcpy(order_field.InvestorID, m_trader_config->TUSER_ID);
 	///报单引用
 	gettimeofday(&current_time, NULL);
+
+    //取当前时刻的毫秒作为报单引用。
 	long long real_order_ref = ((current_time.tv_sec - m_trader_info.START_TIME_STAMP) * 1000+ current_time.tv_sec / 1000) * 100 + m_trader_info.SELF_CODE + g_sig_count;
 	sprintf(order_field.OrderRef, "%lld", real_order_ref);
 
@@ -568,7 +657,9 @@ int Trader_Handler::send_single_order(order_t *order)
 	order_field.IsAutoSuspend = 0;
 	///业务单元, 用于保存订单状态
 	order_field.BusinessUnit[0] = UNDEFINED_STATUS;
+
 	///请求编号, 记录订单序号
+    //将初始化的那个order 节点，加上key为order id
 	order_field.RequestID = reverse_index(order->order_id);
 	///用户强评标志: 否
 	order_field.UserForceClose = 0;
@@ -586,12 +677,20 @@ int Trader_Handler::send_single_order(order_t *order)
 	);
 	LOG_LN("%s", BUFFER_MSG);
 	PRINT_SUCCESS("%s", BUFFER_MSG);
-
+    //m_trader_info ＋＋ 
 	m_trader_info.MaxOrderRef++;
+    //终于发单。
 	int ret = m_trader_api->ReqOrderInsert(&order_field, ++m_request_id);
 	PRINT_DEBUG("Send order %s", ret == 0 ? ", success" : ", fail");
 	return ret;
 }
+
+
+// 发单失败，被拒，挂单失败才会被调用。
+// 把他的状态归为 SIG_STATUS_REJECTED;
+// 将 m_orders 的信息 和 pInputOrder 的信息整理下 放进 st_response_t:g_resp_t
+// 将 g_resp_t 塞进 g_data_t.info 下面这句：
+//	g_data_t.info = (void*)&g_resp_t;
 
 void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -625,10 +724,14 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 			strlcpy(g_resp_t.error_info, ERROR_MSG, 512);
 		}
 
+        // 将 g_resp_t 塞进 g_data_t.info 下面这句：
 		g_data_t.info = (void*)&g_resp_t;
+
+        //调用shannon的策略处理函数，传到接口，再传到sdp,由sdp层维持仓位。
 		my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 
 		hand_index++;
+        //被拒后，从 m_orders 移除
 		m_orders->erase(cur_order_field.OrderRef);
 
 		sprintf(BUFFER_MSG, "--->>> OnRspOrderInsert\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
@@ -649,7 +752,7 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 int Trader_Handler::cancel_single_order(order_t * order)
 {
 	++g_sig_count;
-
+    //   get_order_info 在本文件最后几行，用于稍作处理 org_ord_id
 	CThostFtdcInputOrderField& order_record = get_order_info(order->org_ord_id);
 	///经纪公司代码
 	strcpy(g_order_action_t.BrokerID, order_record.BrokerID);
@@ -687,9 +790,11 @@ int Trader_Handler::cancel_single_order(order_t * order)
 	return ret;
 }
 
+//撤单请求回报
 void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if(pInputOrderAction) {
+        //如果不是自己进程的Front id 和 session id 跳过。
 		if (!is_my_order(pInputOrderAction->FrontID, pInputOrderAction->SessionID)) return;
 
 		sprintf(BUFFER_MSG, "--->>> OnRspOrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
@@ -711,11 +816,17 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
 	flush_log();
 }
 
+
+//订单回报。
+// 将 m_orders 的信息 和 pInputOrder 的信息整理下 放进 st_response_t:g_resp_t
+// 将 g_resp_t 塞进 g_data_t.info 下面这句：
+//	g_data_t.info = (void*)&g_resp_t;
 void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if (pOrder) {
 		if (!is_my_order(pOrder->FrontID, pOrder->SessionID)) return;
 
+        //取出这个订单。
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pOrder->OrderRef];
 		
 		int index = cur_order_field.RequestID;
@@ -724,6 +835,7 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 			cur_order_field.BusinessUnit[0] = SIG_STATUS_INIT;
 			cur_order_field.CombOffsetFlag[0] = 'u'; // open close undefine
 		}
+        //填写g_resp_t 各个字段。
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pOrder->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pOrder->Direction - '0';
@@ -741,12 +853,14 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		PRINT_ERROR("pre status: %s cur status: %s, final status: %s", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status]);
 		LOG_LN("pre status: %s cur status: %s, final status: %s", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status]);
 
+        //包装成g_data_t.info 然后调用sdp的 my_on_response
 		g_data_t.info = (void*)&g_resp_t;
 		if(g_resp_t.status == SIG_STATUS_ENTRUSTED || g_resp_t.status == SIG_STATUS_CANCELED) {
 			my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 		}
 
 		if (g_resp_t.status == SIG_STATUS_CANCELED) {
+            //如果是撤单成功，就remove from m_orders
 			hand_index++;
 			m_orders->erase(cur_order_field.OrderRef);
 		}
@@ -773,6 +887,11 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	flush_log();
 }
 
+
+// 成交回报。
+// 将 m_orders 的信息 和 pInputOrder 的信息整理下 放进 st_response_t:g_resp_t
+// 将 g_resp_t 塞进 g_data_t.info 下面这句：
+// g_data_t.info = (void*)&g_resp_t;
 void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
 	if (pTrade) {
@@ -781,7 +900,7 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 			LOG_LN("Can't find the order, OrderRef: %s", pTrade->OrderRef);
 			return;
 		}
-
+        //从订单列表中取出对应订单。
 		CThostFtdcInputOrderField& cur_order_field = (*m_orders)[pTrade->OrderRef];
 
 		int index = cur_order_field.RequestID;
@@ -805,10 +924,12 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 			g_resp_t.status = SIG_STATUS_SUCCEED;
 		cur_order_field.VolumeTotalOriginal -= pTrade->Volume;
 
+        // 将 g_resp_t 塞进 g_data_t.info 下面这句：
 		g_data_t.info = (void*)&g_resp_t;
 		my_on_response(S_STRATEGY_PASS_RSP, sizeof(g_resp_t), &g_data_t);
 
 		if (g_resp_t.status == SIG_STATUS_SUCCEED)
+            //成交成功，从m_orders 中移除
 			m_orders->erase(cur_order_field.OrderRef);
 
 		sprintf(BUFFER_MSG, "--->>> OnRtnOrder\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
