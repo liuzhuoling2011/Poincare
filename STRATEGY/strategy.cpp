@@ -230,7 +230,7 @@ void run_strategy(Futures_Internal_Book*f_book, int* RoundCount, int* cuSignalco
             //产生Short信号
             if (signal == -1 ) {
                 LOG_LN("short %d", int_time);
-                if(instr->pre_long_position > 0)
+                if(instr->pre_long_qty_remain > 0)
                     sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE_YES);
                 else if(long_position(instr) - instr->pre_long_position > 0)
                     sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE);
@@ -238,7 +238,7 @@ void run_strategy(Futures_Internal_Book*f_book, int* RoundCount, int* cuSignalco
             }
             else if (signal == 1 ) {
                 LOG_LN("long %d", int_time);
-                if (instr->pre_short_position > 0)
+                if (instr->pre_short_qty_remain > 0)
                     sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE_YES);
                 else if (short_position(instr) - instr->pre_short_position > 0)
                     sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE);
@@ -266,7 +266,7 @@ void run_strategy(Futures_Internal_Book*f_book, int* RoundCount, int* cuSignalco
             if (/*signal == -1*/ count%30==0 && flag2 == 0) {
                 flag2 = 1;
                 LOG_LN("short %d", int_time);
-                if(instr->pre_long_position > 0)
+                if(instr->pre_long_qty_remain > 0)
                     sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE_YES);
                 else if(long_position(instr) - instr->pre_long_position > 0)
                     sdp_handler->send_single_order(instr, instr->exch, bid1, myvol, ORDER_SELL, ORDER_CLOSE);
@@ -275,7 +275,7 @@ void run_strategy(Futures_Internal_Book*f_book, int* RoundCount, int* cuSignalco
             else if (/*signal == 1*/ count%30==0 && flag2== 1) {
                 flag2 = 0;
                 LOG_LN("long %d", int_time);
-                if (instr->pre_short_position > 0)
+                if (instr->pre_short_qty_remain > 0)
                     sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE_YES);
                 else if (short_position(instr) - instr->pre_short_position > 0)
                     sdp_handler->send_single_order(instr, instr->exch, ask1, myvol, ORDER_BUY, ORDER_CLOSE);
