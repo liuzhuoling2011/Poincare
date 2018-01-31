@@ -273,7 +273,7 @@ int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price,
 			char* all_order_info = m_orders->get_all_active_order_info();
 			PRINT_DEBUG("%s", all_order_info);
 			LOG_LN("%s", all_order_info);
-			if (flag_close_yesterday_pos) {
+			if (sig_openclose == ORDER_CLOSE_YES || flag_close_yesterday_pos) {
 				update_yes_pos(instr, side, m_cur_ord_size_arr[i]);
 			}
 			update_account_cash(l_order);
