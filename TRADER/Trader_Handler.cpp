@@ -27,12 +27,9 @@ extern char g_strategy_path[256];
 
 static CThostFtdcInputOrderActionField g_order_action_t = { 0 };
 
-
-
 static contract_t empty_contract_t = { 0 };
 
-//shannon 接口用于初始化的结构，盘前查好，更新初始化信息，如资金仓位，
-//还有发单函数等。
+//shannon 接口用于初始化的结构，盘前查好，更新初始化信息，如资金仓位，还有发单函数等。
 static st_config_t g_config_t = { 0 };
 
 //shannon 结构用于将回报传给策略的结构。本代码将ctp回报包装成这个结构打包给strategy
@@ -55,9 +52,7 @@ const static char STATUS[][64] = {
     "CANCEL_REJECTED", //撤单被拒
     "INTRREJECTED",  //
     "UNDEFINED_STATUS" //
-    };
-
-
+};
 
 //CTP返回的仓位信息的Array
 typedef MyArray<CThostFtdcInvestorPositionDetailField> ContractPositionArray;
@@ -660,16 +655,16 @@ int Trader_Handler::send_single_order(order_t *order)
 
 	///请求编号, 记录订单序号
     //将初始化的那个order 节点，加上key为order id
-	order_field.RequestID = reverse_index(order->order_id);
+	order_field.RequestID = g_sig_count;
 	///用户强评标志: 否
 	order_field.UserForceClose = 0;
 
 	m_orders->insert_current_node(order_field.OrderRef); 
 
-	sprintf(BUFFER_MSG, "<<<>>> OrderInsert\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+	sprintf(BUFFER_MSG, "\n<<<>>> OrderInsert\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
 		"报单价格条件 %c\n买卖方向 %c\n组合开平标志 %s\n组合投机套保标志 %s\n"
 		"价格 %f\n数量 %d\n有效期类型 %c\n成交量类型 %c\n"
-		"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s\n",
+		"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s",
 		order_field.BrokerID, order_field.InvestorID, order_field.InstrumentID, order_field.OrderRef, order_field.UserID,
 		order_field.OrderPriceType, order_field.Direction, order_field.CombOffsetFlag, order_field.CombHedgeFlag,
 		order_field.LimitPrice, order_field.VolumeTotalOriginal, order_field.TimeCondition, order_field.VolumeCondition, 
@@ -711,7 +706,8 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
 		g_resp_t.order_id = index * SERIAL_NO_MULTI + m_trader_config->STRAT_ID;
 		strlcpy(g_resp_t.symbol, pInputOrder->InstrumentID, SYMBOL_LEN);
 		g_resp_t.direction = pInputOrder->Direction - '0';
-		g_resp_t.open_close = convert_open_close_flag(pInputOrder->CombOffsetFlag[0]);
+		g_resp_t.open_close = convert_order_open_close_flag(cur_order_field.CombOffsetFlag[0]);
+		//g_resp_t.open_close = convert_open_close_flag(pInputOrder->CombOffsetFlag[0]);
 		g_resp_t.exe_price = pInputOrder->LimitPrice;
 		g_resp_t.exe_volume = pInputOrder->VolumeTotalOriginal;
 		g_resp_t.status = SIG_STATUS_REJECTED;
@@ -734,10 +730,10 @@ void Trader_Handler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CT
         //被拒后，从 m_orders 移除
 		m_orders->erase(cur_order_field.OrderRef);
 
-		sprintf(BUFFER_MSG, "--->>> OnRspOrderInsert\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+		sprintf(BUFFER_MSG, "\n--->>> OnRspOrderInsert\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
 			"报单价格条件 %c\n买卖方向 %c\n组合开平标志 %s\n组合投机套保标志 %s\n"
 			"价格 %f\n数量 %d\n有效期类型 %c\n成交量类型 %c\n"
-			"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s\n",
+			"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s",
 			pInputOrder->BrokerID, pInputOrder->InvestorID, pInputOrder->InstrumentID, pInputOrder->OrderRef, pInputOrder->UserID,
 			pInputOrder->OrderPriceType, pInputOrder->Direction, pInputOrder->CombOffsetFlag, pInputOrder->CombHedgeFlag,
 			pInputOrder->LimitPrice, pInputOrder->VolumeTotalOriginal, pInputOrder->TimeCondition, pInputOrder->VolumeCondition,
@@ -776,8 +772,8 @@ int Trader_Handler::cancel_single_order(order_t * order)
 	///报单编号
 	//	TThostFtdcOrderSysIDType	OrderSysID;
 
-	sprintf(BUFFER_MSG, "<<<>>> OrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
-		"请求编号 %d\n前置编号 %d\n会话编号 %d\n",
+	sprintf(BUFFER_MSG, "\n<<<>>> OrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
+		"请求编号 %d\n前置编号 %d\n会话编号 %d",
 		g_order_action_t.BrokerID, g_order_action_t.InvestorID, g_order_action_t.InstrumentID, g_order_action_t.OrderRef,
 		g_order_action_t.RequestID, g_order_action_t.FrontID, g_order_action_t.SessionID
 	);
@@ -797,9 +793,9 @@ void Trader_Handler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrd
         //如果不是自己进程的Front id 和 session id 跳过。
 		if (!is_my_order(pInputOrderAction->FrontID, pInputOrderAction->SessionID)) return;
 
-		sprintf(BUFFER_MSG, "--->>> OnRspOrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
+		sprintf(BUFFER_MSG, "\n--->>> OnRspOrderAction\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n"
 			"价格 %f\n数量变化 %d\n操作标志 %c\n交易所代码 %s\n"
-			"请求编号 %d\n前置编号 %d\n会话编号 %d\n",
+			"请求编号 %d\n前置编号 %d\n会话编号 %d",
 			g_order_action_t.BrokerID, g_order_action_t.InvestorID, g_order_action_t.InstrumentID, g_order_action_t.OrderRef,
 			pInputOrderAction->LimitPrice, pInputOrderAction->VolumeChange, pInputOrderAction->ActionFlag, pInputOrderAction->ExchangeID,
 			g_order_action_t.RequestID, g_order_action_t.FrontID, g_order_action_t.SessionID
@@ -845,13 +841,15 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 			g_resp_t.open_close = convert_order_open_close_flag(cur_order_field.CombOffsetFlag[0]);
 		g_resp_t.exe_price = pOrder->LimitPrice;
 		g_resp_t.exe_volume = pOrder->VolumeTotalOriginal;
+		g_resp_t.error_no = 0;
+		g_resp_t.error_info[0] = '\0';
 		
 		ORDER_STATUS pre_status = (ORDER_STATUS)cur_order_field.BusinessUnit[0];
 		ORDER_STATUS cur_status = convert_status(pOrder->OrderStatus, pOrder->OrderSysID);
 		g_resp_t.status = get_final_status(pre_status, cur_status);
 		cur_order_field.BusinessUnit[0] = g_resp_t.status; // update order status
-		PRINT_ERROR("pre status: %s cur status: %s, final status: %s", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status]);
-		LOG_LN("pre status: %s cur status: %s, final status: %s", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status]);
+		PRINT_ERROR("pre status: %s cur status: %s, final status: %s, sig_count: %d", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status], g_sig_count);
+		LOG_LN("pre status: %s cur status: %s, final status: %s, sig_count: %d", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status], g_sig_count);
 
         //包装成g_data_t.info 然后调用sdp的 my_on_response
 		g_data_t.info = (void*)&g_resp_t;
@@ -865,13 +863,13 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 			m_orders->erase(cur_order_field.OrderRef);
 		}
 
-		sprintf(BUFFER_MSG, "--->>> OnRtnOrder\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+		sprintf(BUFFER_MSG, "\n--->>> OnRtnOrder\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
 			"报单价格条件 %c\n买卖方向 %c\n组合开平标志 %s\n组合投机套保标志 %s\n"
 			"价格 %f\n数量 %d\n有效期类型 %c\n成交量类型 %c\n"
 			"最小成交量 %d\n触发条件 %c\n请求编号 %d\n交易所代码 %s\n"
 			"本地报单编号 %s\n报单提交状态 %c\n报单编号 %s\n报单状态 %c\n"
 			"今成交数量 %d\n剩余数量 %d\n报单日期 %s\n报单时间 %s\n"
-			"最后修改时间 %s\n撤销时间 %s\n前置编号 %d\n会话编号 %d\n",
+			"最后修改时间 %s\n撤销时间 %s\n前置编号 %d\n会话编号 %d",
 			pOrder->BrokerID, pOrder->InvestorID, pOrder->InstrumentID, pOrder->OrderRef, pOrder->UserID,
 			pOrder->OrderPriceType, pOrder->Direction, pOrder->CombOffsetFlag, pOrder->CombHedgeFlag,
 			pOrder->LimitPrice, pOrder->VolumeTotalOriginal, pOrder->TimeCondition, pOrder->VolumeCondition,
@@ -932,9 +930,9 @@ void Trader_Handler::OnRtnTrade(CThostFtdcTradeField *pTrade)
             //成交成功，从m_orders 中移除
 			m_orders->erase(cur_order_field.OrderRef);
 
-		sprintf(BUFFER_MSG, "--->>> OnRtnOrder\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
+		sprintf(BUFFER_MSG, "\n--->>> OnRtnOrder\n经纪公司代码 %s\n投资者代码 %s\n合约代码 %s\n报单引用 %s\n用户代码 %s\n"
 			"买卖方向 %c\n开平标志 %c\n机套保标志 %c\n价格 %f\n数量 %d\n"
-			"成交编号 %s\n交易所代码 %s\n本地报单编号 %s\n报单编号 %s\n成交日期 %s\n成交时间 %s\n",
+			"成交编号 %s\n交易所代码 %s\n本地报单编号 %s\n报单编号 %s\n成交日期 %s\n成交时间 %s",
 			pTrade->BrokerID, pTrade->InvestorID, pTrade->InstrumentID, pTrade->OrderRef, pTrade->UserID,
 			pTrade->Direction, pTrade->OffsetFlag, pTrade->HedgeFlag, pTrade->Price, pTrade->Volume, 
 			pTrade->TradeID, pTrade->ExchangeID, pTrade->OrderLocalID, pTrade->OrderSysID, pTrade->TradeDate, pTrade->TradeTime
