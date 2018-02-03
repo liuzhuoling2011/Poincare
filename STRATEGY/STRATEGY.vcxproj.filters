@@ -51,6 +51,9 @@
     <ClInclude Include="sdp_handler\utils\utils.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
+    <ClInclude Include="sdp_handler\core\bar.h">
+      <Filter>头文件\core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="strategy.cpp">
@@ -67,6 +70,9 @@
     </ClCompile>
     <ClCompile Include="sdp_handler\utils\utils.cpp">
       <Filter>资源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="sdp_handler\core\bar.cpp">
+      <Filter>资源文件\core</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

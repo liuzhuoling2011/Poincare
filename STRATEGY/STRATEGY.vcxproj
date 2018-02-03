@@ -115,6 +115,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="sdp_handler\core\bar.h" />
     <ClInclude Include="sdp_handler\core\base_define.h" />
     <ClInclude Include="sdp_handler\core\sdp_handler.h" />
     <ClInclude Include="sdp_handler\utils\list.h" />
@@ -125,6 +126,7 @@
     <ClInclude Include="sdp_handler\utils\utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="sdp_handler\core\bar.cpp" />
     <ClCompile Include="sdp_handler\core\sdp_handler.cpp" />
     <ClCompile Include="sdp_handler\utils\log.cpp" />
     <ClCompile Include="sdp_handler\utils\order_hash.cpp" />
