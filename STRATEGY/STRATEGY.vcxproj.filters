@@ -19,10 +19,10 @@
     <Filter Include="头文件\utils">
       <UniqueIdentifier>{6dacc146-0263-45aa-a751-4344903c45ec}</UniqueIdentifier>
     </Filter>
-    <Filter Include="资源文件\core">
+    <Filter Include="源文件\core">
       <UniqueIdentifier>{1411e38e-19cb-4f58-8d59-ee2c6c0d6749}</UniqueIdentifier>
     </Filter>
-    <Filter Include="资源文件\utils">
+    <Filter Include="源文件\utils">
       <UniqueIdentifier>{9c6590ec-2a37-401f-881b-88f519e27bc8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -54,25 +54,36 @@
     <ClInclude Include="sdp_handler\core\bar.h">
       <Filter>头文件\core</Filter>
     </ClInclude>
+    <ClInclude Include="sdp_handler\utils\json11.hpp">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="strategy.cpp">
-      <Filter>资源文件</Filter>
-    </ClCompile>
     <ClCompile Include="sdp_handler\core\sdp_handler.cpp">
-      <Filter>资源文件\core</Filter>
+      <Filter>源文件\core</Filter>
     </ClCompile>
     <ClCompile Include="sdp_handler\utils\log.cpp">
-      <Filter>资源文件\utils</Filter>
+      <Filter>源文件\utils</Filter>
     </ClCompile>
     <ClCompile Include="sdp_handler\utils\order_hash.cpp">
-      <Filter>资源文件\utils</Filter>
+      <Filter>源文件\utils</Filter>
     </ClCompile>
     <ClCompile Include="sdp_handler\utils\utils.cpp">
-      <Filter>资源文件\utils</Filter>
+      <Filter>源文件\utils</Filter>
     </ClCompile>
     <ClCompile Include="sdp_handler\core\bar.cpp">
-      <Filter>资源文件\core</Filter>
+      <Filter>源文件\core</Filter>
     </ClCompile>
+    <ClCompile Include="sdp_handler\utils\json11.cpp">
+      <Filter>源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="strategy.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\TRADER\ev.json">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

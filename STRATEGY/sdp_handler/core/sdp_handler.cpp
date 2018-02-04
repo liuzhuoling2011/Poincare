@@ -270,13 +270,16 @@ int SDPHandler::send_single_order(Contract * instr, EXCHANGE exch, double price,
 			int index = reverse_index(m_cur_ord_id_arr[i]);
 			Order *l_order = m_orders->update_order(index, instr, price, m_cur_ord_size_arr[i],
 				side, m_cur_ord_id_arr[i], sig_openclose);
+
+			if (sig_openclose == ORDER_CLOSE_YES || flag_close_yesterday_pos) {
+				update_yes_pos(instr, side, m_cur_ord_size_arr[i]);
+				l_order->close_yes_pos_flag = true;
+			}
+			update_account_cash(l_order);
+
 			char* all_order_info = m_orders->get_all_active_order_info();
 			PRINT_DEBUG("%s", all_order_info);
 			LOG_LN("%s", all_order_info);
-			if (sig_openclose == ORDER_CLOSE_YES || flag_close_yesterday_pos) {
-				update_yes_pos(instr, side, m_cur_ord_size_arr[i]);
-			}
-			update_account_cash(l_order);
 		}
 
 		m_new_order_times += l_order_count;
@@ -393,6 +396,33 @@ int SDPHandler::cancel_single_order(Order * a_order)
 		return -1;
 	}
 }
+int SDPHandler::cancel_orders_with_dif_px(Contract * instr, DIRECTION side, double price, int & pending_open_size, int & pending_close_size, int & pending_close_yes_size)
+{
+	list_head *cancel_list = m_orders->get_order_by_side(side);
+	struct list_head *pos, *n;
+	Order *l_ord;
+
+	list_for_each_safe(pos, n, cancel_list) {
+		l_ord = list_entry(pos, Order, pd_link);
+		// The Contract Address is the same, Save time do string compare
+		if (l_ord->contr == instr) {
+			if (double_compare(l_ord->price, price) == 0 && is_cancelable(l_ord) && l_ord->openclose == ORDER_OPEN) {
+				pending_open_size += leaves_qty(l_ord);
+			}
+			else if (double_compare(l_ord->price, price) == 0 && is_cancelable(l_ord) && l_ord->openclose == ORDER_CLOSE) {
+				pending_close_size += leaves_qty(l_ord);
+				if (l_ord->close_yes_pos_flag)
+					pending_close_yes_size += leaves_qty(l_ord);
+			}
+			else {
+				cancel_single_order(l_ord);
+			}
+		}
+	}
+
+	return pending_open_size + pending_close_size;
+}
+
 //调用cancel_single_order. 撤掉某一合约某一个方向的单。
 int SDPHandler::cancel_orders_by_side(Contract * instr, DIRECTION side, OPEN_CLOSE flag)
 {

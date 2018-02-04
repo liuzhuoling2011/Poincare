@@ -92,6 +92,7 @@ public:
 	int cancel_orders_by_side(Contract *instr, DIRECTION side);
 	int cancel_orders_by_side(Contract *instr, DIRECTION side, OPEN_CLOSE flag);
 	int cancel_orders_with_dif_px(Contract *instr, DIRECTION side, double price);
+	int cancel_orders_with_dif_px(Contract *instr, DIRECTION side, double price, int &pending_open_size, int &pending_close_size, int& pending_close_yes_size);
 	int cancel_all_orders();
 	int cancel_all_orders(Contract *instr);
 
