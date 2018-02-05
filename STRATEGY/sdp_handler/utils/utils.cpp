@@ -1,8 +1,16 @@
 #include <stdio.h>
+#include <time.h>
 #include <ctype.h>
+#include <math.h>
+#include <fstream>
+#include <sstream>
+#include <string.h>
+#include "json11.hpp"
 #include "utils.h"
 #include "log.h"
-#include <ctime>
+#include <string>
+
+using namespace json11;
 
 #define CHAR_EQUAL_ZERO(a, b, c) do{\
 	if (a != b) goto end;\
@@ -364,3 +372,46 @@ int get_seconds_from_char_time(char* char_time) {
 	int second = (char_time[13] - '0') * 10 + (char_time[14] - '0');
 	return hour * 60 * 60 + minute * 60 + second;
 }
+
+double Round(double price)
+{
+	return round(price * 10) / 10.0;
+}
+
+void read_config_file(std::string& content, char* ev_path)
+{
+	std::ifstream fin(ev_path);
+	std::stringstream buffer;
+	buffer << fin.rdbuf();
+	content = buffer.str();
+	fin.close();
+}
+
+bool read_json_config(ST_BASE_CONFIG & base_config, char* ev_path)
+{
+	std::string json_config;
+	read_config_file(json_config, ev_path);
+	std::string err_msg;
+	Json l_json = json11::Json::parse(json_config, err_msg, JsonParse::COMMENTS);
+	if (err_msg.length() > 0) {
+		PRINT_ERROR("Json parse fail, please check your setting! Error: %s", err_msg.c_str());
+		return false;
+	}
+
+	strlcpy(base_config.KDB_IP, l_json["KDB_IP"].string_value().c_str(), 32);
+	int port_count = 0;
+	for (auto &l_port : l_json["KDB_PORT_LIST"].array_items()) {
+		base_config.KDB_PORT_LIST[port_count] = l_port.int_value();
+		port_count++;
+	}
+	port_count = 0;
+	for (auto &l_port : l_json["KDB_EV_LIST"].array_items()) {
+		base_config.KDB_EV_LIST[port_count] = l_port.number_value();
+		port_count++;
+	}
+	base_config.KDB_PORT_NUM = port_count;
+	base_config.MAX_VOL = l_json["MAX_VOL"].number_value();
+
+	return true;
+}
+

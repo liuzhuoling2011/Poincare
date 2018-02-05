@@ -95,4 +95,13 @@ struct Order {
 	list_t search_link; // used to place in the search list
 };
 
+struct ST_BASE_CONFIG //only for this strategy
+{
+	char   KDB_IP[32];
+	int    KDB_PORT_NUM;
+	int    KDB_PORT_LIST[16];
+	double KDB_EV_LIST[16];
+	int    MAX_VOL;
+};
+
 #endif

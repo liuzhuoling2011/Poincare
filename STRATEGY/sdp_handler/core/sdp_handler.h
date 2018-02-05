@@ -96,7 +96,12 @@ public:
 	int cancel_all_orders();
 	int cancel_all_orders(Contract *instr);
 
+	void cancel_old_order(int tick_time);
+
+	//平掉所有的仓位
 	int close_all_position();
+	//智能操作达到目标仓位
+	void long_short(Contract * instr, int desired_pos, double ap, double bp);
 
 	Contract * find_contract(char* symbol);
 	int get_pos_by_side(Contract *a_instr, DIRECTION side);

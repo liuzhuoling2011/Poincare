@@ -37,7 +37,7 @@
   "STRAT_ID": 1014,
   "STRAT_NAME": "LUO01_01_20171218_007",
   "STRAT_PATH": "./strategy.so",
-  "STRAT_EV": "./ev.txt",
+  "STRAT_EV": "./ev.json",
   "STRAT_OUTPUT": "./output",
 
   "TRADER_LOG": "./logs/trader_[TIME].log",

@@ -524,7 +524,32 @@ int SDPHandler::cancel_all_orders(Contract * instr)
 	return 0;
 }
 
-//平掉所有的仓位
+void SDPHandler::cancel_old_order(int tick_time)
+{
+	list_t *pos, *n;
+	Order *l_ord;
+
+	list_t *ord_list = m_orders->get_order_by_side(ORDER_BUY);
+	list_for_each_prev_safe(pos, n, ord_list) {
+		l_ord = list_entry(pos, Order, pd_link);
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 1) {
+			PRINT_ERROR("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			LOG_LN("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			cancel_single_order(l_ord);
+		}
+	}
+
+	ord_list = m_orders->get_order_by_side(ORDER_SELL);
+	list_for_each_prev_safe(pos, n, ord_list) {
+		l_ord = list_entry(pos, Order, pd_link);
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 1) {
+			PRINT_ERROR("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			LOG_LN("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", int_time, get_seconds_from_int_time(l_ord->insert_time));
+			cancel_single_order(l_ord);
+		}
+	}
+}
+
 int SDPHandler::close_all_position()
 {
 	cancel_all_orders();
@@ -537,6 +562,82 @@ int SDPHandler::close_all_position()
 	}
 	return 0;
 }
+
+void SDPHandler::long_short(Contract * instr, int desired_pos, double ap, double bp)
+{
+	LOG_LN("Enter long_short, symbol: %s, desired_pos: %d, ap: %f, bp: %f",
+		instr->symbol, desired_pos, ap, bp);
+
+	int current_pos = position(instr);
+
+	if (current_pos == desired_pos) {
+		cancel_all_orders();
+		return;
+	}
+
+	int a_size = abs(desired_pos - current_pos);
+	DIRECTION a_side;
+	double price;
+	int same_side_pos;
+	int opposite_side_pos;
+	int available_for_close;
+	int available_for_close_yes;
+	int total_pending_buy_close_size = instr->pending_buy_close_size;
+	int total_pending_sell_close_size = instr->pending_sell_close_size;
+
+	if (desired_pos > current_pos) {
+		a_side = ORDER_BUY;
+		price = ap;
+		same_side_pos = long_position(instr);
+		opposite_side_pos = short_position(instr);
+		available_for_close_yes = instr->pre_short_qty_remain;
+		available_for_close = opposite_side_pos - total_pending_buy_close_size;
+	}
+	else {
+		a_side = ORDER_SELL;
+		price = bp;
+		same_side_pos = short_position(instr);
+		opposite_side_pos = long_position(instr);
+		available_for_close_yes = instr->pre_long_qty_remain;
+		available_for_close = opposite_side_pos - total_pending_sell_close_size;
+	}
+
+	LOG_LN("side: %d, price %f, same_side_pos: %d, opposite_side_pos: %d, available_for_close_yes: %d, available_for_close: %d",
+		a_side, price, same_side_pos, opposite_side_pos, available_for_close_yes, available_for_close);
+
+	int pending_open_size = 0;
+	int pending_close_size = 0;
+	int pending_close_yes_size = 0;
+	cancel_orders_with_dif_px(instr, a_side, price, pending_open_size, pending_close_size, pending_close_yes_size);
+	cancel_orders_by_side(instr, switch_side(a_side));
+
+	LOG_LN("pending_open_size: %d, pending_close_size %d, pending_close_yes_size: %d",
+		pending_open_size, pending_close_size, pending_close_yes_size);
+
+	if (pending_close_size > opposite_side_pos || available_for_close < 0 || available_for_close < available_for_close_yes)
+	{
+		LOG_LN("Something is wrong with close_size, close_yes_size, opposite_side_pos.");
+		cancel_orders_by_side(instr, a_side, ORDER_CLOSE);
+		return;
+	}
+
+	if (pending_open_size + pending_close_size + pending_close_yes_size > 0) {
+		LOG_LN("Skip current signal since pending_open_size + pending_close_size + pending_close_yes_size > 0 for same side and price.");
+		return;
+	}
+
+	int need_to_close_yes = MIN(available_for_close_yes, a_size);
+	int need_to_close_today = MIN(available_for_close - available_for_close_yes, a_size - need_to_close_yes);
+	int need_to_open = a_size - need_to_close_yes - need_to_close_today;
+
+	if (need_to_close_yes > 0)
+		send_single_order(instr, instr->exch, price, need_to_close_yes, a_side, ORDER_CLOSE_YES);
+	if (need_to_close_today > 0)
+		send_single_order(instr, instr->exch, price, need_to_close_today, a_side, ORDER_CLOSE);
+	if (need_to_open > 0)
+		send_single_order(instr, instr->exch, price, need_to_open, a_side, ORDER_OPEN);
+}
+
 
 //根据symbol找到某一合约结构
 Contract * SDPHandler::find_contract(char * symbol)

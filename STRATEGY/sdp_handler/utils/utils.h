@@ -81,4 +81,8 @@ int get_seconds_from_char_time(char* char_time);
 
 void get_time_record(char *time_str);
 
+double Round(double price);
+
+bool read_json_config(ST_BASE_CONFIG& base_config, char* ev_path);
+
 #endif
