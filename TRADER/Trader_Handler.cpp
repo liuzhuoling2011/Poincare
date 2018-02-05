@@ -116,7 +116,7 @@ void update_trader_info(TraderInfo& info, CThostFtdcRspUserLoginField *pRspUserL
 	timeinfo = *tmp_time;
 	timeinfo.tm_min = 0;
 	timeinfo.tm_sec = 0;
-	if (hour > 8 && hour < 19) {
+	if (hour >= 8 && hour < 19) {
         //填写日夜盘
 		g_config_t.day_night = DAY;
 		timeinfo.tm_hour = 9;
