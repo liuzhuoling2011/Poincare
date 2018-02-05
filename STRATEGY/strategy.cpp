@@ -37,7 +37,7 @@ int my_st_init(int type, int length, void *cfg) {
 		char* init_kdb_sql = "int2time:{\"T\"$-9#\"00000000\",string x};evparam:%f;if[not `quoteData in tables `.;ibAskpx:0f;ibBidpx:0f;res:([]a:enlist 0i;b:enlist 0f;c:enlist 0f;d:enlist 0i);quoteData:();FinalSignal2:();"
 									"quote:([]Date:();`float$LegOneBid1:();`float$LegOneAsk1:();`float$LegTwoBid1:();`float$LegTwoAsk1:());`quote insert (.z.D+.z.t;3333.0;3330.5;3.05;3.1)]";
 
-		if (read_json_config(g_base_config, g_config->param_file_path)) 
+		if (!read_json_config(g_base_config, g_config->param_file_path)) 
 			return -1;
 
 		for (int i = 0; i < g_base_config.KDB_PORT_NUM; i++) {
