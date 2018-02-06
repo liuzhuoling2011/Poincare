@@ -39,7 +39,7 @@ debug: export BIN_PATH := bin/debug
 # Find all source files in the source directory, sorted by most
 # recently modified
 SOURCES = $(shell find $(SRC_PATH) -name '*.$(SRC_EXT)' -printf '%T@\t%p\n' \
-						| sort -k 1nr | cut -f2-)
+						| grep -v 'strategy_db' | sort -k 1nr | cut -f2-)
 
 # fallback in case the above fails
 rwildcard = $(foreach d, $(wildcard $1*), $(call rwildcard,$d/,$2) \
