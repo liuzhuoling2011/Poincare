@@ -396,7 +396,7 @@ int SDPHandler::cancel_single_order(Order * a_order)
 		return -1;
 	}
 }
-int SDPHandler::cancel_orders_with_dif_px(Contract * instr, DIRECTION side, double price, int & pending_open_size, int & pending_close_size, int & pending_close_yes_size)
+int SDPHandler::cancel_orders_with_dif_px(Contract * instr, DIRECTION side, double price, int tolerance, int & pending_open_size, int & pending_close_size, int & pending_close_yes_size)
 {
 	list_head *cancel_list = m_orders->get_order_by_side(side);
 	struct list_head *pos, *n;
@@ -406,10 +406,11 @@ int SDPHandler::cancel_orders_with_dif_px(Contract * instr, DIRECTION side, doub
 		l_ord = list_entry(pos, Order, pd_link);
 		// The Contract Address is the same, Save time do string compare
 		if (l_ord->contr == instr) {
-			if (double_compare(l_ord->price, price) == 0 && is_cancelable(l_ord) && l_ord->openclose == ORDER_OPEN) {
+			double tolerant_px = instr->tick_size * tolerance;
+			if (l_ord->price <= (price + tolerant_px) && l_ord->price >= (price - tolerant_px) && is_cancelable(l_ord) && l_ord->openclose == ORDER_OPEN) {
 				pending_open_size += leaves_qty(l_ord);
 			}
-			else if (double_compare(l_ord->price, price) == 0 && is_cancelable(l_ord) && l_ord->openclose == ORDER_CLOSE) {
+			else if (l_ord->price <= (price + tolerant_px) && l_ord->price >= (price - tolerant_px) && is_cancelable(l_ord) && l_ord->openclose == ORDER_CLOSE) {
 				pending_close_size += leaves_qty(l_ord);
 				if (l_ord->close_yes_pos_flag)
 					pending_close_yes_size += leaves_qty(l_ord);
@@ -563,7 +564,7 @@ int SDPHandler::close_all_position()
 	return 0;
 }
 
-void SDPHandler::long_short(Contract * instr, int desired_pos, double ap, double bp)
+void SDPHandler::long_short(Contract * instr, int desired_pos, double ap, double bp, int tolerance)
 {
 	LOG_LN("Enter long_short, symbol: %s, desired_pos: %d, ap: %f, bp: %f",
 		instr->symbol, desired_pos, ap, bp);
@@ -608,7 +609,7 @@ void SDPHandler::long_short(Contract * instr, int desired_pos, double ap, double
 	int pending_open_size = 0;
 	int pending_close_size = 0;
 	int pending_close_yes_size = 0;
-	cancel_orders_with_dif_px(instr, a_side, price, pending_open_size, pending_close_size, pending_close_yes_size);
+	cancel_orders_with_dif_px(instr, a_side, price, tolerance, pending_open_size, pending_close_size, pending_close_yes_size);
 	cancel_orders_by_side(instr, switch_side(a_side));
 
 	LOG_LN("pending_open_size: %d, pending_close_size %d, pending_close_yes_size: %d",

@@ -92,7 +92,7 @@ public:
 	int cancel_orders_by_side(Contract *instr, DIRECTION side);
 	int cancel_orders_by_side(Contract *instr, DIRECTION side, OPEN_CLOSE flag);
 	int cancel_orders_with_dif_px(Contract *instr, DIRECTION side, double price);
-	int cancel_orders_with_dif_px(Contract *instr, DIRECTION side, double price, int &pending_open_size, int &pending_close_size, int& pending_close_yes_size);
+	int cancel_orders_with_dif_px(Contract *instr, DIRECTION side, double price, int tolerance, int &pending_open_size, int &pending_close_size, int& pending_close_yes_size);
 	int cancel_all_orders();
 	int cancel_all_orders(Contract *instr);
 
@@ -101,7 +101,7 @@ public:
 	//平掉所有的仓位
 	int close_all_position();
 	//智能操作达到目标仓位
-	void long_short(Contract * instr, int desired_pos, double ap, double bp);
+	void long_short(Contract * instr, int desired_pos, double ap, double bp, int tolerance);
 
 	Contract * find_contract(char* symbol);
 	int get_pos_by_side(Contract *a_instr, DIRECTION side);

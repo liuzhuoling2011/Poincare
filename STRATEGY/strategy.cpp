@@ -123,7 +123,7 @@ int my_on_book(int type, int length, void *book) {
 	}
 
 	Contract *instr = sdp_handler->find_contract(f_book->symbol);
-	sdp_handler->long_short(instr, signal_sum * g_base_config.MAX_VOL, last_ask_price, last_bid_price);
+	sdp_handler->long_short(instr, signal_sum * g_base_config.MAX_VOL, last_ask_price, last_bid_price, 2); //目前的容忍度是2个tick_size
 
 	return 0;
 }
