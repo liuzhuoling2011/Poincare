@@ -25,6 +25,9 @@
     <Filter Include="源文件\utils">
       <UniqueIdentifier>{9c6590ec-2a37-401f-881b-88f519e27bc8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\strategy_db">
+      <UniqueIdentifier>{40b9b719-9b4a-4bd6-8863-6d18c349704a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="sdp_handler\core\base_define.h">
@@ -79,6 +82,21 @@
     </ClCompile>
     <ClCompile Include="strategy.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="strategy_db\bar_strategy.cpp">
+      <Filter>源文件\strategy_db</Filter>
+    </ClCompile>
+    <ClCompile Include="strategy_db\cu_single.cpp">
+      <Filter>源文件\strategy_db</Filter>
+    </ClCompile>
+    <ClCompile Include="strategy_db\haozai_strategy.cpp">
+      <Filter>源文件\strategy_db</Filter>
+    </ClCompile>
+    <ClCompile Include="strategy_db\lock_0.0.1.cpp">
+      <Filter>源文件\strategy_db</Filter>
+    </ClCompile>
+    <ClCompile Include="strategy_db\sample_strategy.cpp">
+      <Filter>源文件\strategy_db</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

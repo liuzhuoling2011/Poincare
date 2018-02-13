@@ -35,7 +35,7 @@
   "QUOTE_TYPE": 1, // 1 代表1档，2 代表多档
 
   "STRAT_ID": 1014,
-  "STRAT_NAME": "LUO01_01_20171218_007",
+  "STRAT_NAME": "Long_Short",
   "STRAT_PATH": "./strategy.so",
   "STRAT_EV": "./ev.json",
   "STRAT_OUTPUT": "./output",

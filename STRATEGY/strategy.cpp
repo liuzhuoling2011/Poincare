@@ -152,8 +152,12 @@ int my_on_response(int type, int length, void *resp) {
 		PRINT_ERROR("Has Been in OrderList; Waiting Deal...");
 		LOG_LN("Has Been in OrderList; Waiting Deal...");
 		Order* l_ord = sdp_handler->m_orders->query_order(rsp->order_id);
-		if(l_ord != NULL)
+		if(l_ord != NULL) {
 			l_ord->insert_time = int_time;
+			LOG_LN("Order with id: %lld, insert time is: %d", rsp->order_id, l_ord->insert_time);
+		} else {
+			LOG_LN("Can't find order with id: %lld", rsp->order_id);
+		}
 		break;
 	}
 	return 0;
