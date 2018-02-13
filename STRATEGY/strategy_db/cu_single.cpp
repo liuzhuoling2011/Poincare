@@ -124,12 +124,12 @@ void cancel_old_order(int tick_time) {
 	}
 }
 
-//double Round(double price)
-//{
-//    double res = round(price*10)/10.0;
-//    printf("before:%lf, after:%lf\n",price,res);
-//    return res;
-//}
+double Round(double price)
+{
+    double res = round(price*10)/10.0;
+    printf("before:%lf, after:%lf\n",price,res);
+    return res;
+}
 
 int my_on_book(int type, int length, void *book) {
 	if (sdp_handler == NULL) return -1;

@@ -10,9 +10,6 @@ static double last_ask_price;
 static double last_bid_price;
 int my_on_bar(Internal_Bar* bar_quote); // declare bar function
 
-
-//sample strategy: 遇到两个阳线就做多，遇到两个阴线就做空的反手策略。
-
 int my_st_init(int type, int length, void *cfg) {
 	if (sdp_handler == NULL) {
 		sdp_handler = new SDPHandler(type, length, cfg);
@@ -36,7 +33,6 @@ int my_on_book(int type, int length, void *book) {
 		last_ask_price = f_book->ap_array[0];
 		last_bid_price = f_book->bp_array[0];
 		
-        //k线 跳入。
 		process_bar_data(f_book);
 	}
 	return -1;
@@ -44,14 +40,11 @@ int my_on_book(int type, int length, void *book) {
 
 int bar_up_count = 0;
 int bar_down_count = 0;
-
 int my_on_bar(Internal_Bar* bar_quote) {
 	printf("Bar data: symbol %s, int_time %d, open %f, close %f, high %f, low %f\n",
 		bar_quote->symbol, bar_quote->int_time, bar_quote->open, bar_quote->close, bar_quote->high, bar_quote->low);
 	LOG_LN("Bar data: symbol %s, int_time %d, open %f, close %f, high %f, low %f",
 		bar_quote->symbol, bar_quote->int_time, bar_quote->open, bar_quote->close, bar_quote->high, bar_quote->low);
-    //write your bar logic here.
-
 	if( bar_quote->close > bar_quote->open ) {
 		if(bar_up_count == 1) {
 			Contract *instr = sdp_handler->find_contract(bar_quote->symbol);
