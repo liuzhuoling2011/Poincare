@@ -133,18 +133,19 @@ public:
 	/* Record orders' ids and sizes in send_single_order */
 	uint64_t m_cur_ord_id_arr[MAX_ORDER_COUNT];
 	int m_cur_ord_size_arr[MAX_ORDER_COUNT];
+
 private:
 	int m_strat_id = 0;
-	st_config_t *m_config;
-	bool m_is_use_fee = true;
-
-	bool m_use_lock_pos = false;
-	bool is_exit_mode = false;
-	bool exit_mode_orders_sent = false;
 	int m_new_order_times = 0;
 	int m_cancelled_times = 0;
 	int m_total_order_size = 0;		// Accumulated order size.
 	int m_total_cancel_size = 0;	// Accumulated order cancel size.
+	bool m_is_use_fee = true;
+	bool m_use_lock_pos = false;
+	bool is_exit_mode = false;
+	bool exit_mode_orders_sent = false;
+	
+	st_config_t *m_config;
 };
 
 #endif

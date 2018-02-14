@@ -848,7 +848,7 @@ void Trader_Handler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		ORDER_STATUS cur_status = convert_status(pOrder->OrderStatus, pOrder->OrderSysID);
 		g_resp_t.status = get_final_status(pre_status, cur_status);
 		cur_order_field.BusinessUnit[0] = g_resp_t.status; // update order status
-		PRINT_ERROR("pre status: %s cur status: %s, final status: %s, sig_count: %d", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status], g_sig_count);
+		PRINT_DEBUG("pre status: %s cur status: %s, final status: %s, sig_count: %d", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status], g_sig_count);
 		LOG_LN("pre status: %s cur status: %s, final status: %s, sig_count: %d", STATUS[pre_status], STATUS[cur_status], STATUS[g_resp_t.status], g_sig_count);
 
         //包装成g_data_t.info 然后调用sdp的 my_on_response

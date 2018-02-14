@@ -414,14 +414,14 @@ OrderHash::get_all_active_order_info()
 	char temp[1024];
 	g_all_order_info = "Current active orders:\n";
 
-	list_for_each_safe(pos, n, p_buy_list) {
+	list_for_each_prev_safe(pos, n, p_buy_list) {
 		l_ord = list_entry(pos, Order, pd_link);
 		sprintf(temp, "---> %d %lld %s %s %d@%f leaves_qty: %d %s\n", l_ord->insert_time, l_ord->signal_id, BUY_SELL_STR[l_ord->side], OPEN_CLOSE_STR[l_ord->openclose],
 			l_ord->volume, l_ord->price, leaves_qty(l_ord), l_ord->pending_cancel == true ? "canceling..." : "");
 		g_all_order_info += temp;
 	}
 
-	list_for_each_safe(pos, n, p_sell_list) {
+	list_for_each_prev_safe(pos, n, p_sell_list) {
 		l_ord = list_entry(pos, Order, pd_link);
 		sprintf(temp, "---> %d %lld %s %s %d@%f leaves_qty: %d %s\n", l_ord->insert_time, l_ord->signal_id, BUY_SELL_STR[l_ord->side], OPEN_CLOSE_STR[l_ord->openclose],
 			l_ord->volume, l_ord->price, leaves_qty(l_ord), l_ord->pending_cancel == true ? "canceling..." : "");
