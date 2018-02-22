@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "STRATEGY", "STRATEGY\STRATE
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TRADER", "TRADER\CTP.vcxproj", "{3CD54413-D1DB-48F2-949B-CCD58281F09A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SCRIPTS", "SCRIPTS\SCRIPTS.vcxproj", "{0C445AD1-6295-4447-BDC3-C729D33B53D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{3CD54413-D1DB-48F2-949B-CCD58281F09A}.Release|x64.Build.0 = Release|x64
 		{3CD54413-D1DB-48F2-949B-CCD58281F09A}.Release|x86.ActiveCfg = Release|Win32
 		{3CD54413-D1DB-48F2-949B-CCD58281F09A}.Release|x86.Build.0 = Release|Win32
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Debug|x64.ActiveCfg = Debug|x64
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Debug|x64.Build.0 = Debug|x64
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Debug|x86.ActiveCfg = Debug|Win32
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Debug|x86.Build.0 = Debug|Win32
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Release|x64.ActiveCfg = Release|x64
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Release|x64.Build.0 = Release|x64
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Release|x86.ActiveCfg = Release|Win32
+		{0C445AD1-6295-4447-BDC3-C729D33B53D5}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
