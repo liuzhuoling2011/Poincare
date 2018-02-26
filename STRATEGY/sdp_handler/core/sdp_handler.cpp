@@ -534,7 +534,7 @@ void SDPHandler::cancel_old_order(int tick_time)
 	list_t *ord_list = m_orders->get_order_by_side(ORDER_BUY);
 	list_for_each_prev_safe(pos, n, ord_list) {
 		l_ord = list_entry(pos, Order, pd_link);
-		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 1) {
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
 			PRINT_ERROR("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", tick_time, get_seconds_from_int_time(l_ord->insert_time));
 			LOG_LN("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", tick_time, get_seconds_from_int_time(l_ord->insert_time));
 			cancel_single_order(l_ord);
@@ -544,7 +544,7 @@ void SDPHandler::cancel_old_order(int tick_time)
 	ord_list = m_orders->get_order_by_side(ORDER_SELL);
 	list_for_each_prev_safe(pos, n, ord_list) {
 		l_ord = list_entry(pos, Order, pd_link);
-		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 1) {
+		if (tick_time >= get_seconds_from_int_time(l_ord->insert_time) + 6) {
 			PRINT_ERROR("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", tick_time, get_seconds_from_int_time(l_ord->insert_time));
 			LOG_LN("Order in OrderList Waiting over 1 Secs; cur time %d, insert time %d, Cancelling...\n", tick_time, get_seconds_from_int_time(l_ord->insert_time));
 			cancel_single_order(l_ord);
