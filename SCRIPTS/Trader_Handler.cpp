@@ -226,9 +226,13 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 	account_info["AccountID"] = pTradingAccount->AccountID;
 	account_info["PositionProfit"] = pTradingAccount->PositionProfit;
 	account_info["CloseProfit"] = pTradingAccount->CloseProfit;
+	account_info["PreBalance"] = pTradingAccount->PreBalance;
+	account_info["Withdraw"] = pTradingAccount->Withdraw;
+	account_info["Deposit"] = pTradingAccount->Deposit;
 	account_info["Commission"] = pTradingAccount->Commission;
 	account_info["Available"] = pTradingAccount->Available;
 	account_info["ExchangeMargin"] = pTradingAccount->ExchangeMargin;
+
 	g_output_info["account"] = account_info;
 	
 	strlcpy(g_config_t.accounts[0].account, pTradingAccount->AccountID, ACCOUNT_LEN);

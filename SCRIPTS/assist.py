@@ -31,13 +31,16 @@ if __name__ == '__main__':
         cmd_start_handler = 'cd %s;./%s &' % (folder, config_json['HANDLER'])
         p = subprocess.Popen(cmd_start_handler, shell=True, stdout=subprocess.PIPE)  
         data_output[account["USER_ID"]] = (p.stdout.read()).decode()
+        shutil.rmtree(folder)
         
     with open('results.log','w') as logfile:
         for info in data_output:
             task_info = json.loads(data_output[info])
             account_info = task_info['account']
-            log_info = '\n账户名: %s \t持仓盈亏: %s 平仓盈亏: %s 手续费: %s 占用保证金: %s 可用现金: %s\n' % \
-                (account_info["AccountID"], account_info["PositionProfit"], account_info["CloseProfit"], \
+            static_power = account_info["PreBalance"] - account_info["Withdraw"] + account_info["Deposit"]
+            dynamic_power = static_power + account_info["CloseProfit"] + account_info["PositionProfit"] - account_info["Commission"]
+            log_info = '\n账户名: %s \t静态权益: %s 动态权益: %s 持仓盈亏: %s 平仓盈亏: %s 手续费: %s 占用保证金: %s 可用现金: %s\n' % \
+                (account_info["AccountID"], static_power, dynamic_power, account_info["PositionProfit"], account_info["CloseProfit"], \
                 account_info["Commission"], account_info["ExchangeMargin"], account_info["Available"],)
             if 'contracts' in task_info:
                 contracts_info = task_info['contracts']
