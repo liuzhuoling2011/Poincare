@@ -25,16 +25,13 @@ public:
 	virtual void OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	
 	//请求查询投资者持仓响应
-	virtual void OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	virtual void OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	
+	//请求查询成交响应
+	virtual void OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 	//请求查询合约响应
-	virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-
-	//请求查询合约手续费率响应
-	virtual void OnRspQryInstrumentCommissionRate(
-		CThostFtdcInstrumentCommissionRateField *pInstrumentCommissionRate,
-		CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	//virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 	//报单录入请求响应
 	virtual void OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
@@ -62,15 +59,7 @@ public:
 	virtual void OnErrRtnOrderAction(CThostFtdcOrderActionField *pOrderAction,
 		CThostFtdcRspInfoField *pRspInfo);
 
-	//报单录入请求
-	int send_single_order(order_t *order);
-
-	//报单撤销请求
-	int cancel_single_order(order_t *order);
-
-	//初始化策略
-	void init_strategy();
-
+	
 private:
 	//投资者结算结果确认
 	void ReqSettlementInfo();
@@ -78,19 +67,12 @@ private:
 	void ReqTradingAccount();
 	//请求查询合约
 	void ReqInstrument(char* symbol);
-	//请求查询合约手续费率
-	void ReqQryInstrumentCommissionRate(char* symbol);
 	//请求查询投资者持仓
 	void ReqQryInvestorPositionDetail();
-	void ReqQryInvestorPosition();
-	//定制合约
-	void push_contract_to_redis();
-	//策略定时任务
-	int st_idle();
+	//请求查询交易
+	void ReqQryTrade();
 
 	bool is_my_order(int front_id, int session_id);
-
-	CThostFtdcInputOrderField& get_order_info(uint64_t order_id);
 
 public:
 	TraderConfig *m_trader_config;

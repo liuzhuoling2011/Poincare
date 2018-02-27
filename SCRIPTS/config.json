@@ -1,19 +1,18 @@
 {
-  "TRADER_FRONT": "tcp://180.168.146.187:10001", //交易前置
-  "TBROKER_ID": "9999",
-  "TUSER_ID": "106409",
-  "TPASSWORD": "123456",
-
-  "INSTRUMENTS": [ "cu1803" ],
-  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION": true,
-  "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": true,
-  "QUOTE_TYPE": 1, // 1 代表1档，2 代表多档
-
-  "STRAT_ID": 1014,
-  "STRAT_NAME": "Long_Short",
-  "STRAT_PATH": "./strategy.so",
-  "STRAT_EV": "./ev.json",
-  "STRAT_OUTPUT": "./output",
-
-  "TRADER_LOG": "./logs/assist_[TIME].log"
+  "accounts": [
+    {
+      "FRONT": "tcp://180.168.146.187:10001",
+      "BROKER_ID": "9999",
+      "USER_ID": "106409",
+      "PASSWORD": "123456"
+    },
+    {
+      "FRONT": "tcp://180.168.146.187:10001",
+      "BROKER_ID": "9999",
+      "USER_ID": "106407",
+      "PASSWORD": "a.123456"
+    }
+  ],
+  "ASSIST_LOG": "./logs/assist_[TIME].log",
+  "HANDLER": "poincare_assist"
 }

@@ -26,7 +26,7 @@ void recv_signal(int sig) {
 
 int main(int argc, char **argv)
 {
-	PRINT_INFO("Welcome to Poincare Assist!");
+	LOG_LN("Welcome to Poincare Assist!");
 	signal(SIGSEGV, recv_signal);
 	signal(SIGABRT, recv_signal);
 	//signal(SIGINT, recv_signal);
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 	read_json_config(trader_config);
 
 	if (log_handle == NULL) {
-		log_handle = fopen(trader_config.TRADER_LOG, "w");
+		log_handle = fopen(trader_config.ASSIST_LOG, "w");
 	}
 
 	CThostFtdcTraderApi* TraderApi = CThostFtdcTraderApi::CreateFtdcTraderApi("tmp/trader");

@@ -476,26 +476,15 @@ char* get_time_record() {
 
 void update_trader_log_name(TraderConfig& trader_config) {
 	create_dir("./logs");
-	std::string logname = trader_config.TRADER_LOG;
+	std::string logname = trader_config.ASSIST_LOG;
 	char* l_time = get_time_record();
 	size_t pos;
 	if ((pos = logname.find("[TIME]")) != std::string::npos) {
 		logname.replace(pos, 6, l_time);
 	}
-	strlcpy(trader_config.TRADER_LOG, logname.c_str(), 256);
+	strlcpy(trader_config.ASSIST_LOG, logname.c_str(), 256);
 }
 
-void update_strategy_log_name(TraderConfig& trader_config) {
-	std::string logname = trader_config.STRAT_LOG;
-	size_t pos;
-	if ((pos = logname.find("[TIME]")) != std::string::npos) {
-		logname.replace(pos, 6, local_time);
-	}
-	if ((pos = logname.find("[NAME]")) != std::string::npos) {
-		logname.replace(pos, 6, trader_config.STRAT_NAME);
-	}
-	strlcpy(trader_config.STRAT_LOG, logname.c_str(), 256);
-}
 
 bool read_json_config(TraderConfig& trader_config) {
 	std::string json_config;
@@ -503,18 +492,14 @@ bool read_json_config(TraderConfig& trader_config) {
 	std::string err_msg;
 	Json l_json = json11::Json::parse(json_config, err_msg, JsonParse::COMMENTS);
 	if (err_msg.length() > 0) {
-		PRINT_ERROR("Json parse fail, please check your setting!");
+		PRINT_ERROR("Json parse fail, please check your setting! error: %s", err_msg.c_str());
 		return false;
 	}
 
-	strlcpy(trader_config.QUOTE_FRONT, l_json["QUOTE_FRONT"].string_value().c_str(), 64);
-	strlcpy(trader_config.QBROKER_ID, l_json["QBROKER_ID"].string_value().c_str(), 8);
-	strlcpy(trader_config.QUSER_ID, l_json["QUSER_ID"].string_value().c_str(), 64);
-	strlcpy(trader_config.QPASSWORD, l_json["QPASSWORD"].string_value().c_str(), 64);
-	strlcpy(trader_config.TRADER_FRONT, l_json["TRADER_FRONT"].string_value().c_str(), 64);
-	strlcpy(trader_config.TBROKER_ID, l_json["TBROKER_ID"].string_value().c_str(), 8);
-	strlcpy(trader_config.TUSER_ID, l_json["TUSER_ID"].string_value().c_str(), 64);
-	strlcpy(trader_config.TPASSWORD, l_json["TPASSWORD"].string_value().c_str(), 64);
+	strlcpy(trader_config.ACCOUNT.FRONT, l_json["FRONT"].string_value().c_str(), 64);
+	strlcpy(trader_config.ACCOUNT.BROKER_ID, l_json["BROKER_ID"].string_value().c_str(), 64);
+	strlcpy(trader_config.ACCOUNT.USER_ID, l_json["USER_ID"].string_value().c_str(), 64);
+	strlcpy(trader_config.ACCOUNT.PASSWORD, l_json["PASSWORD"].string_value().c_str(), 64);
 
 	strlcpy(trader_config.REDIS_IP, l_json["REDIS_IP"].string_value().c_str(), 64);
 	trader_config.REDIS_PORT = l_json["REDIS_PORT"].int_value();
@@ -534,22 +519,8 @@ bool read_json_config(TraderConfig& trader_config) {
 	
 	trader_config.INSTRUMENT_COUNT = instr_count;
 
-	trader_config.STRAT_ID = l_json["STRAT_ID"].int_value();
-	strlcpy(trader_config.STRAT_PATH, l_json["STRAT_PATH"].string_value().c_str(), 256);
-	strlcpy(trader_config.STRAT_EV, l_json["STRAT_EV"].string_value().c_str(), 256);
-	strlcpy(trader_config.STRAT_OUTPUT, l_json["STRAT_OUTPUT"].string_value().c_str(), 256);
-	strlcpy(trader_config.STRAT_NAME, l_json["STRAT_NAME"].string_value().c_str(), 64);
-	
-	trader_config.TIME_INTERVAL = l_json["TIME_INTERVAL"].int_value();
-	strlcpy(trader_config.TRADER_LOG, l_json["TRADER_LOG"].string_value().c_str(), 256);
-	strlcpy(trader_config.STRAT_LOG, l_json["STRAT_LOG"].string_value().c_str(), 256);
-	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION"].bool_value();
-	trader_config.ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE = l_json["ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE"].bool_value();
-	trader_config.QUOTE_TYPE = l_json["QUOTE_TYPE"].int_value();
-
 	create_dir("./tmp");
 	update_trader_log_name(trader_config);
-	update_strategy_log_name(trader_config);
 }
 
 void free_config(TraderConfig& trader_config) {
