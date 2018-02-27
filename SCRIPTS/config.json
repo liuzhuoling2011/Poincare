@@ -1,0 +1,18 @@
+{
+  "accounts": [
+    {
+      "FRONT": "tcp://180.168.146.187:10001",
+      "BROKER_ID": "9999",
+      "USER_ID": "106409",
+      "PASSWORD": "123456"
+    },
+    {
+      "FRONT": "tcp://180.168.146.187:10001",
+      "BROKER_ID": "9999",
+      "USER_ID": "106407",
+      "PASSWORD": "a.123456"
+    }
+  ],
+  "ASSIST_LOG": "./logs/assist_[TIME].log",
+  "HANDLER": "poincare_assist"
+}
