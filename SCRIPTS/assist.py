@@ -31,7 +31,7 @@ if __name__ == '__main__':
         cmd_start_handler = 'cd %s;./%s &' % (folder, config_json['HANDLER'])
         p = subprocess.Popen(cmd_start_handler, shell=True, stdout=subprocess.PIPE)  
         data_output[account["USER_ID"]] = (p.stdout.read()).decode()
-        shutil.rmtree(folder)
+        # shutil.rmtree(folder)
         
     with open('results.log','w') as logfile:
         for info in data_output:

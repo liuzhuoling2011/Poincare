@@ -261,8 +261,14 @@ void Trader_Handler::ReqQryTrade()
 {
 	CThostFtdcQryTradeField req = { 0 };
 	strcpy(req.InvestorID, m_trader_config->ACCOUNT.USER_ID);
+	m_trader_api->ReqQryTrade(&req, ++m_request_id);
+}
 
-	int ret = m_trader_api->ReqQryTrade(&req, ++m_request_id);
+void Trader_Handler::ReqQryOrder()
+{
+	CThostFtdcQryOrderField req = { 0 };
+	strcpy(req.InvestorID, m_trader_config->ACCOUNT.USER_ID);
+	m_trader_api->ReqQryOrder(&req, ++m_request_id);
 }
 
 void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField * pInvestorPositionDetail, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
@@ -406,7 +412,7 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 			g_output_info["contracts"] = contracts_info;
 		}
         
-		ReqQryTrade();
+		ReqQryOrder();
 	}
 }
 
@@ -443,6 +449,38 @@ void Trader_Handler::OnRspQryTrade(CThostFtdcTradeField * pTrade, CThostFtdcRspI
 		return;
 
 	end_process();
+}
+
+vector<CThostFtdcOrderField*> orderList;
+void Trader_Handler::OnRspQryOrder(CThostFtdcOrderField * pOrder, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (pOrder == NULL)  ReqQryTrade();
+	cerr << "请求查询报单响应:前置编号FrontID:" << pOrder->FrontID << " 会话编号SessionID:" << pOrder->SessionID << " OrderRef:" << pOrder->OrderRef << endl;
+
+	CThostFtdcOrderField* order = new CThostFtdcOrderField();
+	memcpy(order, pOrder, sizeof(CThostFtdcOrderField));
+	orderList.push_back(order);
+
+	if (bIsLast)
+	{
+
+		cerr << "所有合约报单次数：" << orderList.size() << endl;
+
+		cerr << "--------------------------------------------------------------------报单start" << endl;
+		for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)
+			cerr << "经纪公司代码:" << (*iter)->BrokerID << endl << " 投资者代码:" << (*iter)->InvestorID << endl << " 用户代码:" << (*iter)->UserID << endl << " 合约代码:" << (*iter)->InstrumentID << endl << " 买卖方向:" << (*iter)->Direction << endl
+			<< " 组合开平标志:" << (*iter)->CombOffsetFlag << endl << " 价格:" << (*iter)->LimitPrice << endl << " 数量:" << (*iter)->VolumeTotalOriginal << endl << " 报单引用:" << (*iter)->OrderRef << endl << " 客户代码:" << (*iter)->ClientID << endl
+			<< " 报单状态:" << (*iter)->OrderStatus << endl << " 委托时间:" << (*iter)->InsertTime << endl << " 报单编号:" << (*iter)->OrderSysID << endl << " GTD日期:" << (*iter)->GTDDate << endl << " 交易日:" << (*iter)->TradingDay << endl
+			<< " 报单日期:" << (*iter)->InsertDate << endl
+			<< endl;
+
+		cerr << "--------------------------------------------------------------------报单end" << endl;
+
+
+		sleep(1);
+		cerr << "查询报单正常，首次查询成交:" << endl;
+		ReqQryTrade();
+	}
 }
 
 // 发单失败，被拒，挂单失败才会被调用。
