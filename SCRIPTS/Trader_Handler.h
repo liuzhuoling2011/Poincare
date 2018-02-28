@@ -30,6 +30,9 @@ public:
 	//请求查询成交响应
 	virtual void OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
+	//请求查询报单响应
+	virtual void OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+
 	//请求查询合约响应
 	//virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
@@ -71,6 +74,8 @@ private:
 	void ReqQryInvestorPositionDetail();
 	//请求查询交易
 	void ReqQryTrade();
+	//请求查询报单
+	void ReqQryOrder();
 
 	bool is_my_order(int front_id, int session_id);
 

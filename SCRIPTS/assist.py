@@ -31,7 +31,7 @@ if __name__ == '__main__':
         cmd_start_handler = 'cd %s;./%s &' % (folder, config_json['HANDLER'])
         p = subprocess.Popen(cmd_start_handler, shell=True, stdout=subprocess.PIPE)  
         data_output[account["USER_ID"]] = (p.stdout.read()).decode()
-        shutil.rmtree(folder)
+        # shutil.rmtree(folder)
         
     with open('results.log','w') as logfile:
         for info in data_output:
@@ -49,6 +49,15 @@ if __name__ == '__main__':
                     log_info += '合约名: %s \t今仓多仓: %s 今仓空仓: %s 昨仓多仓: %s 昨仓空仓: %s\n' % \
                         (pos["symbol"], pos["tpos_long_val"], pos["tpos_short_val"], \
                         pos["ypos_long_val"], pos["ypos_short_val"])
+            if 'orderlist' in task_info:
+                orderlist_info = task_info['orderlist']
+                log_info += '报单信息:\n'
+                for order in orderlist_info:
+                    log_info += '合约名: %s \t买卖: %s 开平: %s 成交价格: %s 手数: %s 报单时间: %s 报单编号: %s 报单状态: %s\n' % \
+                        (order['InstrumentID'], BUY_SELL[order['Direction'] - ord('0')], OPEN_CLOSE[order['OffsetFlag'] - ord('0')],
+                        order['Price'], order['Volume'], order['InsertDate'] + ' ' + order['InsertTime'], 
+                        order['OrderSysID'].strip(), order['OrderStatus'])
+           
             if 'tradelist' in task_info:
                 tradelist_info = task_info['tradelist']
                 log_info += '交易信息:\n'
