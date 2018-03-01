@@ -18,7 +18,6 @@ char g_core_dump_msg[8192];
 
 void recv_signal(int sig) {
 	dump_backtrace(g_core_dump_msg);
-	PRINT_ERROR("%s", g_core_dump_msg);
 	LOG_LN("%s", g_core_dump_msg);
 	if (trader_handler != NULL) delete trader_handler;
 	exit(1);

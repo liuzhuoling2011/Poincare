@@ -263,7 +263,11 @@ void Trader_Handler::ReqQryTrade()
 	fprintf(stderr, "\nStart query trade list...\n");
 	CThostFtdcQryTradeField req = { 0 };
 	strcpy(req.InvestorID, m_trader_config->ACCOUNT.USER_ID);
-	m_trader_api->ReqQryTrade(&req, ++m_request_id);
+	int ret = 0;
+	do {
+		ret = m_trader_api->ReqQryTrade(&req, ++m_request_id);
+		sleep(1);
+	} while (ret != 0);
 }
 
 void Trader_Handler::ReqQryOrder()
@@ -432,7 +436,6 @@ void end_process() {
 
 void Trader_Handler::OnRspQryTrade(CThostFtdcTradeField * pTrade, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
-	fprintf(stderr, "OnRspQryTrade\n");
 	if (pTrade == NULL) 
 		end_process();
 
@@ -460,8 +463,10 @@ void Trader_Handler::OnRspQryTrade(CThostFtdcTradeField * pTrade, CThostFtdcRspI
 Json::array orderlist_info = Json::array();
 void Trader_Handler::OnRspQryOrder(CThostFtdcOrderField * pOrder, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
-	if (pOrder == NULL)
+	if (pOrder == NULL) {
 		ReqQryTrade();
+		return;
+	}
 
 	fprintf(stderr, "%s %s %s %d %d %d@%f %s\n", pOrder->InstrumentID, pOrder->InsertDate, pOrder->InsertTime,
 		pOrder->Direction - '0', pOrder->CombOffsetFlag[0] - '0', pOrder->VolumeTotalOriginal, pOrder->LimitPrice, pOrder->OrderSysID);
@@ -473,7 +478,7 @@ void Trader_Handler::OnRspQryOrder(CThostFtdcOrderField * pOrder, CThostFtdcRspI
 	order_log["OrderSysID"] = pOrder->OrderSysID;
 	order_log["Direction"] = pOrder->Direction;
 	order_log["OrderStatus"] = pOrder->OrderStatus;
-	order_log["OffsetFlag"] = pOrder->CombOffsetFlag;
+	order_log["OffsetFlag"] = pOrder->CombOffsetFlag[0];
 	order_log["InsertDate"] = pOrder->InsertDate;
 	order_log["InsertTime"] = pOrder->InsertTime;
 	orderlist_info.push_back(order_log);
