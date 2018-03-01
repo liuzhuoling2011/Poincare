@@ -173,7 +173,7 @@ void Trader_Handler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 {
 	if (pRspInfo != NULL && pRspInfo->ErrorID == 0) {
 		update_trader_info(m_trader_info, pRspUserLogin);
-		LOG_LN("TradingDay: %d DayNight: %s Time: %s", 
+		fprintf(stderr, "TradingDay: %d DayNight: %s Time: %s\n",
 			g_config_t.trading_date, g_config_t.day_night == 0 ? "Day":"Night", m_trader_info.LoginTime);
 
 		//投资者结算结果确认
@@ -221,7 +221,7 @@ void Trader_Handler::ReqTradingAccount()
 void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	if (pTradingAccount == NULL) return;
-	LOG_LN("%s %f %f %f %f %f", pTradingAccount->AccountID, pTradingAccount->PositionProfit, pTradingAccount->CloseProfit, pTradingAccount->Commission, pTradingAccount->Available, pTradingAccount->ExchangeMargin);
+	fprintf(stderr, "Account: %s %f %f %f %f %f\n", pTradingAccount->AccountID, pTradingAccount->PositionProfit, pTradingAccount->CloseProfit, pTradingAccount->Commission, pTradingAccount->Available, pTradingAccount->ExchangeMargin);
 	Json::object account_info;
 	account_info["AccountID"] = pTradingAccount->AccountID;
 	account_info["PositionProfit"] = pTradingAccount->PositionProfit;
@@ -247,6 +247,7 @@ void Trader_Handler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 //从 m_trader_config 取得配置，发送仓位请求
 void Trader_Handler::ReqQryInvestorPositionDetail()
 {
+	fprintf(stderr, "\nStart query position...\n");
 	CThostFtdcQryInvestorPositionDetailField req_pos = { 0 };
 	strcpy(req_pos.BrokerID, m_trader_config->ACCOUNT.BROKER_ID);
 	strcpy(req_pos.InvestorID, m_trader_config->ACCOUNT.USER_ID);
@@ -259,6 +260,7 @@ void Trader_Handler::ReqQryInvestorPositionDetail()
 
 void Trader_Handler::ReqQryTrade()
 {
+	fprintf(stderr, "\nStart query trade list...\n");
 	CThostFtdcQryTradeField req = { 0 };
 	strcpy(req.InvestorID, m_trader_config->ACCOUNT.USER_ID);
 	m_trader_api->ReqQryTrade(&req, ++m_request_id);
@@ -266,6 +268,7 @@ void Trader_Handler::ReqQryTrade()
 
 void Trader_Handler::ReqQryOrder()
 {
+	fprintf(stderr, "\nStart query order list...\n");
 	CThostFtdcQryOrderField req = { 0 };
 	strcpy(req.InvestorID, m_trader_config->ACCOUNT.USER_ID);
 	m_trader_api->ReqQryOrder(&req, ++m_request_id);
@@ -393,10 +396,10 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 		if(!g_contract_config_hash.empty()) {
 			Json::array contracts_info = Json::array();
 			for (auto iter = g_contract_config_hash.begin(); iter != g_contract_config_hash.end(); iter++) {
-				/*printf("%s %d@%f %d@%f %d@%f %d@%f\n", iter->first, iter->second.today_pos.long_volume, iter->second.today_pos.long_price,
+				fprintf(stderr, "%s %d@%f %d@%f %d@%f %d@%f\n", iter->first, iter->second.today_pos.long_volume, iter->second.today_pos.long_price,
 					iter->second.today_pos.short_volume, iter->second.today_pos.short_price, 
 					iter->second.yesterday_pos.long_volume, iter->second.yesterday_pos.long_price,
-					iter->second.yesterday_pos.short_volume, iter->second.yesterday_pos.short_price);*/
+					iter->second.yesterday_pos.short_volume, iter->second.yesterday_pos.short_price);
 				Json::object contract_info;
 				contract_info["symbol"] = iter->first;
 				contract_info["tpos_long_val"] = iter->second.today_pos.long_volume;
@@ -417,7 +420,6 @@ void Trader_Handler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDe
 }
 
 Json::array tradelist_info = Json::array();
-
 void end_process() {
 	if (!tradelist_info.empty()) {
 		g_output_info["tradelist"] = tradelist_info;
@@ -430,8 +432,12 @@ void end_process() {
 
 void Trader_Handler::OnRspQryTrade(CThostFtdcTradeField * pTrade, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
+	fprintf(stderr, "OnRspQryTrade\n");
 	if (pTrade == NULL) 
 		end_process();
+
+	fprintf(stderr, "%s %s %s %d %d %d@%f %s %s\n", pTrade->InstrumentID, pTrade->TradeDate, pTrade->TradeTime,
+		pTrade->Direction - '0', pTrade->OffsetFlag - '0', pTrade->Volume, pTrade->Price, pTrade->OrderSysID, pTrade->TradeID);
 
 	Json::object trade_log;
 	trade_log["InstrumentID"] = pTrade->InstrumentID;
@@ -451,36 +457,35 @@ void Trader_Handler::OnRspQryTrade(CThostFtdcTradeField * pTrade, CThostFtdcRspI
 	end_process();
 }
 
-vector<CThostFtdcOrderField*> orderList;
+Json::array orderlist_info = Json::array();
 void Trader_Handler::OnRspQryOrder(CThostFtdcOrderField * pOrder, CThostFtdcRspInfoField * pRspInfo, int nRequestID, bool bIsLast)
 {
-	if (pOrder == NULL)  ReqQryTrade();
-	cerr << "请求查询报单响应:前置编号FrontID:" << pOrder->FrontID << " 会话编号SessionID:" << pOrder->SessionID << " OrderRef:" << pOrder->OrderRef << endl;
-
-	CThostFtdcOrderField* order = new CThostFtdcOrderField();
-	memcpy(order, pOrder, sizeof(CThostFtdcOrderField));
-	orderList.push_back(order);
-
-	if (bIsLast)
-	{
-
-		cerr << "所有合约报单次数：" << orderList.size() << endl;
-
-		cerr << "--------------------------------------------------------------------报单start" << endl;
-		for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)
-			cerr << "经纪公司代码:" << (*iter)->BrokerID << endl << " 投资者代码:" << (*iter)->InvestorID << endl << " 用户代码:" << (*iter)->UserID << endl << " 合约代码:" << (*iter)->InstrumentID << endl << " 买卖方向:" << (*iter)->Direction << endl
-			<< " 组合开平标志:" << (*iter)->CombOffsetFlag << endl << " 价格:" << (*iter)->LimitPrice << endl << " 数量:" << (*iter)->VolumeTotalOriginal << endl << " 报单引用:" << (*iter)->OrderRef << endl << " 客户代码:" << (*iter)->ClientID << endl
-			<< " 报单状态:" << (*iter)->OrderStatus << endl << " 委托时间:" << (*iter)->InsertTime << endl << " 报单编号:" << (*iter)->OrderSysID << endl << " GTD日期:" << (*iter)->GTDDate << endl << " 交易日:" << (*iter)->TradingDay << endl
-			<< " 报单日期:" << (*iter)->InsertDate << endl
-			<< endl;
-
-		cerr << "--------------------------------------------------------------------报单end" << endl;
-
-
-		sleep(1);
-		cerr << "查询报单正常，首次查询成交:" << endl;
+	if (pOrder == NULL)
 		ReqQryTrade();
+
+	fprintf(stderr, "%s %s %s %d %d %d@%f %s\n", pOrder->InstrumentID, pOrder->InsertDate, pOrder->InsertTime,
+		pOrder->Direction - '0', pOrder->CombOffsetFlag[0] - '0', pOrder->VolumeTotalOriginal, pOrder->LimitPrice, pOrder->OrderSysID);
+
+	Json::object order_log;
+	order_log["InstrumentID"] = pOrder->InstrumentID;
+	order_log["Price"] = pOrder->LimitPrice;
+	order_log["Volume"] = pOrder->VolumeTotalOriginal;
+	order_log["OrderSysID"] = pOrder->OrderSysID;
+	order_log["Direction"] = pOrder->Direction;
+	order_log["OrderStatus"] = pOrder->OrderStatus;
+	order_log["OffsetFlag"] = pOrder->CombOffsetFlag;
+	order_log["InsertDate"] = pOrder->InsertDate;
+	order_log["InsertTime"] = pOrder->InsertTime;
+	orderlist_info.push_back(order_log);
+
+	if (!bIsLast)
+		return;
+
+	if (!orderlist_info.empty()) {
+		g_output_info["orderlist"] = orderlist_info;
 	}
+
+	ReqQryTrade();
 }
 
 // 发单失败，被拒，挂单失败才会被调用。
