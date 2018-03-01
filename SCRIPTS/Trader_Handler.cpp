@@ -478,6 +478,7 @@ void Trader_Handler::OnRspQryOrder(CThostFtdcOrderField * pOrder, CThostFtdcRspI
 	order_log["OrderSysID"] = pOrder->OrderSysID;
 	order_log["Direction"] = pOrder->Direction;
 	order_log["OrderStatus"] = pOrder->OrderStatus;
+	order_log["StatusMsg"] = pOrder->StatusMsg;
 	order_log["OffsetFlag"] = pOrder->CombOffsetFlag[0];
 	order_log["InsertDate"] = pOrder->InsertDate;
 	order_log["InsertTime"] = pOrder->InsertTime;
