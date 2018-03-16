@@ -1,18 +1,642 @@
 {
   "accounts": [
-    {
-      "FRONT": "tcp://180.168.146.187:10001",
-      "BROKER_ID": "9999",
-      "USER_ID": "106409",
-      "PASSWORD": "123456"
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990106",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990107",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990189",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990187",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990183",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990182",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990181",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990185",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990188",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990186",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990180",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30900200",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30900201",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30990191",
+      "PASSWORD": "Mycapi168"
     },
     {
-      "FRONT": "tcp://180.168.146.187:10001",
-      "BROKER_ID": "9999",
-      "USER_ID": "106407",
-      "PASSWORD": "a.123456"
+      "FRONT": "tcp://180.166.132.66:41205",
+      "BROKER_ID": "6000",
+      "USER_ID": "30900707",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81240588",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81240666",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81240696",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241335",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241327",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241330",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241352",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241337",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241332",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241331",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81240819",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241336",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "74023080",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241321",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241367",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "81241368",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "83021196",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "83021197",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "83021198",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050139",
+      "PASSWORD": "Mycapi168"
+    },
+		{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050156",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050138",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050143",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050145",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050147",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050152",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050146",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050136",
+      "PASSWORD": "Mycapi168"
+    },
+    {
+      "FRONT": "tcp://180.168.212.76:41205",
+      "BROKER_ID": "8000",
+      "USER_ID": "76050137",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "135008",
+      "PASSWORD": "JR246300"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "135009",
+      "PASSWORD": "JR246301"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "135036",
+      "PASSWORD": "JR250319"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "135037",
+      "PASSWORD": "JR250320"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910079",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910080",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910189",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910082",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910089",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910191",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910231",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910083",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910261",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910258",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910257",
+      "PASSWORD": "Mycapi168"
+    },	
+    {
+      "FRONT": "tcp://101.231.3.126:41205",
+      "BROKER_ID": "8888",
+      "USER_ID": "910262",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800276",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800277",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800312",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800313",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800324",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800325",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800326",
+      "PASSWORD": "Mycapi168"
+    },
+    {
+      "FRONT": "tcp://140.206.241.64:41205",
+      "BROKER_ID": "7080",
+      "USER_ID": "27800327",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "100101956",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "100102058",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "100103186",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300559",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300555",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300561",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300572",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300563",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300585",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300565",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300576",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "100102028",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120300567",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120301363",
+      "PASSWORD": "Mycapi168"
+    },
+    {
+      "FRONT": "tcp://180.169.101.177:41205",
+      "BROKER_ID": "66666",
+      "USER_ID": "120350398",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "20033856",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "20033866",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "20052118",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "20052119",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "20052121",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "20052123",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "20052225",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000326",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000328",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000329",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000324",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000325",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000330",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000331",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000332",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000343",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000334",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000335",
+      "PASSWORD": "Mycapi168"
+    },
+		{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000336",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000337",
+      "PASSWORD": "Mycapi168"
+    },
+	{
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000338",
+      "PASSWORD": "Mycapi168"
+    },
+    {
+      "FRONT": "tcp://180.168.212.230:41205",
+      "BROKER_ID": "8080",
+      "USER_ID": "13000339",
+      "PASSWORD": "Mycapi168"
     }
   ],
+  "ALL_CONTRACT_FLAG": false,
+  "CONTRACT_POS_FLAG": false,
+  "ORDER_INFO_FLAG": false,
+  "TRADE_INFO_FLAG": false,
+
+  "WRITE_LOG": false,
   "ASSIST_LOG": "./logs/assist_[TIME].log",
-  "HANDLER": "poincare_assist"
+  "HANDLER": "ctp_assist"
 }

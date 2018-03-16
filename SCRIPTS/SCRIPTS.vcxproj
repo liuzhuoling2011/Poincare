@@ -136,6 +136,7 @@
     <ClInclude Include="utils\utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assist.py" />
     <None Include="config.json" />
     <None Include="Makefile" />
   </ItemGroup>

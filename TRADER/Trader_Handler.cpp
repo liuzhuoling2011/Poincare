@@ -348,25 +348,11 @@ Calculate:
 				long_price += contracts_long[i].OpenPrice * contracts_long[i].Volume;
 				long_size += contracts_long[i].Volume;
 			}
-			if (long_size == 0) {
-				contract_config.today_pos.long_price = 0;
-				contract_config.today_pos.long_volume = 0;
-			}
-			else {
-                //今天仓位的均价和仓位。
-				contract_config.today_pos.long_price = long_price / long_size;
-				contract_config.today_pos.long_volume = long_size;
-			}
 
-			if (yes_long_size == 0) {
-				contract_config.yesterday_pos.long_price = 0;
-				contract_config.yesterday_pos.long_volume = 0;
-			}
-			else {
-                //昨天仓位的均价和仓位。
-				contract_config.yesterday_pos.long_price = yes_long_price / yes_long_size;
-				contract_config.yesterday_pos.long_volume = yes_long_size;
-			}
+			contract_config.today_pos.long_price = (long_size == 0) ? 0 : long_price / long_size;
+			contract_config.today_pos.long_volume = long_size;
+			contract_config.yesterday_pos.long_price = (yes_long_size == 0) ? 0 : yes_long_price / yes_long_size;
+			contract_config.yesterday_pos.long_volume = yes_long_size;
 
             //short 同理。
 			for (int i = 0; i < contracts_short.size(); i++) {
@@ -377,24 +363,10 @@ Calculate:
 				short_price += contracts_short[i].OpenPrice * contracts_short[i].Volume;
 				short_size += contracts_short[i].Volume;
 			}
-            //short 同理。
-			if (short_size == 0) {
-				contract_config.today_pos.short_price = 0;
-				contract_config.today_pos.short_volume = 0;
-			}
-			else {
-				contract_config.today_pos.short_price = short_price / short_size;
-				contract_config.today_pos.short_volume = short_size;
-			}
-
-			if (yes_short_size == 0) {
-				contract_config.yesterday_pos.short_price = 0;
-				contract_config.yesterday_pos.short_volume = 0;
-			}
-			else {
-				contract_config.yesterday_pos.short_price = yes_short_price / yes_short_size;
-				contract_config.yesterday_pos.short_volume = yes_short_size;
-			}
+			contract_config.today_pos.short_price = (short_size == 0) ? 0 : short_price / short_size;
+			contract_config.today_pos.short_volume = short_size;
+			contract_config.yesterday_pos.short_price = (yes_short_size == 0) ? 0 : yes_short_price / yes_short_size;
+			contract_config.yesterday_pos.short_volume = yes_short_size;
 		}
 		//如果订阅的合约，在仓位查询中没有返回回报，那么就插入空的	 empty_contract_t
 		for (int i = 0; i < m_trader_config->INSTRUMENT_COUNT; i++) {
