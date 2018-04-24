@@ -19,6 +19,9 @@
     <Filter Include="源文件\utils">
       <UniqueIdentifier>{ed3fbcbe-008e-4167-9265-9265c8757f92}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\include">
+      <UniqueIdentifier>{9918fa36-2d0d-4c14-bf8d-1c64b5c92cc1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -31,12 +34,6 @@
       <Filter>源文件\utils</Filter>
     </ClCompile>
     <ClCompile Include="utils\log.cpp">
-      <Filter>源文件\utils</Filter>
-    </ClCompile>
-    <ClCompile Include="utils\order_hash.cpp">
-      <Filter>源文件\utils</Filter>
-    </ClCompile>
-    <ClCompile Include="utils\redis_handler.cpp">
       <Filter>源文件\utils</Filter>
     </ClCompile>
     <ClCompile Include="utils\utils.cpp">
@@ -59,17 +56,29 @@
     <ClInclude Include="utils\MyHash.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\order_hash.h">
-      <Filter>头文件\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\redis_handler.h">
-      <Filter>头文件\utils</Filter>
-    </ClInclude>
     <ClInclude Include="utils\utils.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\json11.hpp">
       <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="include\base_define.h">
+      <Filter>头文件\include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CTP_define.h">
+      <Filter>头文件\include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ThostFtdcMdApi.h">
+      <Filter>头文件\include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ThostFtdcTraderApi.h">
+      <Filter>头文件\include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ThostFtdcUserApiDataType.h">
+      <Filter>头文件\include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ThostFtdcUserApiStruct.h">
+      <Filter>头文件\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

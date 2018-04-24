@@ -36,10 +36,18 @@ void st_flush_log()
 	flush_log(); // flush treder log
 }
 
+bool send_order_flag = false;
+unsigned long start_time, end_time;
+
 int process_strategy_order(int type, int length, void *data) {
 	int ret = 0;
 	switch (type) {
 		case S_PLACE_ORDER_DEFAULT: {
+			if (!send_order_flag) {
+				HP_TIMING_NOW(end_time);
+				send_order_flag = true;
+			}
+
 			order_t *ord = (order_t*)((st_data_t*)data)->info;
 			ret = g_trader_handler->send_single_order(ord);
 			LOG_LN("Send Order: %c %s %d %f %s %s %d %d %d %lld %lld %lld", ord->exch, ord->symbol,
@@ -181,7 +189,12 @@ int my_on_book(int type, int length, void *book) {
 	Futures_Internal_Book *f_book = (Futures_Internal_Book *)((st_data_t*)book)->info;
 	int_time = f_book->int_time;
 	log_quote(f_book);
+	HP_TIMING_NOW(start_time); send_order_flag = false;
 	int ret = on_book(type, length, book);
+	if (!send_order_flag) {
+		HP_TIMING_NOW(end_time);
+	}
+	PRINT_INFO("Strategy %s time: %ld", send_order_flag ? "send order" : "empty run", end_time - start_time);
 	st_flush_log();
 	return ret;
 }

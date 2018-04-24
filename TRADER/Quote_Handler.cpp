@@ -13,6 +13,8 @@ RedisList *g_redis_multi_quote = NULL;
 
 static st_data_t g_data;
 
+unsigned long g_start_time, g_end_time;
+
 bool update_future_quote(void* multi_quote) {
 	Futures_Internal_Book *quote = (Futures_Internal_Book *)multi_quote;
 	printf("int_time: %d, symbol: %s, feed_type: %d, exch: %d, pre_close_px: %f, pre_settle_px: %f, pre_open_interest: %f, open_interest: %f "
@@ -101,6 +103,7 @@ void Quote_Handler::OnRspSubMarketData(
 void Quote_Handler::OnRtnDepthMarketData(
     CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
+	HP_TIMING_NOW(g_start_time);
 	convert_quote(pDepthMarketData, &g_f_book);
     
 	PRINT_INFO("time: %d symbol: %s ap1: %f av1: %d bp1: %f bv1:%d",
@@ -115,6 +118,8 @@ void Quote_Handler::OnRtnDepthMarketData(
 	}
 
 	my_on_book(DEFAULT_FUTURE_QUOTE, sizeof(st_data_t), &g_data);
+	HP_TIMING_NOW(g_end_time);
+	PRINT_INFO("Total time: %ld", g_end_time - g_start_time);
 }
 
 void Quote_Handler::OnFrontDisconnected(int nReason)

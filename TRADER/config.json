@@ -29,7 +29,7 @@
   "REDIS_QUOTE_CACHE": "redis_quote_cache",
   "REDIS_MULTI_QUOTE_CACHE": "redis_multi_quote_cache",
 
-  "INSTRUMENTS": [ "cu1803" ],
+  "INSTRUMENTS": [ "cu1809" ],
   "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_POSITION": true,
   "ONLY_RECEIVE_SUBSCRIBE_INSTRUMENTS_QUOTE": true,
   "QUOTE_TYPE": 1, // 1 代表1档，2 代表多档

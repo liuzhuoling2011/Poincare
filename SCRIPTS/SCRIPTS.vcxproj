@@ -76,7 +76,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)hiredis;$(SolutionDir);$(SolutionDir)include;$(ProjectDir);C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -120,19 +120,21 @@
     <ClCompile Include="Trader_Handler.cpp" />
     <ClCompile Include="utils\json11.cpp" />
     <ClCompile Include="utils\log.cpp" />
-    <ClCompile Include="utils\order_hash.cpp" />
-    <ClCompile Include="utils\redis_handler.cpp" />
     <ClCompile Include="utils\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\base_define.h" />
+    <ClInclude Include="include\CTP_define.h" />
+    <ClInclude Include="include\ThostFtdcMdApi.h" />
+    <ClInclude Include="include\ThostFtdcTraderApi.h" />
+    <ClInclude Include="include\ThostFtdcUserApiDataType.h" />
+    <ClInclude Include="include\ThostFtdcUserApiStruct.h" />
     <ClInclude Include="Trader_Handler.h" />
     <ClInclude Include="utils\json11.hpp" />
     <ClInclude Include="utils\list.h" />
     <ClInclude Include="utils\log.h" />
     <ClInclude Include="utils\MyArray.h" />
     <ClInclude Include="utils\MyHash.h" />
-    <ClInclude Include="utils\order_hash.h" />
-    <ClInclude Include="utils\redis_handler.h" />
     <ClInclude Include="utils\utils.h" />
   </ItemGroup>
   <ItemGroup>
