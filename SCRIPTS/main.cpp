@@ -25,14 +25,14 @@ void recv_signal(int sig) {
 
 int main(int argc, char **argv)
 {
-	LOG_LN("Welcome to Poincare Assist!");
-	signal(SIGSEGV, recv_signal);
-	signal(SIGABRT, recv_signal);
+	/*signal(SIGSEGV, recv_signal);
+	signal(SIGABRT, recv_signal);*/
 	//signal(SIGINT, recv_signal);
 
 	TraderConfig trader_config = { 0 };
 	read_json_config(trader_config);
-
+	PRINT_INFO("Welcome to CTP Assist! Querying Account: %s...", trader_config.USER_ID);
+	
 	if (log_handle == NULL) {
 		log_handle = fopen(trader_config.ASSIST_LOG, "w");
 	}
@@ -42,7 +42,6 @@ int main(int argc, char **argv)
 
 	TraderApi->Join();
 
-	free_config(trader_config);
 	flush_log();
 	fclose(log_handle);
 	return 0;

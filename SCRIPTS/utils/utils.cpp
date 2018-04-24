@@ -12,99 +12,8 @@
 
 using namespace json11;
 
-static const std::map<std::string, char> EXCH_CHAR =
-{ { "SZSE", '0' },{ "SSE", '1' },{ "HKEX", '2' },{ "SHFE", 'A' },{ "CFFEX", 'G' },{ "DCE", 'B' },
-{ "CZCE", 'C' },{ "FUT_EXCH", 'X' },{ "SGX", 'S' },{ "SGE", 'D' },{ "CBOT", 'F' },{ "CME", 'M' },
-{ "LME", 'L' },{ "COMEX", 'O' },{ "NYMEX", 'N' },{ "BLANK_EXCH", '\0' },{ "UNDEFINED_EXCH", 'u' } };
-
-static const std::map<std::string, int> EXCH_FEEDTYPE =
-{ { "CFFEX", 0 },{ "DCE", 1 },{ "SHFE", 6 },{ "CZCE", 7 },{ "Stock", 9 } };
-
-char get_exch_by_name(const char *name)
-{
-	auto need = EXCH_CHAR.find(name);
-	if (need != EXCH_CHAR.end())
-		return need->second;
-	else
-		return '\0';
-}
-
-char get_feedtype_by_exch(const char *name)
-{
-	auto need = EXCH_CHAR.find(name);
-	if (need != EXCH_CHAR.end())
-		return need->second;
-	else
-		return 0;
-}
-
-int convert_open_close_flag(char openclose)
-{
-	switch (openclose) {
-		case '0': case '1':
-			return openclose - '0';
-		case '3':
-			return ORDER_CLOSE;
-		case '4':
-			return ORDER_CLOSE_YES;
-		default: break;
-	}
-	return UNDEFINED_OPEN_CLOSE;
-}
-
-int convert_order_open_close_flag(char openclose)
-{
-	switch (openclose) {
-		case THOST_FTDC_OF_Open:
-			return ORDER_OPEN;
-		case THOST_FTDC_OF_CloseToday:
-			return ORDER_CLOSE;
-		case THOST_FTDC_OF_Close:
-			return ORDER_CLOSE_YES;
-		default: break;
-	}
-	return UNDEFINED_OPEN_CLOSE;
-}
-
-ORDER_STATUS convert_status(char status, char* entrust_no)
-{
-	switch(status) {
-		case 'a': {
-			if (atoi(entrust_no) > 0)
-				return SIG_STATUS_ENTRUSTED;
-			return UNDEFINED_STATUS;
-		}
-		case '0': {
-			return SIG_STATUS_SUCCEED;
-		}
-		case '1': {
-			return SIG_STATUS_PARTED;
-		}
-		case '3': {
-			return SIG_STATUS_ENTRUSTED;
-		}
-		case '4': {
-			return SIG_STATUS_REJECTED;
-		}
-		case '2':
-		case '5': {
-			return SIG_STATUS_CANCELED;
-		}
-	}
-	return UNDEFINED_STATUS;
-}
-
-ORDER_STATUS get_final_status(ORDER_STATUS pre, ORDER_STATUS cur)
-{
-	if (cur == SIG_STATUS_SUCCEED || cur == SIG_STATUS_PARTED || cur == SIG_STATUS_ENTRUSTED)
-		return cur;
-	if (cur == SIG_STATUS_CANCELED) {
-		if (pre != SIG_STATUS_ENTRUSTED && pre != SIG_STATUS_PARTED)
-			return SIG_STATUS_REJECTED;
-		return SIG_STATUS_CANCELED;
-	}
-	return UNDEFINED_STATUS;
-}
+extern bool debug_flag;
+extern bool complete_data_flag;
 
 #define CHAR_EQUAL_ZERO(a, b, c) do{\
 	if (a != b) goto end;\
@@ -178,27 +87,6 @@ end:
 	return hash;
 }
 
-int
-double_compare(double a, double b, double epsilon)
-{
-	if (a - b > epsilon)
-		return 1;
-	else if (a - b < -epsilon)
-		return -1;
-	else
-		return 0;
-}
-
-int float_compare(float a, float b, float epsilon)
-{
-	if (a - b > epsilon)
-		return 1;
-	else if (a - b < -epsilon)
-		return -1;
-	else
-		return 0;
-}
-
 size_t
 strlcpy(char * dst, const char * src, size_t siz)
 {
@@ -244,200 +132,8 @@ end:
 	return;
 }
 
-void duplicate_contract(Contract *src, Contract *dest)
-{
-	dest->exch = src->exch;
-	dest->max_pos = src->max_pos;
-	dest->max_accum_open_vol = src->max_accum_open_vol;
-	dest->single_side_max_pos = src->single_side_max_pos;
-	strlcpy(dest->symbol, src->symbol, SYMBOL_LEN);
-}
-
-//----------positions related-------
-double
-avg_px(Position &pos)
-{
-	if (pos.qty > 0)
-		return pos.notional / (double)pos.qty;
-	else
-		return 0.0;
-}
-
-int
-position(Contract *cont)
-{
-	return long_position(cont) - short_position(cont);
-}
-
-int 
-position(DIRECTION side, Contract * cont)
-{
-	if (side == ORDER_BUY)
-		return long_position(cont);
-	else
-		return short_position(cont);
-}
-
-int
-long_position(Contract *cont)
-{
-	return cont->positions[LONG_OPEN].qty - cont->positions[SHORT_CLOSE].qty;
-}
-
-int
-short_position(Contract *cont)
-{
-	return cont->positions[SHORT_OPEN].qty - cont->positions[LONG_CLOSE].qty;
-}
-
-double
-long_notional(Contract *cont)
-{
-	return cont->positions[LONG_OPEN].notional + cont->positions[LONG_CLOSE].notional;
-}
-
-double
-short_notional(Contract *cont)
-{
-	return cont->positions[SHORT_OPEN].notional + cont->positions[SHORT_CLOSE].notional;
-}
-
-double
-avg_buy_price(Contract *cont)
-{
-	return (cont->positions[LONG_OPEN].notional + cont->positions[LONG_CLOSE].notional)
-		/ (cont->positions[LONG_OPEN].qty + cont->positions[LONG_CLOSE].qty);
-}
-
-double
-avg_sell_price(Contract *cont)
-{
-	return (cont->positions[SHORT_OPEN].notional + cont->positions[SHORT_CLOSE].notional)
-		/ (cont->positions[SHORT_OPEN].qty + cont->positions[SHORT_CLOSE].qty);
-}
-
-double
-get_transaction_fee(Contract *cont, int size, double price, bool flag_close_yes)
-{
-	double l_fee = 0.0;
-	double exchange_fee = 0.0;
-	if (flag_close_yes) {
-		exchange_fee = cont->yes_exchange_fee;
-	}
-	else {
-		exchange_fee = cont->exchange_fee;
-	}
-	if (cont->fee_by_lot)
-		l_fee = size * (exchange_fee + cont->broker_fee); // Caution, for futures right now, broker fee is 0.0
-	else
-		l_fee = size * price * (exchange_fee + cont->broker_fee);
-	if (cont->exch == SSE)
-		l_fee += size * price * cont->acc_transfer_fee;
-
-	return l_fee;
-}
-
-double
-get_realized_PNL(Contract *cont)
-{
-	double long_side_PNL = 0.0;
-	double short_side_PNL = 0.0;
-
-	int long_pos = MIN(cont->positions[LONG_OPEN].qty, cont->positions[SHORT_CLOSE].qty);
-	int short_pos = MIN(cont->positions[SHORT_OPEN].qty, cont->positions[LONG_CLOSE].qty);
-
-	if (long_pos > 0)
-		long_side_PNL = long_pos * (avg_px(cont->positions[SHORT_CLOSE]) - avg_px(cont->positions[LONG_OPEN]));
-
-	if (short_pos > 0)
-		short_side_PNL = short_pos * (avg_px(cont->positions[SHORT_OPEN]) - avg_px(cont->positions[LONG_CLOSE]));
-
-	return long_side_PNL + short_side_PNL;
-}
-
-static uint64_t order_count = 0;
-
-void reset_order_count_for_test() {
-	order_count = 0;
-}
-
-int process_debug_info(int type, int length, void *data) {
-	switch (type) {
-	case S_STRATEGY_DEBUG_LOG: {
-		printf("[CHECK] LOG: %s\n", (char*)data);
-		break;
-	}
-	case S_PLACE_ORDER_DEFAULT: {
-		order_t *l_ord = (order_t *)((st_data_t *)data)->info;
-		l_ord->order_id = ++order_count * 10000000000 + l_ord->st_id;
-		printf("[CHECK] Send Order: %c %s %d %f %d %d %d %d %d %lld %lld %lld\n", l_ord->exch, l_ord->symbol,
-			l_ord->volume, l_ord->price, l_ord->direction, l_ord->open_close,
-			l_ord->investor_type, l_ord->order_type, l_ord->time_in_force,
-			l_ord->st_id, l_ord->order_id, l_ord->org_ord_id);
-		LOG("Send Order: %c %s %d %f %d %d %d %d %d %lld %lld %lld\n", l_ord->exch, l_ord->symbol,
-			l_ord->volume, l_ord->price, l_ord->direction, l_ord->open_close,
-			l_ord->investor_type, l_ord->order_type, l_ord->time_in_force,
-			l_ord->st_id, l_ord->order_id, l_ord->org_ord_id);
-		break;
-	}
-	case S_CANCEL_ORDER_DEFAULT: {
-		order_t *l_ord = (order_t *)((st_data_t *)data)->info;
-		printf("[CHECK] Cancel Order: %c %s %d %f %d %d %d %d %d %lld %lld %lld\n", l_ord->exch, l_ord->symbol,
-			l_ord->volume, l_ord->price, l_ord->direction, l_ord->open_close,
-			l_ord->investor_type, l_ord->order_type, l_ord->time_in_force,
-			l_ord->st_id, l_ord->order_id, l_ord->org_ord_id);
-		LOG("Cancel Order: %c %s %d %f %d %d %d %d %d %lld %lld %lld\n", l_ord->exch, l_ord->symbol,
-			l_ord->volume, l_ord->price, l_ord->direction, l_ord->open_close,
-			l_ord->investor_type, l_ord->order_type, l_ord->time_in_force,
-			l_ord->st_id, l_ord->order_id, l_ord->org_ord_id);
-		break;
-	}
-	case S_STRATEGY_PASS_RSP: {
-		st_response_t *l_ord = (st_response_t *)((st_data_t *)data)->info;
-		printf("[CHECK] Order Resp: %lld %s %d %d %f %d %d %d %s\n", l_ord->order_id, l_ord->symbol,
-			l_ord->direction, l_ord->open_close, l_ord->exe_price, l_ord->exe_volume,
-			l_ord->status, l_ord->error_no, l_ord->error_info);
-		LOG("Order Resp: %lld %s %d %d %f %d %d %d %s\n", l_ord->order_id, l_ord->symbol,
-			l_ord->direction, l_ord->open_close, l_ord->exe_price, l_ord->exe_volume,
-			l_ord->status, l_ord->error_no, l_ord->error_info);
-		break;
-	}
-	}
-	return 0;
-}
-
-int get_time_diff(int time1, int time2)
-{
-	int time1_hour = time1 / 10000000;
-	int time1_min = (time1 / 100000) % 100;
-	int time1_sec = ((time1 / 1000) % 100);
-	int time2_hour = time2 / 10000000;
-	int time2_min = (time2 / 100000) % 100;
-	int time2_sec = ((time2 / 1000) % 100);
-
-	int hour_diff = time2_hour - time1_hour;
-	int min_diff = time2_min - time1_min;
-	int sec_diff = time2_sec - time1_sec;
-	return (hour_diff * 3600 + min_diff * 60 + sec_diff);
-}
-
-int add_time(int int_time, int seconds)
-{
-	int time_hour = int_time / 10000000;
-	int time_min = (int_time / 100000) % 100;
-	int time_sec = ((int_time / 1000) % 100);
-
-	int current_sec = time_hour * 3600 + time_min * 60 + time_sec;
-	int sum_sec = current_sec + seconds;
-
-	int time1_hour = sum_sec / 3600;
-	int time1_min = (sum_sec % 3600) / 60;
-	int time1_sec = ((sum_sec % 3600) % 60);
-	return (time1_hour * 10000 + time1_min * 100 + time1_sec) * 1000;
-}
-
 int code_convert(char *inbuf, size_t inlen, char *outbuf, size_t outlen)
-{
+{	
 	iconv_t cd;
 	char **pin = &inbuf;
 	char **pout = &outbuf;
@@ -452,7 +148,6 @@ int code_convert(char *inbuf, size_t inlen, char *outbuf, size_t outlen)
 }
 
 #define CONFIG_FILE "./config.json"
-
 void read_config_file(std::string& content)
 {
 	std::ifstream fin(CONFIG_FILE);
@@ -464,7 +159,6 @@ void read_config_file(std::string& content)
 
 
 static char local_time[256];
-
 char* get_time_record() {
 	time_t timep;
 	struct tm *p;
@@ -493,116 +187,28 @@ bool read_json_config(TraderConfig& trader_config) {
 	Json l_json = json11::Json::parse(json_config, err_msg, JsonParse::COMMENTS);
 	if (err_msg.length() > 0) {
 		PRINT_ERROR("Json parse fail, please check your setting! error: %s", err_msg.c_str());
+		LOG_LN("Json parse fail, please check your setting! error: %s", err_msg.c_str());
 		return false;
 	}
 
-	strlcpy(trader_config.ACCOUNT.FRONT, l_json["FRONT"].string_value().c_str(), 64);
-	strlcpy(trader_config.ACCOUNT.BROKER_ID, l_json["BROKER_ID"].string_value().c_str(), 64);
-	strlcpy(trader_config.ACCOUNT.USER_ID, l_json["USER_ID"].string_value().c_str(), 64);
-	strlcpy(trader_config.ACCOUNT.PASSWORD, l_json["PASSWORD"].string_value().c_str(), 64);
+	strlcpy(trader_config.FRONT, l_json["FRONT"].string_value().c_str(), 64);
+	strlcpy(trader_config.BROKER_ID, l_json["BROKER_ID"].string_value().c_str(), 64);
+	strlcpy(trader_config.USER_ID, l_json["USER_ID"].string_value().c_str(), 64);
+	strlcpy(trader_config.PASSWORD, l_json["PASSWORD"].string_value().c_str(), 64);
 
-	strlcpy(trader_config.REDIS_IP, l_json["REDIS_IP"].string_value().c_str(), 64);
-	trader_config.REDIS_PORT = l_json["REDIS_PORT"].int_value();
-	strlcpy(trader_config.REDIS_CONTRACT, l_json["REDIS_CONTRACT"].string_value().c_str(), 64);
-	strlcpy(trader_config.REDIS_QUOTE, l_json["REDIS_QUOTE"].string_value().c_str(), 64);
-	strlcpy(trader_config.REDIS_MULTI_QUOTE, l_json["REDIS_MULTI_QUOTE"].string_value().c_str(), 64);
-	strlcpy(trader_config.REDIS_QUOTE_CACHE, l_json["REDIS_QUOTE_CACHE"].string_value().c_str(), 64);
-	for(int i = 0; i < 64; i++) {
-		trader_config.INSTRUMENTS[i] = (char *)malloc(64 * sizeof(char));
-	}
+	trader_config.CONTRACT_INFO_FLAG = l_json["CONTRACT_INFO_FLAG"].bool_value();
+	trader_config.ALL_CONTRACT_INFO_FLAG = l_json["ALL_CONTRACT_INFO_FLAG"].bool_value();
 	
-	int instr_count = 0;
-	for (auto &l_instr : l_json["INSTRUMENTS"].array_items()) {
-		strlcpy(trader_config.INSTRUMENTS[instr_count], l_instr.string_value().c_str(), 64);
-		instr_count++;
-	}
-	
-	trader_config.INSTRUMENT_COUNT = instr_count;
+	trader_config.POSITION_FLAG = l_json["POSITION_FLAG"].bool_value();
+	trader_config.ORDER_INFO_FLAG = l_json["ORDER_INFO_FLAG"].bool_value();
+	trader_config.TRADE_INFO_FLAG = l_json["TRADE_INFO_FLAG"].bool_value();
+	strlcpy(trader_config.ASSIST_LOG, l_json["ASSIST_LOG"].string_value().c_str(), 64);
+
+	debug_flag = l_json["DEBUG_FLAG"].bool_value();
+	complete_data_flag = l_json["COMPLETE_DATA_FLAG"].bool_value();
 
 	create_dir("./tmp");
 	update_trader_log_name(trader_config);
-}
-
-void free_config(TraderConfig& trader_config) {
-	for (int i = 0; i < 64; i++) {
-		free(trader_config.INSTRUMENTS[i]);
-	}
-}
-
-int get_int_time_from_quote(char* UpdateTime, int UpdateMillisec) {
-	int hour = (UpdateTime[0] - '0') * 10 + (UpdateTime[1] - '0');
-	int minute = (UpdateTime[3] - '0') * 10 + (UpdateTime[4] - '0');
-	int second = (UpdateTime[6] - '0') * 10 + (UpdateTime[7] - '0');
-	return UpdateMillisec + second * 1000 + minute * 1000 * 100 + hour * 1000 * 100 * 100;
-}
-
-void convert_quote(CThostFtdcDepthMarketDataField * ctp_quote, Futures_Internal_Book * internal_book) {
-	internal_book->exchange = get_exch_by_name(ctp_quote->ExchangeID);
-	internal_book->feed_type = get_feedtype_by_exch(ctp_quote->ExchangeID);
-	strlcpy(internal_book->symbol, ctp_quote->InstrumentID, SYMBOL_LEN);
-	internal_book->int_time = get_int_time_from_quote(ctp_quote->UpdateTime, ctp_quote->UpdateMillisec);
-	internal_book->pre_close_px = ctp_quote->PreClosePrice;
-	internal_book->pre_settle_px = ctp_quote->PreSettlementPrice;
-	internal_book->pre_open_interest = ctp_quote->PreOpenInterest;
-	internal_book->open_interest = ctp_quote->OpenInterest;
-	internal_book->open_px = ctp_quote->OpenPrice;
-	internal_book->high_px = ctp_quote->HighestPrice;
-	internal_book->low_px = ctp_quote->LowestPrice;
-	internal_book->avg_px = ctp_quote->AveragePrice;
-	internal_book->last_px = ctp_quote->LastPrice;
-	internal_book->bp_array[0] = ctp_quote->BidPrice1;
-	internal_book->bp_array[1] = ctp_quote->BidPrice2;
-	internal_book->bp_array[2] = ctp_quote->BidPrice3;
-	internal_book->bp_array[3] = ctp_quote->BidPrice4;
-	internal_book->bp_array[4] = ctp_quote->BidPrice5;
-
-	internal_book->ap_array[0] = ctp_quote->AskPrice1;
-	internal_book->ap_array[1] = ctp_quote->AskPrice2;
-	internal_book->ap_array[2] = ctp_quote->AskPrice3;
-	internal_book->ap_array[3] = ctp_quote->AskPrice4;
-	internal_book->ap_array[4] = ctp_quote->AskPrice5;
-
-	internal_book->bv_array[0] = ctp_quote->AskVolume1;
-	internal_book->bv_array[1] = ctp_quote->AskVolume2;
-	internal_book->bv_array[2] = ctp_quote->AskVolume3;
-	internal_book->bv_array[3] = ctp_quote->AskVolume4;
-	internal_book->bv_array[4] = ctp_quote->AskVolume5;
-
-	internal_book->av_array[0] = ctp_quote->AskVolume1;
-	internal_book->av_array[1] = ctp_quote->AskVolume2;
-	internal_book->av_array[2] = ctp_quote->AskVolume3;
-	internal_book->av_array[3] = ctp_quote->AskVolume4;
-	internal_book->av_array[4] = ctp_quote->AskVolume5;
-
-	internal_book->upper_limit_px = ctp_quote->UpperLimitPrice;
-	internal_book->lower_limit_px = ctp_quote->LowerLimitPrice;
-	internal_book->close_px = ctp_quote->ClosePrice;
-	internal_book->settle_px = ctp_quote->SettlementPrice;
-
-	//internal_book->total_buy_ordsize =
-	//internal_book->total_sell_ordsize=
-	//internal_book->total_notional=
-	//internal_book->total_vol = ctp_quote->
-
-	//internal_book->weighted_buy_px =
-	//internal_book->weighted_sell_px=
-	//DCE?
-	//internal_book->implied_ask_size[0]=
-	//internal_book->implied_bid_size[0]=
-
-}
-
-int get_seconds_from_char_time(char * time_str)
-{
-	/*Convert int_time e.g 134523 to char time e.g "13:45:23"*/
-	int hour = (time_str[0] - '0') * 10 + (time_str[1] - '0');
-	int minute = (time_str[3] - '0') * 10 + (time_str[4] - '0');
-	int second = (time_str[6] - '0') * 10 + (time_str[7] - '0');
-	return hour * 3600 + minute * 60 + second;
-}
-
-int reverse_index(uint64_t ord_id) {
-	return ord_id / 10000000000;
 }
 
 void popen_coredump_fp(FILE ** fp)

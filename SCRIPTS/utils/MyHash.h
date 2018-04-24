@@ -1,12 +1,11 @@
 #ifndef __MYHASH_H__
 #define __MYHASH_H__
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include "list.h"
-#include "utils.h"
+#include <stdexcept> 
+#include "utils/list.h"
+#include "utils/utils.h"
 
 /**
 * @class   MyHash
@@ -27,11 +26,6 @@
 #define MAX_HASH_SIZE 256
 #define HASH_KEY_SIZE 64
 #define ROUND_UP(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
-
-size_t strlcpy(char * dst, const char * src, size_t siz);
-int my_strcmp(const char *s1, const char *s2);
-uint64_t my_hash_value(const char *str_key);
-
 
 template <class V>
 class MyHash {
@@ -108,8 +102,7 @@ public:
 	V& at(const char* key) {
 		HashNode *l_node = query(key);
 		if (l_node == NULL) {
-			assert(false);
-			return *((V*)NULL);
+			throw std::out_of_range("boom");
 		}
 		return l_node->second;
 	}
@@ -137,7 +130,7 @@ public:
 	void insert(const char* key, const V& value) {
 		HashNode *l_node = query(key);
 		if (l_node == NULL) {
-			HashNode *l_node = get_free_node();
+			l_node = get_free_node();
 
 			size_t hash_value = get_hash_value(key);
 			list_add_after(&l_node->hash_link, &m_hash_head[hash_value]);

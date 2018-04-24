@@ -1,6 +1,6 @@
 #### PROJECT SETTINGS ####
 # The name of the executable to be created
-BIN_NAME := poincare_assist
+BIN_NAME := ctp_assist
 # Compiler used
 CXX ?= g++
 # Extension of source files used in the project
@@ -14,9 +14,9 @@ RCOMPILE_FLAGS = -O3 -pthread
 # Additional debug-specific flags
 DCOMPILE_FLAGS = -g3 -pthread -D DEBUG
 # Add additional include paths
-INCLUDES = -I $(SRC_PATH) -I ../utils -I ../include -I ../hiredis -I ../hiredis/adapters
+INCLUDES = -I $(SRC_PATH) -I ./utils -I ./include
 # General linker settings
-LINK_FLAGS = -fPIC -pthread -Wl,-rpath,./ -L. -lthosttraderapi -L../hiredis -lhiredis -ldl
+LINK_FLAGS = -fPIC -pthread -Wl,-rpath,./ -L. -lthosttraderapi -ldl
 # Additional release-specific linker settings
 RLINK_FLAGS = 
 # Additional debug-specific linker settings

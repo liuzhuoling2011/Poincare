@@ -6,14 +6,13 @@
 
 #define MAX_LOG_BUFF_SIZE (1024 * 1024 * 8)
 
-FILE*             log_handle = NULL;
-static char       log_buffer[MAX_LOG_BUFF_SIZE + 1];
-static char       log_buffer_temp[MAX_LOG_BUFF_SIZE + 1];
-static char*      start_point = log_buffer;
-static int        log_buffer_len = 0;
+FILE*         log_handle = NULL;
+static char   log_buffer[MAX_LOG_BUFF_SIZE + 1];
+static char   log_buffer_temp[MAX_LOG_BUFF_SIZE + 1];
+static char*  start_point = log_buffer;
+static int    log_buffer_len = 0;
 
-send_data send_log = NULL;
-int int_time = 0;
+bool debug_flag = false;
 
 void flush_log()
 {
@@ -61,7 +60,7 @@ void ctp_log_ln(const char * fmt, ...)
 	va_end(args);
 }
 
-int get_curr_time()
+int get_debug_flag()
 {
-	return int_time;
+	return debug_flag;
 }

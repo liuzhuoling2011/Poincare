@@ -6,14 +6,14 @@
 void flush_log();
 void ctp_log(const char *fmt, ...);
 void ctp_log_ln(const char *fmt, ...);
-int  get_curr_time();
+int  get_debug_flag();
 
 #define LOG(format,...) do{\
-	get_curr_time() == 0 ? ctp_log("[CTP before_start] " format, ##__VA_ARGS__) : ctp_log("[CTP %d] " format, get_curr_time(), ##__VA_ARGS__);\
+	ctp_log(format, ##__VA_ARGS__);\
 }while (0)
 
 #define LOG_LN(format,...) do{\
-	get_curr_time() == 0 ? ctp_log_ln("[CTP before_start] " format, ##__VA_ARGS__) : ctp_log_ln("[CTP %d] " format, get_curr_time(), ##__VA_ARGS__);\
+	ctp_log_ln(format, ##__VA_ARGS__);\
 }while (0)
 
 #ifndef _WIN32
@@ -27,25 +27,43 @@ int  get_curr_time();
 	#define CC_RESET "\033[0m"
 
 	#define PRINT_DEBUG(format,...) do{\
-			printf("[DEBUG %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+			if(get_debug_flag()) fprintf(stderr, "[DEBUG %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+		}while (0)
+
+	#define PRINT_LOG_DEBUG(format,...) do{\
+			if(get_debug_flag()) ctp_log_ln(format, ##__VA_ARGS__);\
+			if(get_debug_flag()) fprintf(stderr, "[DEBUG %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
 
 	#define PRINT_INFO(format,...) do{\
-			printf(CC_CYAN "[INFO %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+			fprintf(stderr, CC_CYAN "[INFO %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+		}while (0)
+
+	#define PRINT_LOG_INFO(format,...) do{\
+			if(get_debug_flag()) ctp_log_ln(format, ##__VA_ARGS__);\
+			if(get_debug_flag()) fprintf(stderr, CC_CYAN "[INFO %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
 
 	#define PRINT_SUCCESS(format,...) do{\
-			printf(CC_GREEN "[SUCCESS %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+			fprintf(stderr, CC_GREEN "[SUCCESS %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
 
 	#define PRINT_WARN(format,...) do{\
-			printf(CC_YELLOW "[WARNNING %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+			fprintf(stderr, CC_YELLOW "[WARNNING %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
 
 	#define PRINT_ERROR(format,...) do{\
-			printf(CC_RED "[ERROR %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+			fprintf(stderr, CC_RED "[ERROR %s:%d] " format CC_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
 #else
+	#define PRINT_LOG_DEBUG(format,...) do{\
+			printf("[DEBUG %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+		}while (0)
+
+	#define PRINT_LOG_INFO(format,...) do{\
+			printf("[INFO %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+		}while (0)
+
 	#define PRINT_DEBUG(format,...) do{\
 			printf("[DEBUG %s:%d] " format "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);\
 		}while (0)
